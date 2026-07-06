@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&family=Dosis:wght@200;300;400;500;600;700&display=swap');
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: #FDF3EB;
+    color: #1A1A1A;
+}
+
+.font-serif-display { font-family: 'Cormorant Garamond', serif; }
+.font-logo { font-family: 'Dosis', 'Inter', sans-serif; letter-spacing: 0.35em; font-weight: 300; }
+.font-body { font-family: 'Inter', sans-serif; }
+
+@layer base {
+  :root {
+        --background: 30 60% 96%;
+        --foreground: 20 6% 10%;
+        --card: 30 55% 98%;
+        --card-foreground: 20 6% 10%;
+        --popover: 30 55% 98%;
+        --popover-foreground: 20 6% 10%;
+        --primary: 18 55% 44%;
+        --primary-foreground: 30 60% 98%;
+        --secondary: 12 40% 88%;
+        --secondary-foreground: 20 10% 15%;
+        --muted: 30 30% 92%;
+        --muted-foreground: 20 5% 40%;
+        --accent: 18 55% 44%;
+        --accent-foreground: 30 60% 98%;
+        --destructive: 0 70% 50%;
+        --destructive-foreground: 30 60% 98%;
+        --border: 25 25% 85%;
+        --input: 25 25% 85%;
+        --ring: 18 55% 44%;
+        --radius: 0.5rem;
+    }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; }
+}
+
+/* Custom Utilities */
+.gradient-cream { background: linear-gradient(180deg, #FDF3EB 0%, #F9E7DC 100%); }
+.gradient-blush { background: linear-gradient(180deg, #F5D0CE 0%, #F8DAD3 100%); }
+
+.hover-lift { transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 400ms; }
+.hover-lift:hover { transform: translateY(-6px); box-shadow: 0 20px 40px -18px rgba(180, 89, 63, 0.35); }
+
+/* Marquee Animation */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 40s linear infinite;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Fade up on scroll */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up { animation: fadeUp 700ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Underline reveal on hover */
+.link-underline { position: relative; }
+.link-underline::after {
+  content: '';
+  position: absolute;
+  left: 0; bottom: -4px;
+  width: 0; height: 1.5px;
+  background: currentColor;
+  transition: width 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.link-underline:hover::after { width: 100%; }
+
+/* Shimmer for badges */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer-badge {
+  background: linear-gradient(90deg, #B4593F 0%, #E88864 50%, #B4593F 100%);
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+}
+
+/* Reveal on scroll for elements with .reveal */
+.reveal { opacity: 0; transform: translateY(20px); transition: opacity 700ms ease, transform 700ms cubic-bezier(0.22, 1, 0.36, 1); }
+.reveal.in-view { opacity: 1; transform: translateY(0); }
+
+/* Ticker for announcement bar */
+@keyframes ticker { 
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+.animate-ticker { animation: ticker 30s linear infinite; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #FDF3EB; }
+::-webkit-scrollbar-thumb { background: #C4623B; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #B4593F; }
+
+/* Focus outline */
+:focus-visible { outline: 2px solid #B4593F; outline-offset: 2px; }
