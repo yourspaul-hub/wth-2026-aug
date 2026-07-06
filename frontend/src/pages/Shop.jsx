@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
-import { products, categories } from '../mock/mock';
+import { products as mockProducts, categories as mockCategories } from '../mock/mock';
+import { fetchProducts, fetchCategories } from '../lib/api';
 import { SlidersHorizontal, ChevronDown, X } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+
+const normalize = (p) => ({ ...p, originalPrice: p.original_price ?? p.originalPrice, hoverImage: p.hover_image ?? p.hoverImage });
 
 const Shop = () => {
   const { categorySlug } = useParams();
@@ -14,22 +17,29 @@ const Shop = () => {
   const [sort, setSort] = useState('featured');
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [cats, setCats] = useState(mockCategories);
 
-  const currentCategory = categories.find(c => c.slug === categorySlug);
+  useEffect(() => {
+    fetchCategories().then(cs => { if (cs?.length) setCats(cs.map(c => ({ ...c, comingSoon: c.coming_soon }))); }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchProducts({ category: categorySlug || undefined, q: q || undefined, sort, limit: 100 })
+      .then(res => {
+        const list = (res.items || []).map(normalize);
+        setProducts(list);
+      })
+      .catch(() => setProducts(mockProducts));
+  }, [categorySlug, q, sort]);
+
+  const currentCategory = cats.find(c => c.slug === categorySlug);
 
   const list = useMemo(() => {
-    let arr = wishlistView ? wishlist : [...products];
-    if (currentCategory) arr = arr.filter(p => p.category === currentCategory.id);
-    if (q) arr = arr.filter(p => p.name.toLowerCase().includes(q) || p.verse.toLowerCase().includes(q));
+    let arr = wishlistView ? wishlist : products;
     arr = arr.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1]);
-    switch (sort) {
-      case 'price-asc': arr.sort((a, b) => a.price - b.price); break;
-      case 'price-desc': arr.sort((a, b) => b.price - a.price); break;
-      case 'rating': arr.sort((a, b) => b.rating - a.rating); break;
-      default: break;
-    }
     return arr;
-  }, [currentCategory, q, sort, priceRange, wishlist, wishlistView]);
+  }, [products, priceRange, wishlist, wishlistView]);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [categorySlug]);
 
@@ -38,7 +48,6 @@ const Shop = () => {
 
   return (
     <main className="pt-6 pb-24">
-      {/* Header */}
       <div className="bg-gradient-to-b from-[#F5D0CE]/40 to-[#FDF3EB] py-14">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
           <nav className="text-[11px] uppercase tracking-[0.2em] text-neutral-500 mb-4">
@@ -52,17 +61,15 @@ const Shop = () => {
         </div>
       </div>
 
-      {/* Category pills */}
       {!wishlistView && (
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-6 flex flex-wrap gap-2 overflow-x-auto">
           <Link to="/shop" className={`text-xs uppercase tracking-[0.15em] px-5 py-2.5 rounded-full transition-colors ${!currentCategory ? 'bg-[#1A1A1A] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}>All</Link>
-          {categories.filter(c => !c.comingSoon).map(c => (
+          {cats.filter(c => !c.comingSoon).map(c => (
             <Link key={c.id} to={`/shop/${c.slug}`} className={`text-xs uppercase tracking-[0.15em] px-5 py-2.5 rounded-full transition-colors whitespace-nowrap ${currentCategory?.slug === c.slug ? 'bg-[#1A1A1A] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}>{c.name}</Link>
           ))}
         </div>
       )}
 
-      {/* Toolbar */}
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10 flex items-center justify-between border-y border-[#EBD9CE] py-4 mb-8">
         <div className="flex items-center gap-4">
           <button onClick={() => setFilterOpen(true)} className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em]">
@@ -81,7 +88,6 @@ const Shop = () => {
         </div>
       </div>
 
-      {/* Filter sheet */}
       <div onClick={() => setFilterOpen(false)} className={`fixed inset-0 bg-black/50 z-40 transition-opacity ${filterOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} />
       <aside className={`fixed top-0 left-0 h-full w-full sm:w-[360px] bg-white z-40 shadow-2xl p-6 overflow-y-auto transition-transform duration-500 ${filterOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between mb-6">
@@ -97,7 +103,7 @@ const Shop = () => {
           <div>
             <div className="text-[11px] uppercase tracking-[0.2em] text-[#B4593F] mb-3">Category</div>
             <div className="space-y-2">
-              {categories.filter(c => !c.comingSoon).map(c => (
+              {cats.filter(c => !c.comingSoon).map(c => (
                 <Link key={c.id} to={`/shop/${c.slug}`} onClick={() => setFilterOpen(false)} className={`block text-sm px-4 py-2 rounded ${currentCategory?.slug === c.slug ? 'bg-[#FDF3EB] text-[#B4593F]' : 'hover:bg-[#FDF3EB]'}`}>{c.name}</Link>
               ))}
             </div>
@@ -105,7 +111,6 @@ const Shop = () => {
         </div>
       </aside>
 
-      {/* Grid */}
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
         {list.length === 0 ? (
           <div className="text-center py-20">

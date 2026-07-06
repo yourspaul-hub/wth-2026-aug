@@ -1,20 +1,40 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from './ProductCard';
-import { products } from '../mock/mock';
+import { products as mockProducts } from '../mock/mock';
+import { fetchProducts } from '../lib/api';
 import { ArrowRight } from 'lucide-react';
 
-const FeaturedProducts = ({ title = 'Bestsellers', subtitle = 'Handpicked for you', filter = null, limit = 8, viewAllHref = '/shop' }) => {
+// Normalize API product shape to match ProductCard expectations
+const normalize = (p) => ({
+  ...p,
+  originalPrice: p.original_price ?? p.originalPrice,
+  hoverImage: p.hover_image ?? p.hoverImage,
+});
+
+const FeaturedProducts = ({ title = 'Bestsellers', subtitle = 'Handpicked for you', filter = null, limit = 8, viewAllHref = '/shop', apiTag = null }) => {
   const ref = useRef(null);
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    fetchProducts({ limit: 50, tag: apiTag || undefined })
+      .then(res => {
+        const list = (res.items || []).map(normalize);
+        setItems(list.length ? list : mockProducts);
+      })
+      .catch(() => setItems(mockProducts));
+  }, [apiTag]);
+
   useEffect(() => {
     const els = ref.current?.querySelectorAll('.reveal');
     if (!els) return;
     const io = new IntersectionObserver((entries) => entries.forEach(e => e.isIntersecting && e.target.classList.add('in-view')), { threshold: 0.08 });
     els.forEach(el => io.observe(el));
     return () => io.disconnect();
-  }, []);
+  }, [items]);
 
-  const list = (filter ? products.filter(filter) : products).slice(0, limit);
+  const list = (filter ? items.filter(filter) : items).slice(0, limit);
+  if (list.length === 0) return null;
 
   return (
     <section ref={ref} className="py-24 bg-gradient-to-b from-[#FDF3EB] via-[#F9E7DC] to-[#FDF3EB]">

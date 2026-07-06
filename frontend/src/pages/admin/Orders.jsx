@@ -1,0 +1,126 @@
+import React, { useEffect, useState } from 'react';
+import { adminListOrders, adminUpdateOrder } from '../../lib/api';
+import { toast } from 'sonner';
+import { X, Truck, ExternalLink } from 'lucide-react';
+
+const STATUSES = ['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'refunded'];
+
+const AdminOrders = () => {
+  const [orders, setOrders] = useState([]);
+  const [filter, setFilter] = useState('');
+  const [selected, setSelected] = useState(null);
+
+  const load = () => adminListOrders(filter || undefined).then(setOrders).catch(() => setOrders([]));
+  useEffect(() => { load(); }, [filter]);
+
+  const updateStatus = async (order_number, patch) => {
+    try {
+      const updated = await adminUpdateOrder(order_number, patch);
+      toast.success('Order updated');
+      setOrders(prev => prev.map(o => o.order_number === order_number ? updated : o));
+      if (selected?.order_number === order_number) setSelected(updated);
+    } catch { toast.error('Failed to update'); }
+  };
+
+  return (
+    <div>
+      <div className="flex items-end justify-between mb-8">
+        <div>
+          <h1 className="font-serif-display text-4xl">Orders</h1>
+          <p className="text-sm text-neutral-600 mt-1">{orders.length} orders</p>
+        </div>
+        <select value={filter} onChange={e => setFilter(e.target.value)} className="bg-white border border-[#EBD9CE] rounded-full px-5 py-2.5 text-xs uppercase tracking-widest">
+          <option value="">All statuses</option>
+          {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
+
+      <div className="bg-white rounded-xl border border-[#EBD9CE] overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-[#FDF3EB] text-[11px] uppercase tracking-widest text-neutral-600">
+            <tr>
+              <th className="text-left px-6 py-3">Order</th>
+              <th className="text-left px-6 py-3">Customer</th>
+              <th className="text-left px-6 py-3">Total</th>
+              <th className="text-left px-6 py-3">Payment</th>
+              <th className="text-left px-6 py-3">Status</th>
+              <th className="text-left px-6 py-3">Date</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#EBD9CE]">
+            {orders.length === 0 ? (
+              <tr><td colSpan="7" className="px-6 py-10 text-center text-neutral-500">No orders</td></tr>
+            ) : orders.map(o => (
+              <tr key={o.order_number} className="hover:bg-[#FDF3EB]/50">
+                <td className="px-6 py-3 font-medium">{o.order_number}</td>
+                <td className="px-6 py-3">{o.shipping_address?.full_name}<div className="text-[11px] text-neutral-500">{o.shipping_address?.email}</div></td>
+                <td className="px-6 py-3 font-semibold">₹{o.total.toLocaleString('en-IN')}</td>
+                <td className="px-6 py-3"><span className={`text-[10px] uppercase px-2 py-1 rounded ${o.payment_status === 'paid' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>{o.payment_status}</span></td>
+                <td className="px-6 py-3">
+                  <select value={o.status} onChange={e => updateStatus(o.order_number, { status: e.target.value })} className="bg-transparent border border-[#EBD9CE] rounded px-2 py-1 text-xs">
+                    {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </td>
+                <td className="px-6 py-3 text-xs text-neutral-500">{new Date(o.created_at).toLocaleDateString()}</td>
+                <td className="px-6 py-3"><button onClick={() => setSelected(o)} className="text-xs text-[#B4593F] hover:underline">Details</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {selected && (
+        <>
+          <div onClick={() => setSelected(null)} className="fixed inset-0 bg-black/50 z-50" />
+          <aside className="fixed top-0 right-0 h-full w-full sm:w-[520px] bg-white z-50 overflow-y-auto shadow-2xl">
+            <div className="px-6 py-5 border-b border-[#EBD9CE] flex items-center justify-between">
+              <div>
+                <h3 className="font-serif-display text-2xl">{selected.order_number}</h3>
+                <div className="text-xs text-neutral-500">{new Date(selected.created_at).toLocaleString()}</div>
+              </div>
+              <button onClick={() => setSelected(null)}><X className="w-5 h-5" /></button>
+            </div>
+            <div className="px-6 py-5 space-y-5">
+              <div>
+                <div className="text-[11px] uppercase tracking-widest text-[#B4593F] mb-2">Customer</div>
+                <div className="text-sm">{selected.shipping_address.full_name}<br />{selected.shipping_address.email}<br />{selected.shipping_address.phone}</div>
+              </div>
+              <div>
+                <div className="text-[11px] uppercase tracking-widest text-[#B4593F] mb-2">Shipping Address</div>
+                <div className="text-sm">{selected.shipping_address.line1}{selected.shipping_address.line2 ? ', ' + selected.shipping_address.line2 : ''}<br />{selected.shipping_address.city}, {selected.shipping_address.state} {selected.shipping_address.pincode}<br />{selected.shipping_address.country}</div>
+              </div>
+              <div>
+                <div className="text-[11px] uppercase tracking-widest text-[#B4593F] mb-2">Items</div>
+                <div className="space-y-3">
+                  {selected.items.map((it, i) => (
+                    <div key={i} className="flex items-center gap-3 border border-[#EBD9CE] rounded-lg p-2">
+                      <img src={it.image} alt="" className="w-14 h-14 rounded object-cover" />
+                      <div className="flex-1 text-sm"><div className="font-medium">{it.name}</div><div className="text-xs text-neutral-500">Qty: {it.qty} · ₹{it.price}</div>{it.customization && <div className="text-[11px] italic text-[#B4593F]">{it.customization}</div>}</div>
+                      <div className="font-semibold">₹{(it.price * it.qty).toLocaleString('en-IN')}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-[#FDF3EB] rounded-lg p-4 text-sm space-y-2">
+                <div className="flex justify-between"><span>Subtotal</span><span>₹{selected.subtotal.toLocaleString('en-IN')}</span></div>
+                {selected.discount > 0 && <div className="flex justify-between text-[#B4593F]"><span>Discount ({selected.coupon_code})</span><span>-₹{selected.discount.toLocaleString('en-IN')}</span></div>}
+                <div className="flex justify-between"><span>Shipping</span><span>₹{selected.shipping_fee}</span></div>
+                <div className="flex justify-between font-semibold pt-2 border-t border-[#EBD9CE]"><span>Total</span><span>₹{selected.total.toLocaleString('en-IN')}</span></div>
+              </div>
+              <div>
+                <div className="text-[11px] uppercase tracking-widest text-[#B4593F] mb-2 flex items-center gap-2"><Truck className="w-3 h-3" /> Shipping (Shiprocket — MOCKED)</div>
+                <div className="text-sm space-y-1">
+                  <div>AWB: {selected.shiprocket_awb || 'Not assigned'}</div>
+                  {selected.tracking_url && <a href={selected.tracking_url} target="_blank" rel="noreferrer" className="text-[#B4593F] inline-flex items-center gap-1">Track <ExternalLink className="w-3 h-3" /></a>}
+                </div>
+              </div>
+            </div>
+          </aside>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default AdminOrders;

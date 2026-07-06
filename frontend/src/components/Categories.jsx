@@ -1,10 +1,19 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
-import { categories } from '../mock/mock';
+import { categories as mockCategories } from '../mock/mock';
+import { fetchCategories } from '../lib/api';
 
 const Categories = () => {
   const containerRef = useRef(null);
+  const [cats, setCats] = useState(mockCategories);
+
+  useEffect(() => {
+    fetchCategories().then(cs => {
+      if (cs && cs.length) setCats(cs.map(c => ({ ...c, comingSoon: c.coming_soon })));
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     const els = containerRef.current?.querySelectorAll('.reveal');
     if (!els) return;
@@ -13,7 +22,7 @@ const Categories = () => {
     }, { threshold: 0.1 });
     els.forEach(el => io.observe(el));
     return () => io.disconnect();
-  }, []);
+  }, [cats]);
 
   return (
     <section id="categories" ref={containerRef} className="relative py-24 bg-[#FDF3EB]">
@@ -27,7 +36,7 @@ const Categories = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
-          {categories.map((c, i) => (
+          {cats.map((c, i) => (
             <Link
               key={c.id}
               to={c.comingSoon ? '#' : `/shop/${c.slug}`}
@@ -35,11 +44,7 @@ const Categories = () => {
               style={{ transitionDelay: `${i * 60}ms` }}
             >
               <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-[#F5D0CE]/40 border border-[#EBD9CE]/60">
-                <img
-                  src={c.image}
-                  alt={c.name}
-                  className="w-full h-full object-cover transition-transform duration-[900ms] group-hover:scale-110"
-                />
+                <img src={c.image} alt={c.name} className="w-full h-full object-cover transition-transform duration-[900ms] group-hover:scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-70 group-hover:opacity-90 transition-opacity duration-500" />
                 {c.comingSoon && (
                   <div className="absolute top-3 left-3 bg-white/95 text-[10px] uppercase tracking-[0.2em] px-3 py-1.5 rounded-full text-[#1A1A1A]">Coming Soon</div>

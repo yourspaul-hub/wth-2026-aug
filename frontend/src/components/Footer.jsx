@@ -2,15 +2,21 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Instagram, Facebook, Youtube, Mail, Phone, MapPin, Send } from 'lucide-react';
 import { categories, brandInfo } from '../mock/mock';
+import { subscribeNewsletter } from '../lib/api';
 import { toast } from 'sonner';
 
 const Footer = () => {
   const [email, setEmail] = useState('');
-  const subscribe = (e) => {
+  const subscribe = async (e) => {
     e.preventDefault();
     if (!email) return;
-    toast.success("You're subscribed! Watch out for hope in your inbox.");
-    setEmail('');
+    try {
+      const r = await subscribeNewsletter(email);
+      toast.success(r.already ? "You're already subscribed!" : "You're subscribed! Watch out for hope in your inbox.");
+      setEmail('');
+    } catch {
+      toast.error('Subscription failed. Try again.');
+    }
   };
 
   return (

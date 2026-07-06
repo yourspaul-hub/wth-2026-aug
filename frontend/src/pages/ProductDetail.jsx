@@ -1,22 +1,44 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { products } from '../mock/mock';
+import { Helmet } from 'react-helmet-async';
+import { products as mockProducts } from '../mock/mock';
+import { fetchProduct } from '../lib/api';
 import { useCart } from '../context/CartContext';
 import { Heart, ShoppingBag, Minus, Plus, Truck, Sparkles, RefreshCw, Star, Share2, ChevronRight } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import { toast } from 'sonner';
 
+const normalize = (p) => ({ ...p, originalPrice: p.original_price ?? p.originalPrice, hoverImage: p.hover_image ?? p.hoverImage });
+
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const product = products.find(p => p.id === id);
+  const [product, setProduct] = useState(null);
+  const [related, setRelated] = useState([]);
+  const [loading, setLoading] = useState(true);
   const { addToCart, toggleWishlist, inWishlist } = useCart();
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
   const [tab, setTab] = useState('details');
   const [customName, setCustomName] = useState('');
 
-  useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setActiveImg(0); setQty(1); }, [id]);
+  useEffect(() => {
+    setLoading(true);
+    fetchProduct(id).then(({ product, related }) => {
+      setProduct(normalize(product));
+      setRelated((related || []).map(normalize));
+      setLoading(false);
+    }).catch(() => {
+      const fallback = mockProducts.find(p => p.id === id);
+      if (fallback) setProduct(fallback);
+      setRelated([]);
+      setLoading(false);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setActiveImg(0); setQty(1);
+  }, [id]);
+
+  if (loading) return <main className="min-h-[60vh] flex items-center justify-center"><div className="w-10 h-10 border-4 border-[#B4593F] border-t-transparent rounded-full animate-spin" /></main>;
 
   if (!product) {
     return (
@@ -30,27 +52,51 @@ const ProductDetail = () => {
   }
 
   const gallery = [product.image, product.hoverImage, product.image].filter(Boolean);
-  const related = products.filter(p => p.category === product.category && p.id !== product.id).slice(0, 4);
   const wished = inWishlist(product.id);
 
   const handleAdd = () => {
-    addToCart(product, qty);
+    addToCart({ ...product, customization: customName || undefined }, qty);
     toast.success(`Added ${qty} × ${product.name} to bag`);
+  };
+
+  const productJsonLd = {
+    '@context': 'https://schema.org', '@type': 'Product',
+    'name': product.name,
+    'image': [product.image, product.hoverImage].filter(Boolean),
+    'description': product.description,
+    'sku': product.id,
+    'brand': { '@type': 'Brand', 'name': 'Wear The Hope' },
+    'offers': {
+      '@type': 'Offer', 'price': product.price, 'priceCurrency': 'INR',
+      'availability': (product.stock ?? 100) > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+    },
+    'aggregateRating': { '@type': 'AggregateRating', 'ratingValue': product.rating, 'reviewCount': product.reviews },
   };
 
   return (
     <main className="pt-6 pb-24">
+      <Helmet>
+        <title>{product.seo_title || `${product.name} | Wear The Hope`}</title>
+        <meta name="description" content={product.seo_description || product.description?.slice(0, 160)} />
+        {product.seo_keywords && <meta name="keywords" content={product.seo_keywords} />}
+        <meta property="og:type" content="product" />
+        <meta property="og:title" content={product.name} />
+        <meta property="og:description" content={product.description} />
+        <meta property="og:image" content={product.image} />
+        <script type="application/ld+json">{JSON.stringify(productJsonLd)}</script>
+      </Helmet>
+
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
         <nav className="text-[11px] uppercase tracking-[0.2em] text-neutral-500 mb-8">
           <Link to="/" className="hover:text-[#B4593F]">Home</Link>
           <ChevronRight className="inline w-3 h-3 mx-2" />
           <Link to="/shop" className="hover:text-[#B4593F]">Shop</Link>
+          {product.category_slug && (<><ChevronRight className="inline w-3 h-3 mx-2" /><Link to={`/shop/${product.category_slug}`} className="hover:text-[#B4593F]">{product.category_name}</Link></>)}
           <ChevronRight className="inline w-3 h-3 mx-2" />
           <span className="text-[#B4593F]">{product.name}</span>
         </nav>
 
         <div className="grid lg:grid-cols-2 gap-12">
-          {/* Gallery */}
           <div className="flex gap-4">
             <div className="hidden md:flex flex-col gap-3 w-20 shrink-0">
               {gallery.map((img, i) => (
@@ -64,7 +110,6 @@ const ProductDetail = () => {
             </div>
           </div>
 
-          {/* Info */}
           <div>
             <div className="flex items-center gap-2 mb-3">
               {product.tag && <span className="shimmer-badge text-white text-[10px] uppercase tracking-[0.15em] px-3 py-1 rounded-full">{product.tag}</span>}
@@ -93,7 +138,6 @@ const ProductDetail = () => {
 
             <p className="mt-6 text-neutral-700 leading-relaxed">{product.description}</p>
 
-            {/* Colors */}
             {product.colors?.length > 0 && (
               <div className="mt-6">
                 <div className="text-[11px] uppercase tracking-[0.2em] text-neutral-600 mb-2">Color</div>
@@ -105,7 +149,6 @@ const ProductDetail = () => {
               </div>
             )}
 
-            {/* Personalization */}
             <div className="mt-6 bg-[#FDF3EB] border border-[#EBD9CE] rounded-xl p-5">
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-[#B4593F] mb-3">
                 <Sparkles className="w-3.5 h-3.5" /> Personalize (optional)
@@ -114,7 +157,6 @@ const ProductDetail = () => {
               <div className="text-[11px] text-neutral-500 mt-2">Free customization · Adds 2-3 days to delivery</div>
             </div>
 
-            {/* Quantity + Actions */}
             <div className="flex items-center gap-3 mt-8">
               <div className="inline-flex items-center border border-[#EBD9CE] rounded-full bg-white">
                 <button onClick={() => setQty(q => Math.max(1, q - 1))} className="w-11 h-12 flex items-center justify-center hover:bg-[#FDF3EB] rounded-l-full"><Minus className="w-4 h-4" /></button>
@@ -130,7 +172,6 @@ const ProductDetail = () => {
               <button className="w-12 h-12 rounded-full border border-[#EBD9CE] flex items-center justify-center hover:border-[#B4593F] transition-colors" aria-label="Share"><Share2 className="w-4 h-4" /></button>
             </div>
 
-            {/* Assurances */}
             <div className="grid grid-cols-3 gap-3 mt-8 pt-6 border-t border-[#EBD9CE]">
               {[{ icon: Truck, l: 'Free Shipping', s: 'On orders ₹999+' }, { icon: RefreshCw, l: 'Easy Returns', s: '7-day window' }, { icon: Sparkles, l: 'Customize', s: 'Any language' }].map((a, i) => {
                 const I = a.icon;
@@ -144,7 +185,6 @@ const ProductDetail = () => {
               })}
             </div>
 
-            {/* Tabs */}
             <div className="mt-10 border-t border-[#EBD9CE] pt-6">
               <div className="flex gap-6 text-xs uppercase tracking-[0.2em]">
                 {['details', 'shipping', 'reviews'].map(t => (
@@ -160,7 +200,6 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* Related */}
         {related.length > 0 && (
           <div className="mt-24">
             <div className="flex items-end justify-between mb-8">

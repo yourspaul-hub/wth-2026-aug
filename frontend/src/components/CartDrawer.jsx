@@ -73,9 +73,9 @@ const CartDrawer = () => {
                 <span>Shipping</span>
                 <span>{totals.subtotal >= 999 ? 'Free' : 'Calculated at checkout'}</span>
               </div>
-              <button className="w-full bg-[#1A1A1A] hover:bg-[#B4593F] transition-colors text-white py-4 rounded-full text-xs uppercase tracking-[0.2em] inline-flex items-center justify-center gap-2">
+              <Link to="/checkout" onClick={() => setCartOpen(false)} className="w-full bg-[#1A1A1A] hover:bg-[#B4593F] transition-colors text-white py-4 rounded-full text-xs uppercase tracking-[0.2em] inline-flex items-center justify-center gap-2">
                 Proceed to Checkout <ArrowRight className="w-4 h-4" />
-              </button>
+              </Link>
               <button onClick={() => setCartOpen(false)} className="w-full mt-3 text-xs uppercase tracking-[0.2em] text-neutral-600 hover:text-[#B4593F]">Continue Shopping</button>
             </div>
           )}
