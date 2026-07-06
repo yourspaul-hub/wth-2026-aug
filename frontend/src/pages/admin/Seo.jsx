@@ -31,8 +31,8 @@ const AdminSeo = () => {
           <p className="text-sm text-neutral-600 mt-1">Meta tags per URL path · sitemap auto-generated at /sitemap.xml</p>
         </div>
         <div className="flex items-center gap-3">
-          <a href="/sitemap.xml" target="_blank" rel="noreferrer" className="text-xs uppercase tracking-widest inline-flex items-center gap-1 border border-[#EBD9CE] px-4 py-2.5 rounded-full hover:border-[#B4593F]">Sitemap <ExternalLink className="w-3 h-3" /></a>
-          <a href="/robots.txt" target="_blank" rel="noreferrer" className="text-xs uppercase tracking-widest inline-flex items-center gap-1 border border-[#EBD9CE] px-4 py-2.5 rounded-full hover:border-[#B4593F]">Robots <ExternalLink className="w-3 h-3" /></a>
+          <a href="/api/sitemap.xml" target="_blank" rel="noreferrer" className="text-xs uppercase tracking-widest inline-flex items-center gap-1 border border-[#EBD9CE] px-4 py-2.5 rounded-full hover:border-[#B4593F]">Sitemap <ExternalLink className="w-3 h-3" /></a>
+          <a href="/api/robots.txt" target="_blank" rel="noreferrer" className="text-xs uppercase tracking-widest inline-flex items-center gap-1 border border-[#EBD9CE] px-4 py-2.5 rounded-full hover:border-[#B4593F]">Robots <ExternalLink className="w-3 h-3" /></a>
           <button onClick={() => setEditing({ ...empty })} className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest"><Plus className="w-4 h-4" /> Add</button>
         </div>
       </div>

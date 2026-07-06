@@ -570,6 +570,7 @@ def _site_base(request: Request) -> str:
 
 
 @app.get('/sitemap.xml', response_class=PlainTextResponse)
+@api.get('/sitemap.xml', response_class=PlainTextResponse)
 async def sitemap(request: Request):
     base = _site_base(request)
     urls = ['/', '/shop', '/about', '/contact']
@@ -587,6 +588,7 @@ async def sitemap(request: Request):
 
 
 @app.get('/robots.txt', response_class=PlainTextResponse)
+@api.get('/robots.txt', response_class=PlainTextResponse)
 async def robots(request: Request):
     base = _site_base(request)
     body = f"""User-agent: *
@@ -595,7 +597,7 @@ Disallow: /admin
 Disallow: /checkout
 Disallow: /order/
 
-Sitemap: {base}/sitemap.xml
+Sitemap: {base}/api/sitemap.xml
 """
     return PlainTextResponse(body, media_type='text/plain')
 
