@@ -5,6 +5,7 @@ import { createOrder, validateCoupon, verifyPayment, shippingRates } from '../li
 import { toast } from 'sonner';
 import { ArrowRight, Tag, Truck, Lock, CheckCircle2, X, Info } from 'lucide-react';
 import SeoHelmet from '../components/SeoHelmet';
+import Logo from '../components/Logo';
 
 const emptyAddr = { full_name: '', email: '', phone: '', line1: '', line2: '', city: '', state: '', pincode: '', country: 'India' };
 
@@ -71,7 +72,7 @@ const Checkout = () => {
       <SeoHelmet overrides={{ title: 'Checkout | Wear The Hope', robots: 'noindex,follow' }} />
       <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
         <div className="flex items-center gap-3 mb-8">
-          <Link to="/" className="font-logo text-lg tracking-[0.3em]">WEAR THE HOPE</Link>
+          <Link to="/" aria-label="Wear The Hope home"><Logo variant="dark" className="h-8" /></Link>
           <span className="text-xs text-neutral-400">/</span>
           <span className="font-serif-display text-3xl">Checkout</span>
         </div>

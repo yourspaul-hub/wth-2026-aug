@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingBag, Heart, Search, Menu, X, Instagram } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { categories } from '../mock/mock';
+import Logo from './Logo';
 
 const Navbar = () => {
   const { totals, setCartOpen, wishlist } = useCart();
@@ -61,9 +62,8 @@ const Navbar = () => {
           </button>
 
           {/* Center: logo */}
-          <Link to="/" className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-            <span className="font-logo text-[22px] md:text-[28px] text-[#1A1A1A]">WEAR THE HOPE</span>
-            <span className="text-[9px] tracking-[0.3em] text-[#B4593F] mt-0.5 uppercase">Share Love · Wear Hope</span>
+          <Link to="/" className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center" aria-label="Wear The Hope home">
+            <Logo variant="dark" className="h-9 md:h-11" />
           </Link>
 
           {/* Right: icons */}

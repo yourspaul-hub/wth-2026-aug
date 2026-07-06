@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Package, ShoppingCart, Tag, Star, Search, Send, ArrowUpRight, LogOut, ExternalLink } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import Logo from '../../components/Logo';
 
 const nav = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -23,8 +24,10 @@ const AdminLayout = () => {
     <div className="min-h-screen bg-[#FDF3EB] flex">
       <aside className="w-64 shrink-0 bg-[#1A1A1A] text-white flex flex-col">
         <div className="px-6 py-6 border-b border-white/10">
-          <Link to="/" className="font-logo text-sm tracking-[0.3em]">WEAR THE HOPE</Link>
-          <div className="text-[10px] uppercase tracking-[0.3em] text-[#E88864] mt-1">Admin</div>
+          <Link to="/" aria-label="Wear The Hope home">
+            <Logo variant="light" className="h-7" />
+          </Link>
+          <div className="text-[10px] uppercase tracking-[0.3em] text-[#E88864] mt-2">Admin</div>
         </div>
         <nav className="flex-1 py-6 px-3 space-y-1">
           {nav.map(n => {

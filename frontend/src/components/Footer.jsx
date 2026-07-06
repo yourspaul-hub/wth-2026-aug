@@ -4,6 +4,7 @@ import { Instagram, Facebook, Youtube, Mail, Phone, MapPin, Send } from 'lucide-
 import { categories, brandInfo } from '../mock/mock';
 import { subscribeNewsletter } from '../lib/api';
 import { toast } from 'sonner';
+import Logo from './Logo';
 
 const Footer = () => {
   const [email, setEmail] = useState('');
@@ -39,7 +40,7 @@ const Footer = () => {
         {/* Main */}
         <div className="grid md:grid-cols-4 gap-10 py-14">
           <div>
-            <div className="font-logo text-xl mb-4">WEAR THE HOPE</div>
+            <Logo variant="light" className="h-9 mb-4" />
             <p className="text-white/70 text-sm leading-relaxed max-w-xs">A motivational gift brand — declaring love and hope through everyday products. Handcrafted with intention since 2018.</p>
             <div className="flex items-center gap-3 mt-6">
               <a href={brandInfo.instagram} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-white/10 hover:bg-[#B4593F] flex items-center justify-center transition-colors"><Instagram className="w-4 h-4" /></a>
