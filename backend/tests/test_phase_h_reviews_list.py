@@ -348,10 +348,7 @@ class TestAdminPublishedFalse:
             'text': 'This review is intentionally unpublished for testing.',
             'published': False,
         }
-        token = STATE.get('_admin_token')
-        # Grab admin token via fixture-style call: use minted one via header state
-        # We need to re-mint or reuse admin_json_headers - but this is a class method.
-        # Simpler: mint via mongo helper
+        # Mint an admin token via mongo helper (STATE-based tokens don't work in this scope)
         tok = _mint_admin_token()
         headers = {'Authorization': f'Bearer {tok}', 'Content-Type': 'application/json'}
         c = requests.post(f"{API}/admin/reviews", json=payload, headers=headers, timeout=15)

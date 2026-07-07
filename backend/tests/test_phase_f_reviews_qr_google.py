@@ -501,9 +501,10 @@ class TestGoogleSyncMocked:
 
     def test_public_reviews_include_mocked_high_rating(self):
         place_id = STATE['gbl_01_place_id']
-        r = requests.get(f"{API}/reviews", timeout=15)
+        r = requests.get(f"{API}/reviews?limit=100", timeout=15)
         assert r.status_code == 200
-        arr = r.json()
+        data = r.json()
+        arr = data['items'] if isinstance(data, dict) else data
         mocked = [x for x in arr if (x.get('google_review_id') or '').startswith(f'gmock_{place_id}_')]
         # published=True only in this endpoint; each published one must have rating>=4
         for rv in mocked:
