@@ -36,7 +36,7 @@ const Navbar = () => {
           <nav className="hidden lg:flex items-center gap-8 text-[13px] uppercase tracking-[0.15em] text-[#1A1A1A]">
             <Link to="/" className="link-underline">Home</Link>
             <div className="relative" onMouseEnter={() => setShopOpen(true)} onMouseLeave={() => setShopOpen(false)}>
-              <button className="link-underline flex items-center gap-1">Shop</button>
+              <button className="link-underline flex items-center gap-1 uppercase">SHOP</button>
               <div className={`absolute left-1/2 -translate-x-1/2 top-full pt-4 transition-all duration-300 ${shopOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}`}>
                 <div className="bg-white rounded-md shadow-2xl border border-[#EBD9CE] p-6 grid grid-cols-2 gap-1 w-[520px]">
                   {categories.map(c => (
@@ -98,8 +98,8 @@ const Navbar = () => {
         {/* Mobile menu */}
         <div className={`lg:hidden overflow-hidden transition-all duration-500 ${mobileOpen ? 'max-h-[600px] pb-6' : 'max-h-0'}`}>
           <div className="pt-2 flex flex-col gap-1">
-            {['Home','Shop','About','Journal','Contact'].map(l => (
-              <Link key={l} to={l === 'Home' ? '/' : l === 'Journal' ? '/blog' : `/${l.toLowerCase()}`} className="py-3 border-b border-[#EBD9CE] uppercase text-sm tracking-[0.15em]">{l}</Link>
+            {['Home','SHOP','About','Journal','Contact'].map(l => (
+              <Link key={l} to={l === 'Home' ? '/' : l === 'Journal' ? '/blog' : l === 'SHOP' ? '/shop' : `/${l.toLowerCase()}`} className="py-3 border-b border-[#EBD9CE] uppercase text-sm tracking-[0.15em]">{l}</Link>
             ))}
             <div className="grid grid-cols-2 gap-2 pt-4">
               {categories.slice(0,8).map(c => (

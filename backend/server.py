@@ -16,7 +16,7 @@ from fastapi.responses import PlainTextResponse, StreamingResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -49,6 +49,7 @@ from models import (
     SheetsImportRequest,
     QRReviewToken, QRTokenCreate, QRReviewSubmission,
     GoogleBusinessLocation, GoogleBusinessLocationCreate,
+    Setting, SettingUpdate,
 )
 from auth import exchange_session_id, get_session_from_request, ensure_aware
 
@@ -68,7 +69,32 @@ async def require_admin(request: Request) -> dict:
     user = await db.admin_users.find_one({'user_id': sess['user_id']}, {'_id': 0})
     if not user:
         raise HTTPException(status_code=401, detail='User not found')
+    if user.get('role') != 'admin':
+        raise HTTPException(status_code=403, detail='Admin role required for this action')
     return user
+
+
+def require_role(*roles: str):
+    """Return a dependency that allows any of the given roles."""
+    role_set = set(roles)
+
+    async def _dep(request: Request) -> dict:
+        sess = await get_session_from_request(request, db)
+        if not sess:
+            raise HTTPException(status_code=401, detail='Not authenticated')
+        user = await db.admin_users.find_one({'user_id': sess['user_id']}, {'_id': 0})
+        if not user:
+            raise HTTPException(status_code=401, detail='User not found')
+        if user.get('role') not in role_set:
+            raise HTTPException(status_code=403, detail=f'Requires one of: {", ".join(sorted(role_set))}')
+        return user
+
+    return _dep
+
+
+require_staff = require_role('admin', 'store_manager', 'blogger')
+require_store = require_role('admin', 'store_manager')
+require_blog = require_role('admin', 'blogger')
 
 
 @api.post('/auth/session')
@@ -81,17 +107,22 @@ async def create_session(payload: SessionRequest, response: Response):
     if not email or not session_token:
         raise HTTPException(status_code=400, detail='Invalid auth response')
 
-    # Find or create admin user
+    # Find or invite: first user auto-becomes admin (bootstrap). New emails must be pre-invited.
     user = await db.admin_users.find_one({'email': email}, {'_id': 0})
     if not user:
-        user_id = f'user_{uuid.uuid4().hex[:12]}'
-        user_doc = {
-            'user_id': user_id, 'email': email, 'name': name, 'picture': picture,
-            'role': 'admin', 'created_at': datetime.now(timezone.utc),
-        }
-        await db.admin_users.insert_one(user_doc)
-        user = user_doc.copy()
-        user.pop('_id', None)
+        existing_count = await db.admin_users.count_documents({})
+        if existing_count == 0:
+            # Bootstrap the very first admin
+            user_id = f'user_{uuid.uuid4().hex[:12]}'
+            user_doc = {
+                'user_id': user_id, 'email': email, 'name': name, 'picture': picture,
+                'role': 'admin', 'created_at': datetime.now(timezone.utc),
+            }
+            await db.admin_users.insert_one(user_doc)
+            user = user_doc.copy()
+            user.pop('_id', None)
+        else:
+            raise HTTPException(status_code=403, detail='This email is not invited. Ask an admin to add you under Admin → Users.')
     else:
         await db.admin_users.update_one({'email': email}, {'$set': {'name': name, 'picture': picture}})
 
@@ -109,7 +140,7 @@ async def create_session(payload: SessionRequest, response: Response):
 
 
 @api.get('/auth/me')
-async def me(user: dict = Depends(require_admin)):
+async def me(user: dict = Depends(require_staff)):
     return {'user_id': user['user_id'], 'email': user['email'], 'name': user['name'], 'picture': user.get('picture'), 'role': user.get('role', 'admin')}
 
 
@@ -130,7 +161,7 @@ async def list_categories():
 
 
 @api.post('/admin/categories')
-async def create_category(payload: CategoryCreate, user: dict = Depends(require_admin)):
+async def create_category(payload: CategoryCreate, user: dict = Depends(require_store)):
     doc = Category(**payload.model_dump()).model_dump()
     await db.categories.insert_one(doc)
     doc.pop('_id', None)
@@ -138,13 +169,17 @@ async def create_category(payload: CategoryCreate, user: dict = Depends(require_
 
 
 @api.patch('/admin/categories/{cid}')
-async def update_category(cid: str, payload: dict, user: dict = Depends(require_admin)):
+async def update_category(cid: str, payload: dict, user: dict = Depends(require_store)):
     await db.categories.update_one({'id': cid}, {'$set': payload})
     return await db.categories.find_one({'id': cid}, {'_id': 0})
 
 
 @api.delete('/admin/categories/{cid}')
-async def delete_category(cid: str, user: dict = Depends(require_admin)):
+async def delete_category(cid: str, user: dict = Depends(require_store)):
+    # Guard: block deletion if products are linked
+    linked = await db.products.count_documents({'category': cid})
+    if linked > 0:
+        raise HTTPException(status_code=400, detail=f'{linked} product(s) are still assigned to this category. Reassign them first.')
     await db.categories.delete_one({'id': cid})
     return {'ok': True}
 
@@ -213,7 +248,7 @@ async def get_product(pid: str):
 
 
 @api.post('/admin/products')
-async def create_product(payload: ProductCreate, user: dict = Depends(require_admin)):
+async def create_product(payload: ProductCreate, user: dict = Depends(require_store)):
     doc = Product(**payload.model_dump()).model_dump()
     await db.products.insert_one(doc)
     doc.pop('_id', None)
@@ -221,7 +256,7 @@ async def create_product(payload: ProductCreate, user: dict = Depends(require_ad
 
 
 @api.patch('/admin/products/{pid}')
-async def update_product(pid: str, payload: ProductUpdate, user: dict = Depends(require_admin)):
+async def update_product(pid: str, payload: ProductUpdate, user: dict = Depends(require_store)):
     updates = {k: v for k, v in payload.model_dump().items() if v is not None}
     if updates:
         await db.products.update_one({'id': pid}, {'$set': updates})
@@ -229,7 +264,7 @@ async def update_product(pid: str, payload: ProductUpdate, user: dict = Depends(
 
 
 @api.delete('/admin/products/{pid}')
-async def delete_product(pid: str, user: dict = Depends(require_admin)):
+async def delete_product(pid: str, user: dict = Depends(require_store)):
     await db.products.delete_one({'id': pid})
     return {'ok': True}
 
@@ -253,12 +288,12 @@ async def get_collection(slug: str):
 
 
 @api.get('/admin/collections')
-async def admin_list_collections(user: dict = Depends(require_admin)):
+async def admin_list_collections(user: dict = Depends(require_store)):
     return await db.collections.find({}, {'_id': 0}).sort('order', 1).to_list(500)
 
 
 @api.post('/admin/collections')
-async def create_collection(payload: CollectionCreate, user: dict = Depends(require_admin)):
+async def create_collection(payload: CollectionCreate, user: dict = Depends(require_store)):
     doc = Collection(**payload.model_dump()).model_dump()
     if await db.collections.find_one({'slug': doc['slug']}):
         raise HTTPException(status_code=400, detail='Collection slug already exists')
@@ -268,13 +303,13 @@ async def create_collection(payload: CollectionCreate, user: dict = Depends(requ
 
 
 @api.patch('/admin/collections/{cid}')
-async def update_collection(cid: str, payload: dict, user: dict = Depends(require_admin)):
+async def update_collection(cid: str, payload: dict, user: dict = Depends(require_store)):
     await db.collections.update_one({'id': cid}, {'$set': payload})
     return await db.collections.find_one({'id': cid}, {'_id': 0})
 
 
 @api.delete('/admin/collections/{cid}')
-async def delete_collection(cid: str, user: dict = Depends(require_admin)):
+async def delete_collection(cid: str, user: dict = Depends(require_store)):
     await db.collections.delete_one({'id': cid})
     return {'ok': True}
 
@@ -651,12 +686,12 @@ async def public_shipping_options(pincode: Optional[str] = None, subtotal: int =
 
 
 @api.get('/admin/shipping-rules')
-async def admin_list_shipping_rules(user: dict = Depends(require_admin)):
+async def admin_list_shipping_rules(user: dict = Depends(require_store)):
     return await db.shipping_rules.find({}, {'_id': 0}).sort('order', 1).to_list(500)
 
 
 @api.post('/admin/shipping-rules')
-async def create_shipping_rule(payload: ShippingRuleCreate, user: dict = Depends(require_admin)):
+async def create_shipping_rule(payload: ShippingRuleCreate, user: dict = Depends(require_store)):
     doc = ShippingRule(**payload.model_dump()).model_dump()
     await db.shipping_rules.insert_one(doc)
     doc.pop('_id', None)
@@ -664,13 +699,13 @@ async def create_shipping_rule(payload: ShippingRuleCreate, user: dict = Depends
 
 
 @api.patch('/admin/shipping-rules/{rid}')
-async def update_shipping_rule(rid: str, payload: dict, user: dict = Depends(require_admin)):
+async def update_shipping_rule(rid: str, payload: dict, user: dict = Depends(require_store)):
     await db.shipping_rules.update_one({'id': rid}, {'$set': payload})
     return await db.shipping_rules.find_one({'id': rid}, {'_id': 0})
 
 
 @api.delete('/admin/shipping-rules/{rid}')
-async def delete_shipping_rule(rid: str, user: dict = Depends(require_admin)):
+async def delete_shipping_rule(rid: str, user: dict = Depends(require_store)):
     await db.shipping_rules.delete_one({'id': rid})
     return {'ok': True}
 
@@ -682,12 +717,12 @@ async def public_tax_rates():
 
 
 @api.get('/admin/tax-rates')
-async def admin_list_tax_rates(user: dict = Depends(require_admin)):
+async def admin_list_tax_rates(user: dict = Depends(require_store)):
     return await db.tax_rates.find({}, {'_id': 0}).sort('order', 1).to_list(500)
 
 
 @api.post('/admin/tax-rates')
-async def create_tax_rate(payload: TaxRateCreate, user: dict = Depends(require_admin)):
+async def create_tax_rate(payload: TaxRateCreate, user: dict = Depends(require_store)):
     doc = TaxRate(**payload.model_dump()).model_dump()
     await db.tax_rates.insert_one(doc)
     doc.pop('_id', None)
@@ -695,13 +730,13 @@ async def create_tax_rate(payload: TaxRateCreate, user: dict = Depends(require_a
 
 
 @api.patch('/admin/tax-rates/{tid}')
-async def update_tax_rate(tid: str, payload: dict, user: dict = Depends(require_admin)):
+async def update_tax_rate(tid: str, payload: dict, user: dict = Depends(require_store)):
     await db.tax_rates.update_one({'id': tid}, {'$set': payload})
     return await db.tax_rates.find_one({'id': tid}, {'_id': 0})
 
 
 @api.delete('/admin/tax-rates/{tid}')
-async def delete_tax_rate(tid: str, user: dict = Depends(require_admin)):
+async def delete_tax_rate(tid: str, user: dict = Depends(require_store)):
     await db.tax_rates.delete_one({'id': tid})
     return {'ok': True}
 
@@ -1211,7 +1246,7 @@ _SAMPLE_ROWS = [
 
 
 @api.get('/admin/products/template.csv')
-async def download_product_template(user: dict = Depends(require_admin)):
+async def download_product_template(user: dict = Depends(require_store)):
     cat_slugs = await db.categories.distinct('slug')
     slugs_str = ' / '.join(sorted(cat_slugs))
     buf = io.StringIO()
@@ -1300,7 +1335,7 @@ async def _read_upload_rows(file: UploadFile):
 
 
 @api.post('/admin/products/bulk')
-async def bulk_upload_products(file: UploadFile = File(...), user: dict = Depends(require_admin)):
+async def bulk_upload_products(file: UploadFile = File(...), user: dict = Depends(require_store)):
     rows = await _read_upload_rows(file)
     if not rows:
         raise HTTPException(status_code=400, detail='No data rows found')
@@ -1405,7 +1440,7 @@ def _sheets_url_to_csv(url: str) -> Optional[str]:
 
 
 @api.post('/admin/products/import-sheet')
-async def import_from_sheet(payload: SheetsImportRequest, user: dict = Depends(require_admin)):
+async def import_from_sheet(payload: SheetsImportRequest, user: dict = Depends(require_store)):
     csv_url = _sheets_url_to_csv(payload.url)
     if not csv_url:
         raise HTTPException(status_code=400, detail='Could not extract Google Sheets ID from URL. Use a link like https://docs.google.com/spreadsheets/d/…/edit#gid=0')
@@ -1449,12 +1484,12 @@ async def public_blog_get(slug: str):
 
 
 @api.get('/admin/blog')
-async def admin_list_blog(user: dict = Depends(require_admin)):
+async def admin_list_blog(user: dict = Depends(require_blog)):
     return await db.blog_posts.find({}, {'_id': 0}).sort('created_at', -1).to_list(500)
 
 
 @api.post('/admin/blog')
-async def admin_create_blog(payload: BlogPostCreate, user: dict = Depends(require_admin)):
+async def admin_create_blog(payload: BlogPostCreate, user: dict = Depends(require_blog)):
     if await db.blog_posts.find_one({'slug': payload.slug}):
         raise HTTPException(status_code=400, detail='Slug already exists')
     doc = BlogPost(**payload.model_dump()).model_dump()
@@ -1466,7 +1501,7 @@ async def admin_create_blog(payload: BlogPostCreate, user: dict = Depends(requir
 
 
 @api.patch('/admin/blog/{pid}')
-async def admin_update_blog(pid: str, payload: dict, user: dict = Depends(require_admin)):
+async def admin_update_blog(pid: str, payload: dict, user: dict = Depends(require_blog)):
     payload.pop('id', None)
     payload.pop('_id', None)
     payload['updated_at'] = datetime.now(timezone.utc)
@@ -1481,7 +1516,7 @@ async def admin_update_blog(pid: str, payload: dict, user: dict = Depends(requir
 
 
 @api.delete('/admin/blog/{pid}')
-async def admin_delete_blog(pid: str, user: dict = Depends(require_admin)):
+async def admin_delete_blog(pid: str, user: dict = Depends(require_blog)):
     await db.blog_posts.delete_one({'id': pid})
     return {'ok': True}
 
@@ -1782,6 +1817,338 @@ async def public_qr_submit(token: str, payload: QRReviewSubmission):
     return {'ok': True, 'review_id': review['id'], 'message': 'Thanks! Your review is submitted and will appear after a quick check.'}
 
 
+# ---- Generic (non-tokenised) public review ----
+# Anyone can submit; used with the single shareable QR code (below)
+@api.post('/reviews/public')
+async def public_generic_review(payload: QRReviewSubmission):
+    if not (1 <= payload.rating <= 5):
+        raise HTTPException(status_code=400, detail='Rating must be 1-5')
+    if len((payload.text or '').strip()) < 5:
+        raise HTTPException(status_code=400, detail='Please write at least a few words about your experience')
+    if not (payload.name or '').strip():
+        raise HTTPException(status_code=400, detail='Please tell us your name')
+
+    safe_photos = []
+    for p in (payload.photos or [])[:6]:
+        s = str(p).strip()
+        if len(s) <= 2048 and (s.startswith('http://') or s.startswith('https://')):
+            safe_photos.append(s)
+
+    review = Review(
+        name=payload.name.strip()[:120], rating=payload.rating, text=payload.text.strip()[:2000],
+        when='just now', source='QR', published=False, verified=False,
+        email=(payload.email or None), photos=safe_photos,
+    ).model_dump()
+    await db.reviews.insert_one(review)
+    return {'ok': True, 'review_id': review['id'], 'message': 'Thanks! Your review is submitted and will appear after a quick check.'}
+
+
+@api.get('/admin/reviews/generic-qr')
+async def admin_generic_qr(user: dict = Depends(require_admin)):
+    """Return the URL + PNG endpoint for the single generic (non-user-specific) review QR."""
+    base = await get_setting('PUBLIC_APP_URL', '')
+    review_url = f'{base}/review' if base else '/review'
+    return {
+        'review_url': review_url,
+        'image_url': '/api/admin/reviews/generic-qr/image.png',
+        'description': 'Share this link (or the printed QR) on packing slips, WhatsApp, or Instagram bio. Anyone can submit a review through it — submissions go to your Reviews Hub as unpublished for moderation.',
+    }
+
+
+@api.get('/admin/reviews/generic-qr/image.png')
+async def admin_generic_qr_image(user: dict = Depends(require_admin)):
+    base = await get_setting('PUBLIC_APP_URL', '')
+    review_url = f'{base}/review' if base else '/review'
+    img = qrcode.make(review_url)
+    buf = BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    return StreamingResponse(iter([buf.getvalue()]), media_type='image/png', headers={'Content-Disposition': 'inline; filename="wth-review-qr.png"'})
+
+
+# ================= ADMIN USERS (RBAC) =================
+VALID_ROLES = {'admin', 'store_manager', 'blogger'}
+
+
+class AdminUserInvite(BaseModel):
+    email: EmailStr
+    name: Optional[str] = None
+    role: str = 'store_manager'
+
+
+class AdminUserUpdate(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+
+
+@api.get('/admin/users')
+async def admin_list_users(user: dict = Depends(require_admin)):
+    users = await db.admin_users.find({}, {'_id': 0}).sort('created_at', 1).to_list(200)
+    return users
+
+
+@api.post('/admin/users')
+async def admin_invite_user(payload: AdminUserInvite, user: dict = Depends(require_admin)):
+    if payload.role not in VALID_ROLES:
+        raise HTTPException(status_code=400, detail=f'Invalid role. Choose one of: {", ".join(sorted(VALID_ROLES))}')
+    if await db.admin_users.find_one({'email': payload.email.lower()}):
+        raise HTTPException(status_code=400, detail='A user with that email already exists')
+    uid = f'user_{uuid.uuid4().hex[:12]}'
+    doc = {
+        'user_id': uid,
+        'email': payload.email.lower(),
+        'name': payload.name or payload.email.split('@')[0],
+        'picture': None,
+        'role': payload.role,
+        'created_at': datetime.now(timezone.utc),
+        'invited_by': user.get('email'),
+    }
+    await db.admin_users.insert_one(doc)
+    doc.pop('_id', None)
+    return doc
+
+
+@api.patch('/admin/users/{uid}')
+async def admin_update_user(uid: str, payload: AdminUserUpdate, user: dict = Depends(require_admin)):
+    target = await db.admin_users.find_one({'user_id': uid}, {'_id': 0})
+    if not target:
+        raise HTTPException(status_code=404, detail='User not found')
+    updates = {}
+    if payload.name is not None:
+        updates['name'] = payload.name
+    if payload.role is not None:
+        if payload.role not in VALID_ROLES:
+            raise HTTPException(status_code=400, detail='Invalid role')
+        # Prevent demoting the last admin
+        if target.get('role') == 'admin' and payload.role != 'admin':
+            admin_count = await db.admin_users.count_documents({'role': 'admin'})
+            if admin_count <= 1:
+                raise HTTPException(status_code=400, detail='Cannot demote the last remaining admin')
+        updates['role'] = payload.role
+    if updates:
+        await db.admin_users.update_one({'user_id': uid}, {'$set': updates})
+    return await db.admin_users.find_one({'user_id': uid}, {'_id': 0})
+
+
+@api.delete('/admin/users/{uid}')
+async def admin_delete_user(uid: str, user: dict = Depends(require_admin)):
+    if uid == user.get('user_id'):
+        raise HTTPException(status_code=400, detail='You cannot delete your own account')
+    target = await db.admin_users.find_one({'user_id': uid})
+    if not target:
+        raise HTTPException(status_code=404, detail='User not found')
+    if target.get('role') == 'admin':
+        admin_count = await db.admin_users.count_documents({'role': 'admin'})
+        if admin_count <= 1:
+            raise HTTPException(status_code=400, detail='Cannot delete the last remaining admin')
+    await db.admin_users.delete_one({'user_id': uid})
+    await db.admin_sessions.delete_many({'user_id': uid})
+    return {'ok': True}
+
+
+@api.get('/admin/roles')
+async def admin_list_roles(user: dict = Depends(require_admin)):
+    return {
+        'roles': [
+            {'key': 'admin', 'label': 'Full Admin', 'description': 'Access to everything — orders, integrations, users, analytics.'},
+            {'key': 'store_manager', 'label': 'Store Manager', 'description': 'Manage products, categories, collections, shipping and tax. Cannot see orders, customers, integrations or analytics.'},
+            {'key': 'blogger', 'label': 'Blogger', 'description': 'Publish and manage blog posts only.'},
+        ]
+    }
+
+
+# ================= INTEGRATION SETTINGS =================
+INTEGRATIONS_SCHEMA = [
+    {
+        'category': 'instagram',
+        'label': 'Instagram',
+        'description': 'Connect the @wearthehope Instagram Business account to auto-sync the storefront feed and enable shoppable tags (via Meta Graph API).',
+        'docs_url': 'https://developers.facebook.com/docs/instagram-basic-display-api/getting-started',
+        'fields': [
+            {'key': 'INSTAGRAM_HANDLE', 'label': 'Handle (public)', 'placeholder': 'wearthehope', 'secret': False},
+            {'key': 'INSTAGRAM_PROFILE_URL', 'label': 'Profile URL', 'placeholder': 'https://www.instagram.com/wearthehope', 'secret': False},
+            {'key': 'INSTAGRAM_BUSINESS_ID', 'label': 'IG Business Account ID', 'placeholder': '17841400000000000', 'secret': False},
+            {'key': 'INSTAGRAM_ACCESS_TOKEN', 'label': 'Meta Graph API access token', 'placeholder': 'EAAG...', 'secret': True},
+        ],
+    },
+    {
+        'category': 'shipping',
+        'label': 'Shipping — Shiprocket',
+        'description': 'Provide credentials to move shipment tracking + AWB assignment from the mocked path to real Shiprocket.',
+        'docs_url': 'https://apidocs.shiprocket.in/',
+        'fields': [
+            {'key': 'SHIPROCKET_EMAIL', 'label': 'Shiprocket email', 'placeholder': 'ops@wearthehope.com', 'secret': False},
+            {'key': 'SHIPROCKET_PASSWORD', 'label': 'Shiprocket password', 'placeholder': '••••••••', 'secret': True},
+            {'key': 'SHIPROCKET_PICKUP_LOCATION', 'label': 'Default pickup location', 'placeholder': 'Mumbai Design Center', 'secret': False},
+        ],
+    },
+    {
+        'category': 'payments',
+        'label': 'Payments — Razorpay',
+        'description': 'Razorpay live key + secret for taking real payments. When absent, checkout runs in mocked mode.',
+        'docs_url': 'https://razorpay.com/docs/api/',
+        'fields': [
+            {'key': 'RAZORPAY_KEY_ID', 'label': 'Key ID', 'placeholder': 'rzp_live_XXXX', 'secret': False},
+            {'key': 'RAZORPAY_KEY_SECRET', 'label': 'Key secret', 'placeholder': '••••••••', 'secret': True},
+            {'key': 'RAZORPAY_WEBHOOK_SECRET', 'label': 'Webhook secret', 'placeholder': '••••••••', 'secret': True},
+        ],
+    },
+    {
+        'category': 'payments',
+        'label': 'Payments — Stripe',
+        'description': 'International payments via Stripe. Optional if you only accept Indian cards.',
+        'docs_url': 'https://stripe.com/docs/keys',
+        'fields': [
+            {'key': 'STRIPE_PUBLISHABLE_KEY', 'label': 'Publishable key', 'placeholder': 'pk_live_XXXX', 'secret': False},
+            {'key': 'STRIPE_SECRET_KEY', 'label': 'Secret key', 'placeholder': 'sk_live_XXXX', 'secret': True},
+            {'key': 'STRIPE_WEBHOOK_SECRET', 'label': 'Webhook signing secret', 'placeholder': 'whsec_XXXX', 'secret': True},
+        ],
+    },
+    {
+        'category': 'payments',
+        'label': 'Payments — PayPal',
+        'description': 'Optional PayPal Business creds.',
+        'docs_url': 'https://developer.paypal.com/api/rest/authentication/',
+        'fields': [
+            {'key': 'PAYPAL_CLIENT_ID', 'label': 'Client ID', 'placeholder': 'AXX...', 'secret': False},
+            {'key': 'PAYPAL_CLIENT_SECRET', 'label': 'Client secret', 'placeholder': '••••••••', 'secret': True},
+            {'key': 'PAYPAL_MODE', 'label': 'Mode', 'placeholder': 'sandbox / live', 'secret': False},
+        ],
+    },
+    {
+        'category': 'email',
+        'label': 'Email — Gmail SMTP',
+        'description': 'Send real transactional emails from your Gmail account (order confirmation, shipped, refund, review request).',
+        'docs_url': 'https://support.google.com/mail/answer/185833',
+        'fields': [
+            {'key': 'GMAIL_FROM_ADDRESS', 'label': 'From address', 'placeholder': 'orders@wearthehope.com', 'secret': False},
+            {'key': 'GMAIL_APP_PASSWORD', 'label': 'App password (16 chars)', 'placeholder': '••••••••••••••••', 'secret': True},
+        ],
+    },
+    {
+        'category': 'analytics',
+        'label': 'Analytics — Google Analytics 4',
+        'description': 'Once set, GA4 tag is injected into the storefront and the analytics dashboard swaps the mocked baseline for live event counts.',
+        'docs_url': 'https://support.google.com/analytics/answer/9539598',
+        'fields': [
+            {'key': 'GA4_MEASUREMENT_ID', 'label': 'Measurement ID', 'placeholder': 'G-XXXXXXXXXX', 'secret': False},
+        ],
+    },
+    {
+        'category': 'analytics',
+        'label': 'Analytics — Meta (Facebook) Pixel',
+        'description': 'Meta Pixel ID for retargeting + purchase events.',
+        'docs_url': 'https://www.facebook.com/business/help/952192354843755',
+        'fields': [
+            {'key': 'FB_PIXEL_ID', 'label': 'Pixel ID', 'placeholder': '1234567890', 'secret': False},
+        ],
+    },
+    {
+        'category': 'google',
+        'label': 'Google — Places API',
+        'description': 'Used to sync real Google Business reviews. Without this key, the reviews sync runs in mocked mode.',
+        'docs_url': 'https://developers.google.com/maps/documentation/places/web-service/get-api-key',
+        'fields': [
+            {'key': 'GOOGLE_PLACES_API_KEY', 'label': 'API key', 'placeholder': 'AIza...', 'secret': True},
+        ],
+    },
+    {
+        'category': 'general',
+        'label': 'General — Public App URL',
+        'description': 'Base URL used when building QR-code review links and outbound emails. Should match your production domain.',
+        'docs_url': None,
+        'fields': [
+            {'key': 'PUBLIC_APP_URL', 'label': 'Public app URL', 'placeholder': 'https://wearthehope.com', 'secret': False},
+        ],
+    },
+]
+
+_SETTING_KEYS = {f['key'] for section in INTEGRATIONS_SCHEMA for f in section['fields']}
+
+
+def _mask(v: str) -> str:
+    if not v:
+        return ''
+    if len(v) <= 4:
+        return '••••'
+    return f'{v[:2]}••••{v[-2:]}'
+
+
+async def get_setting(key: str, default: Optional[str] = None) -> Optional[str]:
+    """Read a setting from DB first, fall back to env var, then default."""
+    doc = await db.settings.find_one({'key': key}, {'_id': 0, 'value': 1})
+    if doc and doc.get('value'):
+        return doc['value']
+    env_v = os.environ.get(key)
+    if env_v:
+        return env_v
+    return default
+
+
+@api.get('/admin/integrations')
+async def admin_list_integrations(user: dict = Depends(require_admin)):
+    """Return integration schema grouped with current values (secrets masked)."""
+    docs = await db.settings.find({'key': {'$in': list(_SETTING_KEYS)}}, {'_id': 0}).to_list(200)
+    val_map = {d['key']: d.get('value', '') for d in docs}
+    updated_map = {d['key']: d.get('updated_at') for d in docs}
+    sections = []
+    for section in INTEGRATIONS_SCHEMA:
+        filled = 0
+        rows = []
+        for f in section['fields']:
+            raw = val_map.get(f['key']) or os.environ.get(f['key']) or ''
+            has_value = bool(raw)
+            if has_value:
+                filled += 1
+            display = _mask(raw) if (f.get('secret') and has_value) else raw
+            rows.append({
+                **f,
+                'display_value': display,
+                'has_value': has_value,
+                'source': 'db' if val_map.get(f['key']) else ('env' if os.environ.get(f['key']) else 'none'),
+                'updated_at': updated_map.get(f['key']),
+            })
+        total = len(section['fields'])
+        status = 'configured' if filled == total else ('partial' if filled else 'unconfigured')
+        sections.append({**section, 'fields': rows, 'status': status, 'filled': filled, 'total': total})
+    return {'sections': sections, 'mocked_when_empty': True}
+
+
+@api.get('/admin/integrations/{key}/reveal')
+async def admin_reveal_setting(key: str, user: dict = Depends(require_admin)):
+    if key not in _SETTING_KEYS:
+        raise HTTPException(status_code=404, detail='Unknown setting key')
+    doc = await db.settings.find_one({'key': key}, {'_id': 0, 'value': 1})
+    return {'key': key, 'value': (doc.get('value') if doc else '') or os.environ.get(key) or ''}
+
+
+@api.put('/admin/integrations')
+async def admin_upsert_setting(payload: SettingUpdate, user: dict = Depends(require_admin)):
+    if payload.key not in _SETTING_KEYS:
+        raise HTTPException(status_code=400, detail='Unknown setting key')
+    category = next((s['category'] for s in INTEGRATIONS_SCHEMA for f in s['fields'] if f['key'] == payload.key), 'general')
+    await db.settings.update_one(
+        {'key': payload.key},
+        {'$set': {
+            'key': payload.key,
+            'value': (payload.value or '').strip(),
+            'category': category,
+            'updated_at': datetime.now(timezone.utc),
+            'updated_by': user.get('email'),
+        }},
+        upsert=True,
+    )
+    return {'ok': True, 'key': payload.key, 'has_value': bool(payload.value)}
+
+
+@api.delete('/admin/integrations/{key}')
+async def admin_clear_setting(key: str, user: dict = Depends(require_admin)):
+    if key not in _SETTING_KEYS:
+        raise HTTPException(status_code=400, detail='Unknown setting key')
+    await db.settings.delete_one({'key': key})
+    return {'ok': True}
+
+
 # ================= GOOGLE BUSINESS LOCATIONS + REVIEW SYNC =================
 _MOCK_GOOGLE_REVIEWERS = [
     ('Anita Sharma', 5, "Beautiful craftsmanship and quick delivery. The engraved wallet was gift-perfect!", 'https://i.pravatar.cc/80?u=anita'),
@@ -1796,7 +2163,7 @@ _MOCK_GOOGLE_REVIEWERS = [
 
 async def _fetch_google_reviews(place_id: str) -> dict:
     """Fetch reviews from Google Places API v1. Falls back to a deterministic mock when key is missing."""
-    key = os.environ.get('GOOGLE_PLACES_API_KEY')
+    key = await get_setting('GOOGLE_PLACES_API_KEY')
     if not key:
         # Deterministic mock: seed randomness with a stable hash of place_id so rating & count don't jump between syncs.
         rng = random.Random(hash(place_id) & 0xFFFFFFFF)

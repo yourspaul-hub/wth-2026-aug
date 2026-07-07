@@ -141,3 +141,27 @@ export const adminUpdateGoogleLocation = (id, p) => api.patch(`/admin/google-loc
 export const adminDeleteGoogleLocation = (id) => api.delete(`/admin/google-locations/${id}`).then(r => r.data);
 export const adminSyncGoogleLocation = (id) => api.post(`/admin/google-locations/${id}/sync`).then(r => r.data);
 export const adminSyncAllGoogleLocations = () => api.post('/admin/google-locations/sync-all').then(r => r.data);
+
+// Generic (non-user-specific) review QR + public submission
+export const adminGetGenericQr = () => api.get('/admin/reviews/generic-qr').then(r => r.data);
+export const genericQrImageUrl = () => `${API_BASE}/admin/reviews/generic-qr/image.png`;
+export const submitPublicReview = (payload) => api.post('/reviews/public', payload).then(r => r.data);
+
+// Integration settings
+export const adminListIntegrations = () => api.get('/admin/integrations').then(r => r.data);
+export const adminSaveIntegration = (key, value) => api.put('/admin/integrations', { key, value }).then(r => r.data);
+export const adminRevealIntegration = (key) => api.get(`/admin/integrations/${key}/reveal`).then(r => r.data);
+export const adminClearIntegration = (key) => api.delete(`/admin/integrations/${key}`).then(r => r.data);
+
+// Category admin (public list already exposed by listCategories in mock/mock)
+export const adminCreateCategory = (p) => api.post('/admin/categories', p).then(r => r.data);
+export const adminUpdateCategory = (id, p) => api.patch(`/admin/categories/${id}`, p).then(r => r.data);
+export const adminDeleteCategory = (id) => api.delete(`/admin/categories/${id}`).then(r => r.data);
+export const listAllCategories = () => api.get('/categories').then(r => r.data);
+
+// Admin users (RBAC)
+export const adminListUsers = () => api.get('/admin/users').then(r => r.data);
+export const adminInviteUser = (p) => api.post('/admin/users', p).then(r => r.data);
+export const adminUpdateUser = (uid, p) => api.patch(`/admin/users/${uid}`, p).then(r => r.data);
+export const adminDeleteUser = (uid) => api.delete(`/admin/users/${uid}`).then(r => r.data);
+export const adminListRoles = () => api.get('/admin/roles').then(r => r.data);

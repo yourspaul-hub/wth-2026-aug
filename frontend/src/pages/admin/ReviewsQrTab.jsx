@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { adminGenerateQr, adminListQrTokens, adminDeleteQrToken, qrImageUrl, adminListProducts } from '../../lib/api';
+import { adminGenerateQr, adminListQrTokens, adminDeleteQrToken, qrImageUrl, adminListProducts, adminGetGenericQr, genericQrImageUrl } from '../../lib/api';
 import { toast } from 'sonner';
-import { QrCode, Plus, Trash2, Copy, Check, Download, X, ExternalLink } from 'lucide-react';
+import { QrCode, Plus, Trash2, Copy, Check, Download, X, ExternalLink, Share2 } from 'lucide-react';
 
 const ReviewsQrTab = () => {
   const [items, setItems] = useState([]);
@@ -10,11 +10,13 @@ const ReviewsQrTab = () => {
   const [form, setForm] = useState({ customer_name: '', customer_email: '', order_number: '', product_id: '', expires_days: 90 });
   const [copiedTok, setCopiedTok] = useState('');
   const [preview, setPreview] = useState(null);
+  const [genericQr, setGenericQr] = useState(null);
 
   const load = () => adminListQrTokens().then(setItems).catch(() => setItems([]));
   useEffect(() => {
     load();
     adminListProducts().then(setProducts).catch(() => setProducts([]));
+    adminGetGenericQr().then(setGenericQr).catch(() => setGenericQr(null));
   }, []);
 
   const generate = async (e) => {
@@ -46,6 +48,33 @@ const ReviewsQrTab = () => {
 
   return (
     <div>
+      {genericQr && (
+        <div className="bg-gradient-to-br from-[#FDF3EB] to-white border border-[#EBD9CE] rounded-2xl p-6 mb-6" data-testid="generic-qr-card">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+            <div className="bg-white p-3 rounded-xl border border-[#EBD9CE] shrink-0">
+              <img src={genericQrImageUrl()} alt="Generic review QR" className="w-32 h-32" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-2 inline-flex items-center gap-2"><Share2 className="w-3.5 h-3.5" /> Public / shareable</div>
+              <h3 className="font-serif-display text-2xl">One QR for everyone</h3>
+              <p className="text-sm text-neutral-700 mt-2 max-w-lg leading-relaxed">{genericQr.description}</p>
+              <div className="mt-3 text-[11px] text-neutral-500 font-mono break-all">{genericQr.review_url}</div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <a href={genericQrImageUrl()} download="wth-review-qr.png" data-testid="generic-qr-download" className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full transition-colors">
+                  <Download className="w-3.5 h-3.5" /> Download PNG
+                </a>
+                <button onClick={() => copy('generic', genericQr.review_url)} className="inline-flex items-center gap-2 bg-white border border-[#EBD9CE] hover:border-[#B4593F] text-xs uppercase tracking-widest px-5 py-2.5 rounded-full transition-colors">
+                  {copiedTok === 'generic' ? <><Check className="w-3.5 h-3.5" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy link</>}
+                </button>
+                <a href={genericQr.review_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-white border border-[#EBD9CE] hover:border-[#B4593F] text-xs uppercase tracking-widest px-5 py-2.5 rounded-full transition-colors">
+                  <ExternalLink className="w-3.5 h-3.5" /> Preview form
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-[#FDF3EB] border border-[#EBD9CE] rounded-xl p-4 mb-5 text-xs text-neutral-700 flex items-start gap-3">
         <QrCode className="w-4 h-4 text-[#B4593F] mt-0.5 shrink-0" />
         <div>

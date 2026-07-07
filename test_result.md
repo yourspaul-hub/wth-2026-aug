@@ -384,6 +384,54 @@ backend:
         agent: "main"
         comment: "Admin CRUD on /api/admin/google-locations. POST /api/admin/google-locations/{id}/sync fetches reviews via Google Places API v1 when GOOGLE_PLACES_API_KEY is set; falls back to _fetch_google_reviews MOCKED data (5 reviews from a curated pool) when key is absent. Imports/updates reviews (idempotent via google_review_id), auto-publishes when rating>=min_rating_to_publish (default 4). Updates location.rating + review_count + last_synced_at. POST /api/admin/google-locations/sync-all iterates active locations. Seeded 2 locations (gbl_01 Mumbai, gbl_02 Ernakulam)."
 
+  - task: "Multi-role users (RBAC): invite/list/update/delete users + role-gated endpoints"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Roles: admin | store_manager | blogger. `require_admin` restricted to role=admin (403 for others). `require_role(*roles)` factory + presets require_store, require_blog, require_staff. Login flow only allows unknown emails when admin_users is empty (bootstrap); otherwise 403 'Not invited'. Endpoints re-gated: /admin/products, /admin/categories, /admin/collections, /admin/shipping-rules, /admin/tax-rates, /admin/products/{template.csv,bulk,import-sheet} → require_store. /admin/blog/* → require_blog. Users CRUD /api/admin/users (invite/list/update/delete) → require_admin. Guards: cannot demote/delete last remaining admin; cannot delete self. GET /api/admin/roles returns role catalog."
+
+  - task: "Categories admin CRUD (with product-linked delete guard)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Existing /admin/categories POST/PATCH now open to store_manager+admin. DELETE now returns 400 with product count if any product still references the category."
+
+  - task: "Generic (public) review submission + QR"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Public POST /api/reviews/public (no auth) creates a Review(source='QR', published=False, verified=False) with sanitised photos (≤6 http(s) URLs). Admin GET /api/admin/reviews/generic-qr returns {review_url,image_url,description}. Admin GET /api/admin/reviews/generic-qr/image.png returns PNG bytes. URL built from PUBLIC_APP_URL setting/env."
+
+  - task: "Integrations Hub — DB-backed settings with masked secrets"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "GET /api/admin/integrations returns 10 sections (instagram/shipping/payments razorpay/stripe/paypal/email gmail/analytics ga4/meta pixel/google places/general public url) with per-section status configured|partial|unconfigured and masked display for secret fields. PUT /api/admin/integrations upserts (validates key against INTEGRATIONS_SCHEMA). GET /api/admin/integrations/{key}/reveal returns full value. DELETE /api/admin/integrations/{key} clears. Helper get_setting(key) reads DB first, falls back to env var, then default. Google Places sync now uses this helper."
+
 frontend:
   - task: "Storefront + Admin panel wiring (React 19)"
     implemented: true
@@ -405,8 +453,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "QR Reviews — token generation, public submission, expiry & single-use guard"
-    - "Google Business Locations — CRUD + review sync (mocked when no API key)"
+    - "Multi-role users (RBAC): invite/list/update/delete users + role-gated endpoints"
+    - "Categories admin CRUD (with product-linked delete guard)"
+    - "Generic (public) review submission + QR"
+    - "Integrations Hub — DB-backed settings with masked secrets"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

@@ -690,3 +690,18 @@ class GoogleBusinessLocationCreate(BaseModel):
     active: bool = True
     order: int = 0
 
+
+
+# ---------- Integration Settings ----------
+class Setting(BaseModel):
+    key: str
+    value: str = ''
+    category: str = 'general'
+    updated_at: datetime = Field(default_factory=_now)
+    updated_by: Optional[str] = None
+
+
+class SettingUpdate(BaseModel):
+    key: str
+    value: str = ''
+

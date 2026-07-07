@@ -1,27 +1,30 @@
 import React from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Tag, Star, Search, Send, ArrowUpRight, LogOut, ExternalLink, Layers, Truck, Percent, Mail, Clock, MapPin, FileText, Instagram, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Tag, Star, Search, Send, ArrowUpRight, LogOut, ExternalLink, Layers, Truck, Percent, Mail, Clock, MapPin, FileText, Instagram, BarChart3, Users as UsersIcon, Puzzle, FolderOpen } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Logo from '../../components/Logo';
 
-const nav = [
-  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-  { to: '/admin/orders', label: 'Orders', icon: ShoppingCart },
-  { to: '/admin/products', label: 'Products', icon: Package },
-  { to: '/admin/collections', label: 'Collections', icon: Layers },
-  { to: '/admin/coupons', label: 'Coupons', icon: Tag },
-  { to: '/admin/shipping', label: 'Shipping', icon: Truck },
-  { to: '/admin/tax', label: 'Tax', icon: Percent },
-  { to: '/admin/reviews', label: 'Reviews', icon: Star },
-  { to: '/admin/blog', label: 'Blog', icon: FileText },
-  { to: '/admin/instagram', label: 'Instagram', icon: Instagram },
-  { to: '/admin/seo', label: 'SEO', icon: Search },
-  { to: '/admin/redirects', label: 'Redirects', icon: ArrowUpRight },
-  { to: '/admin/newsletter', label: 'Newsletter', icon: Send },
-  { to: '/admin/emails', label: 'Emails', icon: Mail },
-  { to: '/admin/abandoned-carts', label: 'Abandoned Carts', icon: Clock },
-  { to: '/admin/locations', label: 'Locations', icon: MapPin },
+const NAV = [
+  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true, roles: ['admin', 'store_manager', 'blogger'] },
+  { to: '/admin/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin'] },
+  { to: '/admin/orders', label: 'Orders', icon: ShoppingCart, roles: ['admin'] },
+  { to: '/admin/products', label: 'Products', icon: Package, roles: ['admin', 'store_manager'] },
+  { to: '/admin/categories', label: 'Categories', icon: FolderOpen, roles: ['admin', 'store_manager'] },
+  { to: '/admin/collections', label: 'Collections', icon: Layers, roles: ['admin', 'store_manager'] },
+  { to: '/admin/coupons', label: 'Coupons', icon: Tag, roles: ['admin'] },
+  { to: '/admin/shipping', label: 'Shipping', icon: Truck, roles: ['admin', 'store_manager'] },
+  { to: '/admin/tax', label: 'Tax', icon: Percent, roles: ['admin', 'store_manager'] },
+  { to: '/admin/reviews', label: 'Reviews', icon: Star, roles: ['admin'] },
+  { to: '/admin/blog', label: 'Blog', icon: FileText, roles: ['admin', 'blogger'] },
+  { to: '/admin/instagram', label: 'Instagram', icon: Instagram, roles: ['admin'] },
+  { to: '/admin/seo', label: 'SEO', icon: Search, roles: ['admin'] },
+  { to: '/admin/redirects', label: 'Redirects', icon: ArrowUpRight, roles: ['admin'] },
+  { to: '/admin/newsletter', label: 'Newsletter', icon: Send, roles: ['admin'] },
+  { to: '/admin/emails', label: 'Emails', icon: Mail, roles: ['admin'] },
+  { to: '/admin/abandoned-carts', label: 'Abandoned Carts', icon: Clock, roles: ['admin'] },
+  { to: '/admin/locations', label: 'Locations', icon: MapPin, roles: ['admin'] },
+  { to: '/admin/users', label: 'Team & Access', icon: UsersIcon, roles: ['admin'] },
+  { to: '/admin/integrations', label: 'Integrations', icon: Puzzle, roles: ['admin'] },
 ];
 
 const AdminLayout = () => {
@@ -38,8 +41,8 @@ const AdminLayout = () => {
           </Link>
           <div className="text-[10px] uppercase tracking-[0.3em] text-[#E88864] mt-2">Admin</div>
         </div>
-        <nav className="flex-1 py-6 px-3 space-y-1">
-          {nav.map(n => {
+        <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
+          {NAV.filter(n => !n.roles || n.roles.includes(user?.role || 'admin')).map(n => {
             const Icon = n.icon;
             return (
               <NavLink
@@ -66,6 +69,7 @@ const AdminLayout = () => {
             <div className="flex-1 min-w-0">
               <div className="text-xs font-medium truncate">{user?.name}</div>
               <div className="text-[10px] text-white/50 truncate">{user?.email}</div>
+              {user?.role && <div className="text-[9px] uppercase tracking-widest text-[#E88864] mt-0.5">{user.role.replace('_', ' ')}</div>}
             </div>
             <button onClick={doLogout} className="p-2 rounded-full hover:bg-white/10" title="Logout"><LogOut className="w-3.5 h-3.5" /></button>
           </div>
