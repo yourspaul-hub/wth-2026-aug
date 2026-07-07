@@ -43,6 +43,10 @@ from models import (
     Newsletter, NewsletterCreate,
     EmailOutbox, AbandonedCart, AbandonedCartTrack, RefundRequest,
     Location, LocationCreate,
+    BlogPost, BlogPostCreate,
+    InstagramPost, InstagramPostCreate,
+    AnalyticsEvent, AnalyticsEventCreate,
+    SheetsImportRequest,
 )
 from auth import exchange_session_id, get_session_from_request, ensure_aware
 
@@ -1375,6 +1379,272 @@ async def bulk_upload_products(file: UploadFile = File(...), user: dict = Depend
         'created': created,
         'updated': updated,
         'errors': errors,
+    }
+
+
+# ================= GOOGLE SHEETS IMPORTER =================
+import re
+import httpx
+
+
+def _sheets_url_to_csv(url: str) -> Optional[str]:
+    """Convert any Google Sheets URL variant to its CSV export URL."""
+    if not url:
+        return None
+    # Extract spreadsheet id
+    m = re.search(r'/spreadsheets/d/([a-zA-Z0-9-_]+)', url)
+    if not m:
+        return None
+    sid = m.group(1)
+    # Extract gid (sheet tab id)
+    gid_m = re.search(r'[#&?]gid=(\d+)', url)
+    gid = gid_m.group(1) if gid_m else '0'
+    return f'https://docs.google.com/spreadsheets/d/{sid}/export?format=csv&gid={gid}'
+
+
+@api.post('/admin/products/import-sheet')
+async def import_from_sheet(payload: SheetsImportRequest, user: dict = Depends(require_admin)):
+    csv_url = _sheets_url_to_csv(payload.url)
+    if not csv_url:
+        raise HTTPException(status_code=400, detail='Could not extract Google Sheets ID from URL. Use a link like https://docs.google.com/spreadsheets/d/…/edit#gid=0')
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=20) as client_h:
+            r = await client_h.get(csv_url)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f'Failed to fetch sheet: {e}')
+    if r.status_code != 200:
+        raise HTTPException(status_code=400, detail=f'Google Sheets returned {r.status_code} — is the sheet shared as "Anyone with the link"?')
+    if 'text/html' in r.headers.get('content-type', ''):
+        raise HTTPException(status_code=400, detail='Sheet is not public. Set sharing to "Anyone with the link — Viewer" and try again.')
+
+    # Reuse bulk upload parsing by wrapping bytes as an UploadFile-like
+    from io import BytesIO
+    from starlette.datastructures import UploadFile as StarletteUploadFile
+    file_like = StarletteUploadFile(filename='sheet.csv', file=BytesIO(r.content))
+    return await bulk_upload_products(file=file_like, user=user)
+
+
+# ================= BLOG =================
+@api.get('/blog')
+async def public_blog_list(limit: int = 20, skip: int = 0, tag: Optional[str] = None):
+    filt = {'published': True}
+    if tag:
+        filt['tags'] = tag
+    total = await db.blog_posts.count_documents(filt)
+    docs = await db.blog_posts.find(filt, {'_id': 0, 'content': 0}).sort('published_at', -1).skip(skip).limit(limit).to_list(limit)
+    return {'items': docs, 'total': total}
+
+
+@api.get('/blog/{slug}')
+async def public_blog_get(slug: str):
+    doc = await db.blog_posts.find_one({'slug': slug, 'published': True}, {'_id': 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail='Post not found')
+    related = await db.blog_posts.find(
+        {'published': True, 'slug': {'$ne': slug}}, {'_id': 0, 'content': 0}
+    ).sort('published_at', -1).limit(3).to_list(3)
+    return {'post': doc, 'related': related}
+
+
+@api.get('/admin/blog')
+async def admin_list_blog(user: dict = Depends(require_admin)):
+    return await db.blog_posts.find({}, {'_id': 0}).sort('created_at', -1).to_list(500)
+
+
+@api.post('/admin/blog')
+async def admin_create_blog(payload: BlogPostCreate, user: dict = Depends(require_admin)):
+    if await db.blog_posts.find_one({'slug': payload.slug}):
+        raise HTTPException(status_code=400, detail='Slug already exists')
+    doc = BlogPost(**payload.model_dump()).model_dump()
+    if doc['published']:
+        doc['published_at'] = datetime.now(timezone.utc)
+    await db.blog_posts.insert_one(doc)
+    doc.pop('_id', None)
+    return doc
+
+
+@api.patch('/admin/blog/{pid}')
+async def admin_update_blog(pid: str, payload: dict, user: dict = Depends(require_admin)):
+    payload.pop('id', None)
+    payload.pop('_id', None)
+    payload['updated_at'] = datetime.now(timezone.utc)
+    existing = await db.blog_posts.find_one({'id': pid}, {'_id': 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail='Post not found')
+    # Set published_at on first publish
+    if payload.get('published') and not existing.get('published_at'):
+        payload['published_at'] = datetime.now(timezone.utc)
+    await db.blog_posts.update_one({'id': pid}, {'$set': payload})
+    return await db.blog_posts.find_one({'id': pid}, {'_id': 0})
+
+
+@api.delete('/admin/blog/{pid}')
+async def admin_delete_blog(pid: str, user: dict = Depends(require_admin)):
+    await db.blog_posts.delete_one({'id': pid})
+    return {'ok': True}
+
+
+# ================= INSTAGRAM FEED =================
+@api.get('/instagram')
+async def public_instagram(limit: int = 12):
+    return await db.instagram_posts.find({'active': True}, {'_id': 0}).sort('order', 1).limit(limit).to_list(limit)
+
+
+@api.get('/admin/instagram')
+async def admin_list_instagram(user: dict = Depends(require_admin)):
+    return await db.instagram_posts.find({}, {'_id': 0}).sort('order', 1).to_list(500)
+
+
+@api.post('/admin/instagram')
+async def admin_create_instagram(payload: InstagramPostCreate, user: dict = Depends(require_admin)):
+    doc = InstagramPost(**payload.model_dump()).model_dump()
+    await db.instagram_posts.insert_one(doc)
+    doc.pop('_id', None)
+    return doc
+
+
+@api.patch('/admin/instagram/{iid}')
+async def admin_update_instagram(iid: str, payload: dict, user: dict = Depends(require_admin)):
+    payload.pop('id', None)
+    payload.pop('_id', None)
+    await db.instagram_posts.update_one({'id': iid}, {'$set': payload})
+    return await db.instagram_posts.find_one({'id': iid}, {'_id': 0})
+
+
+@api.delete('/admin/instagram/{iid}')
+async def admin_delete_instagram(iid: str, user: dict = Depends(require_admin)):
+    await db.instagram_posts.delete_one({'id': iid})
+    return {'ok': True}
+
+
+# ================= ANALYTICS (mocked GA / FB Pixel) =================
+@api.post('/analytics/track')
+async def analytics_track(payload: AnalyticsEventCreate, request: Request):
+    doc = AnalyticsEvent(
+        **payload.model_dump(),
+        user_agent=(request.headers.get('user-agent') or '')[:300],
+    ).model_dump()
+    await db.analytics_events.insert_one(doc)
+    return {'ok': True, 'mocked': True}
+
+
+def _day_key(dt: datetime) -> str:
+    return dt.strftime('%Y-%m-%d')
+
+
+@api.get('/admin/analytics/summary')
+async def admin_analytics_summary(days: int = 30, user: dict = Depends(require_admin)):
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=days)
+
+    # ---- Orders / Revenue by day ----
+    orders_by_day = {}
+    revenue_by_day = {}
+    async for o in db.orders.find(
+        {'created_at': {'$gte': since}},
+        {'_id': 0, 'created_at': 1, 'total': 1, 'payment_status': 1}
+    ):
+        day = _day_key(o['created_at']) if isinstance(o['created_at'], datetime) else str(o['created_at'])[:10]
+        orders_by_day[day] = orders_by_day.get(day, 0) + 1
+        if o.get('payment_status') == 'paid':
+            revenue_by_day[day] = revenue_by_day.get(day, 0) + int(o.get('total', 0))
+
+    # Traffic events (page_view) — MOCKED if empty, augment
+    events_by_day = {}
+    async for e in db.analytics_events.find(
+        {'created_at': {'$gte': since}, 'name': 'page_view'},
+        {'_id': 0, 'created_at': 1}
+    ):
+        day = _day_key(e['created_at']) if isinstance(e['created_at'], datetime) else str(e['created_at'])[:10]
+        events_by_day[day] = events_by_day.get(day, 0) + 1
+
+    # Build a continuous day series
+    total_events = sum(events_by_day.values())
+    use_mock_baseline = total_events < 20  # not enough real events yet
+    series = []
+    for i in range(days - 1, -1, -1):
+        d = (now - timedelta(days=i))
+        key = _day_key(d)
+        pv = events_by_day.get(key, 0)
+        ords = orders_by_day.get(key, 0)
+        rev = revenue_by_day.get(key, 0)
+        if pv == 0 and use_mock_baseline:
+            base = 120 + int(50 * ((i * 7) % 11) / 11)
+            pv = base + ords * 45  # correlate with orders
+        series.append({
+            'date': key,
+            'label': d.strftime('%d %b'),
+            'page_views': pv,
+            'orders': ords,
+            'revenue': rev,
+        })
+
+    # ---- Top products (by paid orders line count) ----
+    top_pipeline = [
+        {'$match': {'payment_status': 'paid', 'created_at': {'$gte': since}}},
+        {'$unwind': '$items'},
+        {'$group': {
+            '_id': '$items.product_id',
+            'name': {'$first': '$items.name'},
+            'image': {'$first': '$items.image'},
+            'units': {'$sum': '$items.qty'},
+            'revenue': {'$sum': {'$multiply': ['$items.price', '$items.qty']}},
+        }},
+        {'$sort': {'units': -1}},
+        {'$limit': 6},
+    ]
+    top_products = []
+    async for r in db.orders.aggregate(top_pipeline):
+        top_products.append({
+            'product_id': r['_id'], 'name': r.get('name') or 'Product',
+            'image': r.get('image'), 'units': r['units'], 'revenue': r['revenue'],
+        })
+
+    # ---- Traffic sources (mocked derived + real referrer split) ----
+    source_map = {}
+    async for e in db.analytics_events.find(
+        {'name': 'page_view', 'created_at': {'$gte': since}}, {'_id': 0, 'referrer': 1}
+    ):
+        ref = (e.get('referrer') or '').lower()
+        src = 'Direct'
+        if 'instagram' in ref:
+            src = 'Instagram'
+        elif 'google' in ref:
+            src = 'Google'
+        elif 'facebook' in ref or 'fb.com' in ref:
+            src = 'Facebook'
+        elif ref:
+            src = 'Other'
+        source_map[src] = source_map.get(src, 0) + 1
+
+    if not source_map:  # mocked default
+        source_map = {'Instagram': 42, 'Google': 28, 'Direct': 18, 'Facebook': 8, 'Other': 4}
+    traffic_sources = [{'source': k, 'value': v} for k, v in sorted(source_map.items(), key=lambda x: -x[1])]
+
+    # ---- Totals ----
+    total_pv = sum(s['page_views'] for s in series)
+    total_orders = sum(s['orders'] for s in series)
+    total_revenue = sum(s['revenue'] for s in series)
+    conversion = round((total_orders / total_pv * 100), 2) if total_pv else 0.0
+
+    # Avg order value
+    aov = int(total_revenue / total_orders) if total_orders else 0
+
+    return {
+        'mocked': True,
+        'range_days': days,
+        'series': series,
+        'totals': {
+            'page_views': total_pv,
+            'orders': total_orders,
+            'revenue': total_revenue,
+            'conversion_percent': conversion,
+            'aov': aov,
+        },
+        'top_products': top_products,
+        'traffic_sources': traffic_sources,
+        'pixel_ga_id': 'G-MOCKED-XXXXX',
+        'pixel_fb_id': 'FBPIXEL_MOCKED',
     }
 
 

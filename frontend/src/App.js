@@ -10,6 +10,7 @@ import CartDrawer from './components/CartDrawer';
 import AnnouncementBar from './components/AnnouncementBar';
 import RedirectGate from './components/RedirectGate';
 import SeoHelmet from './components/SeoHelmet';
+import AnalyticsTracker from './components/AnalyticsTracker';
 import Home from './pages/Home';
 import Shop from './pages/Shop';
 import ProductDetail from './pages/ProductDetail';
@@ -35,6 +36,11 @@ import AdminNewsletter from './pages/admin/Newsletter';
 import AdminEmails from './pages/admin/Emails';
 import AdminAbandonedCarts from './pages/admin/AbandonedCarts';
 import AdminLocations from './pages/admin/Locations';
+import AdminBlog from './pages/admin/Blog';
+import AdminInstagram from './pages/admin/Instagram';
+import AdminAnalytics from './pages/admin/Analytics';
+import Blog from './pages/Blog';
+import BlogPost from './pages/BlogPost';
 import { Toaster } from './components/ui/sonner';
 
 // Storefront chrome (navbar, footer, cart, announcement) — hidden on /admin routes and /admin/callback
@@ -51,6 +57,7 @@ function AppRouter() {
   return (
     <>
       <RedirectGate />
+      <AnalyticsTracker />
       {!isAdmin && <AnnouncementBar />}
       {!isAdmin && <Navbar />}
       {!isAdmin && <SeoHelmet />}
@@ -61,6 +68,8 @@ function AppRouter() {
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/blog" element={<Blog />} />
+        <Route path="/blog/:slug" element={<BlogPost />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/order/:orderNumber" element={<OrderSuccess />} />
 
@@ -82,6 +91,9 @@ function AppRouter() {
           <Route path="emails" element={<AdminEmails />} />
           <Route path="abandoned-carts" element={<AdminAbandonedCarts />} />
           <Route path="locations" element={<AdminLocations />} />
+          <Route path="blog" element={<AdminBlog />} />
+          <Route path="instagram" element={<AdminInstagram />} />
+          <Route path="analytics" element={<AdminAnalytics />} />
         </Route>
       </Routes>
       {!isAdmin && <Footer />}

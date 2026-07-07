@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { adminListProducts, adminCreateProduct, adminUpdateProduct, adminDeleteProduct, adminListCategories, productTemplateUrl, adminBulkUploadProducts } from '../../lib/api';
+import { adminListProducts, adminCreateProduct, adminUpdateProduct, adminDeleteProduct, adminListCategories, productTemplateUrl, adminBulkUploadProducts, adminImportFromSheet } from '../../lib/api';
 import { toast } from 'sonner';
 import { Plus, Edit3, Trash2, X, Search, Layers, Image as ImageIcon, Sparkles, Info, Tag as TagIcon, Upload, Download, FileSpreadsheet } from 'lucide-react';
 
@@ -25,6 +25,7 @@ const AdminProducts = () => {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkResult, setBulkResult] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [sheetUrl, setSheetUrl] = useState('');
   const fileRef = useRef(null);
 
   const load = () => adminListProducts().then(setItems).catch(() => setItems([]));
@@ -43,6 +44,21 @@ const AdminProducts = () => {
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const doSheetImport = async () => {
+    if (!sheetUrl.trim()) return;
+    setUploading(true); setBulkResult(null);
+    try {
+      const res = await adminImportFromSheet(sheetUrl.trim());
+      setBulkResult(res);
+      toast.success(`Sheet import: ${res.created} created · ${res.updated} updated · ${res.errors?.length || 0} errors`);
+      load();
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || 'Sheet import failed');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -376,6 +392,35 @@ const AdminProducts = () => {
                   <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" data-testid="bulk-upload-input" disabled={uploading} onChange={e => doBulk(e.target.files?.[0])} className="hidden" />
                 </label>
                 <div className="text-[11px] text-neutral-500 mt-3">Accepts .csv, .xlsx, .xls · max ~2 MB recommended</div>
+              </div>
+
+              <div className="relative flex items-center gap-3 py-1">
+                <span className="flex-1 border-t border-[#EBD9CE]" />
+                <span className="text-[10px] uppercase tracking-widest text-neutral-500">Or import directly from Google Sheets</span>
+                <span className="flex-1 border-t border-[#EBD9CE]" />
+              </div>
+
+              <div className="bg-white border border-[#EBD9CE] rounded-2xl p-5 space-y-3">
+                <div className="text-xs text-neutral-600 leading-relaxed">
+                  In Google Sheets: <strong>Share → Anyone with the link → Viewer</strong>. Paste the sheet URL below and we'll pull the rows live.
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    value={sheetUrl}
+                    onChange={e => setSheetUrl(e.target.value)}
+                    placeholder="https://docs.google.com/spreadsheets/d/..."
+                    data-testid="sheet-url-input"
+                    className="flex-1 bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]"
+                  />
+                  <button
+                    onClick={doSheetImport}
+                    disabled={uploading || !sheetUrl.trim()}
+                    data-testid="sheet-import-btn"
+                    className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] disabled:bg-neutral-300 text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest transition-colors whitespace-nowrap"
+                  >
+                    {uploading ? 'Importing…' : 'Import Sheet'}
+                  </button>
+                </div>
               </div>
 
               {bulkResult && (

@@ -520,3 +520,99 @@ class LocationCreate(BaseModel):
     active: bool = True
     order: int = 0
 
+
+
+# ---------- Blog ----------
+class BlogPost(BaseModel):
+    id: str = Field(default_factory=lambda: _uid('bp_'))
+    slug: str
+    title: str
+    excerpt: Optional[str] = None
+    content: str = ''  # HTML/Markdown
+    cover_image: Optional[str] = None
+    author: str = 'Wear The Hope'
+    author_avatar: Optional[str] = None
+    tags: List[str] = []
+    published: bool = False
+    featured: bool = False
+    read_minutes: int = 4
+    seo_title: Optional[str] = None
+    seo_description: Optional[str] = None
+    published_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=_now)
+    updated_at: datetime = Field(default_factory=_now)
+
+
+class BlogPostCreate(BaseModel):
+    slug: str
+    title: str
+    excerpt: Optional[str] = None
+    content: str = ''
+    cover_image: Optional[str] = None
+    author: str = 'Wear The Hope'
+    author_avatar: Optional[str] = None
+    tags: List[str] = []
+    published: bool = False
+    featured: bool = False
+    read_minutes: int = 4
+    seo_title: Optional[str] = None
+    seo_description: Optional[str] = None
+
+
+# ---------- Instagram Feed (curated / mocked) ----------
+class InstagramPost(BaseModel):
+    id: str = Field(default_factory=lambda: _uid('ig_'))
+    caption: str = ''
+    image: str  # cover/image URL
+    permalink: Optional[str] = None  # link to instagram post
+    likes: int = 0
+    comments: int = 0
+    posted_at: Optional[datetime] = None
+    product_ids: List[str] = []  # for shoppable tags
+    active: bool = True
+    order: int = 0
+    created_at: datetime = Field(default_factory=_now)
+
+
+class InstagramPostCreate(BaseModel):
+    caption: str = ''
+    image: str
+    permalink: Optional[str] = None
+    likes: int = 0
+    comments: int = 0
+    posted_at: Optional[datetime] = None
+    product_ids: List[str] = []
+    active: bool = True
+    order: int = 0
+
+
+# ---------- Analytics events (mocked GA / FB Pixel) ----------
+class AnalyticsEvent(BaseModel):
+    id: str = Field(default_factory=lambda: _uid('ev_'))
+    name: str  # page_view | add_to_cart | begin_checkout | purchase | view_item
+    path: Optional[str] = None
+    referrer: Optional[str] = None
+    session_id: Optional[str] = None
+    user_agent: Optional[str] = None
+    value: Optional[float] = None  # e.g. cart value or order total
+    currency: str = 'INR'
+    product_id: Optional[str] = None
+    order_number: Optional[str] = None
+    context: dict = {}
+    created_at: datetime = Field(default_factory=_now)
+
+
+class AnalyticsEventCreate(BaseModel):
+    name: str
+    path: Optional[str] = None
+    referrer: Optional[str] = None
+    session_id: Optional[str] = None
+    value: Optional[float] = None
+    product_id: Optional[str] = None
+    order_number: Optional[str] = None
+    context: dict = {}
+
+
+# ---------- Google Sheets import ----------
+class SheetsImportRequest(BaseModel):
+    url: str  # public Google Sheet URL (any edit/view/csv variant)

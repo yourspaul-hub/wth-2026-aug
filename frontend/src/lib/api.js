@@ -105,3 +105,23 @@ export const adminBulkUploadProducts = (file) => {
   fd.append('file', file);
   return api.post('/admin/products/bulk', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data);
 };
+export const adminImportFromSheet = (url) => api.post('/admin/products/import-sheet', { url }).then(r => r.data);
+
+// Blog
+export const listBlogPosts = (params) => api.get('/blog', { params }).then(r => r.data);
+export const getBlogPost = (slug) => api.get(`/blog/${slug}`).then(r => r.data);
+export const adminListBlog = () => api.get('/admin/blog').then(r => r.data);
+export const adminCreateBlog = (p) => api.post('/admin/blog', p).then(r => r.data);
+export const adminUpdateBlog = (id, p) => api.patch(`/admin/blog/${id}`, p).then(r => r.data);
+export const adminDeleteBlog = (id) => api.delete(`/admin/blog/${id}`).then(r => r.data);
+
+// Instagram
+export const listInstagram = (limit = 12) => api.get('/instagram', { params: { limit } }).then(r => r.data);
+export const adminListInstagram = () => api.get('/admin/instagram').then(r => r.data);
+export const adminCreateInstagram = (p) => api.post('/admin/instagram', p).then(r => r.data);
+export const adminUpdateInstagram = (id, p) => api.patch(`/admin/instagram/${id}`, p).then(r => r.data);
+export const adminDeleteInstagram = (id) => api.delete(`/admin/instagram/${id}`).then(r => r.data);
+
+// Analytics
+export const trackEvent = (evt) => api.post('/analytics/track', evt).then(r => r.data).catch(() => null);
+export const adminAnalyticsSummary = (days = 30) => api.get('/admin/analytics/summary', { params: { days } }).then(r => r.data);

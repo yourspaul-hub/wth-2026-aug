@@ -1,5 +1,5 @@
 """Seed initial products, categories, reviews from mock data."""
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import asyncio
 
 CATEGORIES_SEED = [
@@ -344,3 +344,90 @@ async def seed_all(db):
             },
         ]
         await db.locations.insert_many(locs)
+
+
+    # ---------- Seed blog posts ----------
+    if await db.blog_posts.count_documents({}) == 0:
+        now = datetime.now(timezone.utc)
+        posts = [
+            {
+                'id': 'bp_01', 'slug': 'the-story-of-hope',
+                'title': 'The story behind Wear The Hope',
+                'excerpt': 'How a small hobby project in December 2018 grew into a message of hope carried on every product.',
+                'content': "<p>In December 2018, we launched a small idea — to offer our \"5 loaves and 2 fish\" to God. What began as a hobby has grown into a brand that carries messages of hope, faith, and love on wearables, drinkware and homeware.</p><p>Every product is a small reminder that you are chosen, loved, and favoured.</p><h2>Our vision</h2><p>To create motivational products that impact lives across nations. We ship worldwide, but our roots stay in Mumbai and Ernakulam.</p>",
+                'cover_image': 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1200',
+                'author': 'The WTH Team', 'author_avatar': None,
+                'tags': ['story', 'brand'], 'published': True, 'featured': True, 'read_minutes': 4,
+                'seo_title': 'The Story Behind Wear The Hope',
+                'seo_description': 'From a small hobby project in 2018 to a global message of hope on every product.',
+                'published_at': now, 'created_at': now, 'updated_at': now,
+            },
+            {
+                'id': 'bp_02', 'slug': 'gifting-with-purpose',
+                'title': 'Gifting with purpose: 5 ideas that speak faith',
+                'excerpt': 'From engraved wallets to Christmas glass sets — thoughtful gifts that carry the message beyond the box.',
+                'content': "<p>Gifts that make a person pause and smile are the ones that carry meaning. Here are our 5 most-loved picks for meaningful gifting.</p><ol><li>Personalised Scripture Wallet</li><li>Faith Cap – Blessed</li><li>Christmas Borosil Glass Set</li><li>Wood Carved Custom Keychain</li><li>Scripture Pen Stand</li></ol><p>Order early for festive delivery — we ship pan-India in 3–5 days.</p>",
+                'cover_image': 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=1200',
+                'author': 'The WTH Team', 'tags': ['gifting', 'guide'],
+                'published': True, 'featured': False, 'read_minutes': 3,
+                'seo_title': 'Gifting with purpose — 5 faith-filled picks',
+                'seo_description': '5 thoughtful, faith-filled gift ideas from Wear The Hope.',
+                'published_at': now - timedelta(days=6),
+                'created_at': now - timedelta(days=6),
+                'updated_at': now,
+            },
+            {
+                'id': 'bp_03', 'slug': 'behind-the-cold-burn-tech',
+                'title': 'Behind the "Cold Burn Tech" wood keychains',
+                'excerpt': 'A peek into the craft that lets us engrave your name onto walnut without smoke, char, or the shakes.',
+                'content': "<p>Traditional wood engraving heats the wood until it burns — leaving char, smoke and irregular edges. Our Cold Burn technique lifts the ink with UV curing instead, producing crisp, high-contrast art at scale.</p><p>The result? Ultra-fine detail on couple names, initials and even short verses. Every keychain feels intentional.</p>",
+                'cover_image': 'https://images.unsplash.com/photo-1609587415882-97552f39c6c2?w=1200',
+                'author': 'The WTH Team', 'tags': ['craft', 'behind-the-scenes'],
+                'published': True, 'featured': False, 'read_minutes': 5,
+                'seo_title': 'Behind the Cold Burn keychain tech',
+                'seo_description': 'How we engrave crisp keychains without smoke or char.',
+                'published_at': now - timedelta(days=14),
+                'created_at': now - timedelta(days=14),
+                'updated_at': now,
+            },
+        ]
+        await db.blog_posts.insert_many(posts)
+
+    # ---------- Seed Instagram feed (curated / mocked) ----------
+    if await db.instagram_posts.count_documents({}) == 0:
+        # Fetch products so we can attach shoppable tags
+        prods = await db.products.find({}, {'_id': 0, 'id': 1, 'slug': 1}).to_list(50)
+        pmap = {p['slug']: p['id'] for p in prods}
+        ig = [
+            {'id': 'ig_01', 'caption': 'Personalised wallets that speak faith. DM to customise.',
+             'image': 'https://images.unsplash.com/photo-1627123424574-724758594e93?w=800',
+             'permalink': 'https://www.instagram.com/wearthehope/', 'likes': 342, 'comments': 24,
+             'product_ids': [pmap['scripture-wallet']] if 'scripture-wallet' in pmap else [],
+             'active': True, 'order': 1, 'created_at': datetime.now(timezone.utc)},
+            {'id': 'ig_02', 'caption': 'BLESSED. SIMPLY BLESSED. CHOSEN — the Faith Cap collection is here.',
+             'image': 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=800',
+             'permalink': 'https://www.instagram.com/wearthehope/', 'likes': 512, 'comments': 41,
+             'product_ids': [pmap['faith-cap-blessed']] if 'faith-cap-blessed' in pmap else [],
+             'active': True, 'order': 2, 'created_at': datetime.now(timezone.utc)},
+            {'id': 'ig_03', 'caption': 'Christmas glass set — pan-India shipping. Order now.',
+             'image': 'https://images.unsplash.com/photo-1643946404043-178456b0e3f8?w=800',
+             'permalink': 'https://www.instagram.com/wearthehope/', 'likes': 289, 'comments': 18,
+             'product_ids': [pmap['borosil-christmas-set']] if 'borosil-christmas-set' in pmap else [],
+             'active': True, 'order': 3, 'created_at': datetime.now(timezone.utc)},
+            {'id': 'ig_04', 'caption': 'Psalm 46 — through every storm, God is our refuge.',
+             'image': 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800',
+             'permalink': 'https://www.instagram.com/wearthehope/', 'likes': 428, 'comments': 32,
+             'product_ids': [pmap['psalm-46-tee']] if 'psalm-46-tee' in pmap else [],
+             'active': True, 'order': 4, 'created_at': datetime.now(timezone.utc)},
+            {'id': 'ig_05', 'caption': 'YHWH — the most holy name, in minimalist calligraphy.',
+             'image': 'https://images.unsplash.com/photo-1699465301322-362016624dd7?w=800',
+             'permalink': 'https://www.instagram.com/wearthehope/', 'likes': 356, 'comments': 22,
+             'product_ids': [pmap['yhwh-canvas-frame']] if 'yhwh-canvas-frame' in pmap else [],
+             'active': True, 'order': 5, 'created_at': datetime.now(timezone.utc)},
+            {'id': 'ig_06', 'caption': 'Wood keychains, Cold Burn Tech — DM +91 9004373305.',
+             'image': 'https://images.unsplash.com/photo-1609587415882-97552f39c6c2?w=800',
+             'permalink': 'https://www.instagram.com/wearthehope/', 'likes': 231, 'comments': 15,
+             'product_ids': [pmap['wood-keychain']] if 'wood-keychain' in pmap else [],
+             'active': True, 'order': 6, 'created_at': datetime.now(timezone.utc)},
+        ]
+        await db.instagram_posts.insert_many(ig)

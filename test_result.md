@@ -312,6 +312,54 @@ backend:
         agent: "main"
         comment: "GET /api/admin/products/template.csv returns a StreamingResponse CSV with headers, 3 sample rows, and instructions (lines starting with # are skipped on upload). Uses live category slugs in instructions. POST /api/admin/products/bulk accepts multipart file (.csv/.xlsx/.xls). Rows matching an existing sku OR slug are UPDATED; others CREATED. Validates: name required, category_slug must exist, price > 0. Returns {ok, total_rows, created, updated, errors:[{row,error}]}. Handles UTF-8 BOM (Google Sheets exports) and boolean strings (true/false/1/0/yes/no)."
 
+  - task: "Blog CRUD (public GET /api/blog, /api/blog/{slug} + admin /api/admin/blog)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Public GET /api/blog returns paginated {items,total} with published=true only, sorted by published_at desc. Public GET /api/blog/{slug} returns {post,related}. Admin GET/POST/PATCH/DELETE at /api/admin/blog. Slug is unique. When toggling published=true for the first time, published_at auto-set. Seeded 3 posts (bp_01/02/03)."
+
+  - task: "Instagram Feed (curated / mocked) — public /api/instagram + admin CRUD"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Public GET /api/instagram?limit= returns active=true sorted by order. Admin CRUD. Each post can carry product_ids (shoppable tags). Seeded 6 posts (ig_01..06) linked to real seeded products."
+
+  - task: "Analytics — track events + admin summary (mocked GA/FB Pixel + real orders)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "POST /api/analytics/track (public, records to analytics_events with user_agent). Referrer parsed into Instagram/Google/Facebook/Direct/Other buckets. GET /api/admin/analytics/summary?days= returns {series (per-day page_views/orders/revenue), totals (page_views/orders/revenue/conversion_percent/aov), top_products (aggregated from paid orders), traffic_sources (real + mocked baseline), pixel_ga_id, pixel_fb_id, mocked:true, range_days}. When total tracked events < 20 the per-day pv is synthesized as a mocked baseline correlated with real orders."
+
+  - task: "Google Sheets import for products (POST /api/admin/products/import-sheet)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Accepts any Google Sheets URL variant (edit#gid=0 / view / already-csv). Extracts spreadsheet id + gid via regex, builds /export?format=csv&gid= URL, fetches via httpx (follow_redirects, 20s timeout), then reuses bulk_upload_products pipeline. Errors: 400 if URL not parseable, 400 if sheet is HTML (not shared publicly), 502 on network error."
+
 frontend:
   - task: "Storefront + Admin panel wiring (React 19)"
     implemented: true
@@ -333,8 +381,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Locations CRUD (public GET /api/locations, admin CRUD /api/admin/locations)"
-    - "Bulk Product Upload (CSV/XLSX) + Template download"
+    - "Blog CRUD (public GET /api/blog, /api/blog/{slug} + admin /api/admin/blog)"
+    - "Instagram Feed (curated / mocked) — public /api/instagram + admin CRUD"
+    - "Analytics — track events + admin summary (mocked GA/FB Pixel + real orders)"
+    - "Google Sheets import for products (POST /api/admin/products/import-sheet)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

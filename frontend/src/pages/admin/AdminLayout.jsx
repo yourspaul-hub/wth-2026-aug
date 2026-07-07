@@ -1,11 +1,12 @@
 import React from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Tag, Star, Search, Send, ArrowUpRight, LogOut, ExternalLink, Layers, Truck, Percent, Mail, Clock, MapPin } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Tag, Star, Search, Send, ArrowUpRight, LogOut, ExternalLink, Layers, Truck, Percent, Mail, Clock, MapPin, FileText, Instagram, BarChart3 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Logo from '../../components/Logo';
 
 const nav = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/admin/orders', label: 'Orders', icon: ShoppingCart },
   { to: '/admin/products', label: 'Products', icon: Package },
   { to: '/admin/collections', label: 'Collections', icon: Layers },
@@ -13,6 +14,8 @@ const nav = [
   { to: '/admin/shipping', label: 'Shipping', icon: Truck },
   { to: '/admin/tax', label: 'Tax', icon: Percent },
   { to: '/admin/reviews', label: 'Reviews', icon: Star },
+  { to: '/admin/blog', label: 'Blog', icon: FileText },
+  { to: '/admin/instagram', label: 'Instagram', icon: Instagram },
   { to: '/admin/seo', label: 'SEO', icon: Search },
   { to: '/admin/redirects', label: 'Redirects', icon: ArrowUpRight },
   { to: '/admin/newsletter', label: 'Newsletter', icon: Send },

@@ -53,6 +53,7 @@ const Navbar = () => {
             </div>
             <Link to="/shop" className="link-underline">Collections</Link>
             <Link to="/about" className="link-underline">About</Link>
+            <Link to="/blog" className="link-underline">Journal</Link>
             <Link to="/contact" className="link-underline">Contact</Link>
           </nav>
 
@@ -97,8 +98,8 @@ const Navbar = () => {
         {/* Mobile menu */}
         <div className={`lg:hidden overflow-hidden transition-all duration-500 ${mobileOpen ? 'max-h-[600px] pb-6' : 'max-h-0'}`}>
           <div className="pt-2 flex flex-col gap-1">
-            {['Home','Shop','About','Contact'].map(l => (
-              <Link key={l} to={l === 'Home' ? '/' : `/${l.toLowerCase()}`} className="py-3 border-b border-[#EBD9CE] uppercase text-sm tracking-[0.15em]">{l}</Link>
+            {['Home','Shop','About','Journal','Contact'].map(l => (
+              <Link key={l} to={l === 'Home' ? '/' : l === 'Journal' ? '/blog' : `/${l.toLowerCase()}`} className="py-3 border-b border-[#EBD9CE] uppercase text-sm tracking-[0.15em]">{l}</Link>
             ))}
             <div className="grid grid-cols-2 gap-2 pt-4">
               {categories.slice(0,8).map(c => (
