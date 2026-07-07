@@ -12,7 +12,8 @@ export const api = axios.create({
 export const fetchCategories = () => api.get('/categories').then(r => r.data);
 export const fetchProducts = (params = {}) => api.get('/products', { params }).then(r => r.data);
 export const fetchProduct = (id) => api.get(`/products/${id}`).then(r => r.data);
-export const fetchReviews = () => api.get('/reviews').then(r => r.data);
+export const fetchReviews = () => api.get('/reviews').then(r => r.data?.items || r.data || []);
+export const fetchReviewsFull = (params = {}) => api.get('/reviews', { params }).then(r => r.data);
 export const validateCoupon = (code, subtotal) => api.post('/coupons/validate', { code, subtotal }).then(r => r.data);
 export const createOrder = (payload) => api.post('/orders', payload).then(r => r.data);
 export const verifyPayment = (payload) => api.post('/payments/razorpay/verify', payload).then(r => r.data);
@@ -43,7 +44,7 @@ export const adminCreateCoupon = (payload) => api.post('/admin/coupons', payload
 export const adminUpdateCoupon = (id, patch) => api.patch(`/admin/coupons/${id}`, patch).then(r => r.data);
 export const adminDeleteCoupon = (id) => api.delete(`/admin/coupons/${id}`).then(r => r.data);
 
-export const adminListReviews = () => api.get('/reviews', { params: { published: false } }).then(r => r.data);
+export const adminListReviews = () => api.get('/reviews', { params: { published: false } }).then(r => r.data?.items || r.data || []);
 export const adminCreateReview = (payload) => api.post('/admin/reviews', payload).then(r => r.data);
 export const adminUpdateReview = (id, patch) => api.patch(`/admin/reviews/${id}`, patch).then(r => r.data);
 export const adminDeleteReview = (id) => api.delete(`/admin/reviews/${id}`).then(r => r.data);

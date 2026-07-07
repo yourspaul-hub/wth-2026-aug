@@ -324,10 +324,55 @@ async def delete_collection(cid: str, user: dict = Depends(require_store)):
 
 # ================= REVIEWS =================
 @api.get('/reviews')
-async def list_reviews(published: Optional[bool] = True):
+async def list_reviews(
+    published: Optional[bool] = True,
+    source: Optional[str] = None,  # 'google' | 'qr' | 'manual' | None
+    min_rating: Optional[int] = None,
+    limit: int = 60,
+    skip: int = 0,
+):
     filt = {} if not published else {'published': True}
-    docs = await db.reviews.find(filt, {'_id': 0}).sort('order', 1).to_list(200)
-    return docs
+    if source:
+        s = source.lower()
+        if s == 'google':
+            filt['google_review_id'] = {'$exists': True, '$ne': None}
+        elif s == 'qr':
+            filt['source'] = 'QR'
+        elif s == 'manual':
+            filt['$and'] = [
+                {'google_review_id': {'$in': [None, '', False]}},
+                {'source': {'$ne': 'QR'}},
+            ]
+    if min_rating:
+        filt['rating'] = {'$gte': int(min_rating)}
+    total = await db.reviews.count_documents(filt)
+    # Aggregate stars breakdown across the published set (independent of filter for stability)
+    pub_only = {'published': True}
+    docs = await db.reviews.find(filt, {'_id': 0}).sort([('order', 1), ('created_at', -1)]).skip(skip).limit(limit).to_list(limit)
+    stats = {
+        'total': total,
+        'total_all_published': await db.reviews.count_documents(pub_only),
+        'breakdown': {str(k): 0 for k in range(1, 6)},
+        'average': 0.0,
+    }
+    agg = [
+        {'$match': pub_only},
+        {'$group': {'_id': '$rating', 'c': {'$sum': 1}}},
+    ]
+    total_stars = 0
+    total_reviews = 0
+    async for r in db.reviews.aggregate(agg):
+        try:
+            k = int(r['_id'])
+        except Exception:
+            continue
+        if 1 <= k <= 5:
+            stats['breakdown'][str(k)] = r['c']
+            total_stars += k * r['c']
+            total_reviews += r['c']
+    if total_reviews:
+        stats['average'] = round(total_stars / total_reviews, 1)
+    return {'items': docs, 'total': total, 'stats': stats, 'skip': skip, 'limit': limit}
 
 
 @api.post('/admin/reviews')

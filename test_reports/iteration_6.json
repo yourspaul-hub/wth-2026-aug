@@ -1,0 +1,52 @@
+{
+  "summary": "Phase H — /api/reviews shape+filters+stats verified. Added /app/backend/tests/test_phase_h_reviews_list.py with 22 tests: ALL PASS. However, found ONE real regression in Phase F caused by the shape change.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/reviews (Phase F test)", "issue": "test_phase_f_reviews_qr_google.py::TestGoogleSyncMocked::test_public_reviews_include_mocked_high_rating fails because it does `arr = r.json()` and then iterates expecting list-of-review-dicts. With the new envelope {items:[], total, stats, ...}, iterating yields dict keys (strings) → AttributeError: 'str' object has no attribute 'get'. Needs `arr = r.json().get('items', r.json())` or `arr = r.json()['items']`."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "phase_h_verification": {
+    "shape": "PASS — /api/reviews returns {items:[], total:int, stats:{average:float, breakdown:{'1'..'5':int}, total_all_published:int}, skip:0, limit:60}",
+    "public_published_only": "PASS — every item has published=true when no ?published param",
+    "filter_source_google": "PASS — items[] all have google_review_id set; ≥1 result after gbl_01+gbl_02 sync",
+    "filter_source_qr": "PASS — items[] all have source=='QR'",
+    "filter_source_manual": "PASS — items[] have neither google_review_id nor source==QR",
+    "filter_min_rating": "PASS — min_rating=5 returns rating>=5; min_rating=4 count >= min_rating=5 count",
+    "stats_invariant": "PASS — stats.breakdown, stats.total_all_published, stats.average are IDENTICAL across all source and min_rating filters (aggregate uses pub_only match independent of filt)",
+    "average_math": "PASS — stats.average == round(sum(k*breakdown[k])/sum(breakdown[k]), 1); stats.total_all_published == sum(breakdown[k])",
+    "pagination_limit": "PASS — limit=2 returns 2 items, total unchanged",
+    "pagination_skip": "PASS — skip=2 removes the first 2 items",
+    "limit_100_returns_all": "PASS — with 16+ published reviews, limit=100 returns exactly total",
+    "admin_published_false": "PASS — GET /api/reviews?published=false returns dict envelope with items[] usable by adminListReviews (which unwraps via r.data?.items || r.data || [])",
+    "admin_sees_all": "PASS — published=false returns BOTH published and unpublished reviews",
+    "admin_crud_regression": "PASS — POST/PATCH/DELETE /api/admin/reviews all work; auto-avatar populated; 401 without admin token",
+    "qr_flow_regression": "PASS — /api/reviews/generic-qr.png, /api/reviews/public, /api/r/{token} generate+submit all still work",
+    "google_sync_regression": "PASS — POST /api/admin/google-locations/gbl_01/sync still mocked+idempotent"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase_h_reviews_list.py",
+    "/app/test_reports/pytest/phase_h_results.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: Fix /app/backend/tests/test_phase_f_reviews_qr_google.py:502-507 — update `arr = r.json()` to `arr = r.json().get('items', [])` (or `r.json()['items']`) so the pre-existing Phase F test tolerates the new /api/reviews envelope. This is the only real regression caused by the Phase H shape change. The other 4 phase F failures observed (KeyError 'main_token' in TestQRImage/TestQRSubmit) appear to be a pytest-xdist worker-scheduling issue with the shared STATE dict, NOT caused by phase H — those tests pass when workers execute the class in order."
+  ],
+  "critical_code_review_comments": [
+    "server.py L326-375 list_reviews — stats aggregation uses `pub_only = {'published': True}` INDEPENDENT of `filt`. Confirmed correct: total_all_published and breakdown remain stable across all filters. Good design.",
+    "server.py L342-345 source='manual' filter uses `google_review_id: {'$in': [None, '', False]}` combined with `source: {'$ne': 'QR'}` via $and. Works but note: legacy reviews without a `source` key still pass `$ne:'QR'`. Verified with the manual review we created — no issue.",
+    "server.py L346-347 `if min_rating:` — falsy check means min_rating=0 is ignored (semantically that means 'no filter' anyway, so fine). But `min_rating=1` correctly applied.",
+    "api.js L15 fetchReviews unwraps items[] safely with `r.data?.items || r.data || []` — backward compatible.",
+    "api.js L47 adminListReviews correctly passes ?published=false and unwraps items[]. Confirmed working end-to-end.",
+    "Phase F test at line 502 (test_public_reviews_include_mocked_high_rating) is the ONLY existing test that iterates /api/reviews response as list — recommend the trivial fix above. Rest of Phase F tests do not touch /api/reviews response body shape."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase_h_reviews_list.py (new)"
+  ],
+  "success_rate": {"backend": "100% (22/22 phase H tests passed)", "frontend": "N/A (skipped per request)"},
+  "test_credentials": "Admin token minted via mongosh per /app/memory/test_credentials.md — session-scoped fixture in test file",
+  "seed_data_creation": "Session fixture syncs gbl_01+gbl_02 (mocked → up to 10 google reviews), creates 1 admin-manual review + 1 QR review (published via PATCH). All test data cleaned up in teardown.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase H reviews endpoint verified end-to-end. New shape is dict envelope. Any future test hitting /api/reviews must access .items (not iterate the top level). Session-scoped fixture in test_phase_h_reviews_list.py handles setup+teardown; nukes all gmock_* reviews on teardown so it can be re-run cleanly."
+}

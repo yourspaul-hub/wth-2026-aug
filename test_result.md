@@ -444,6 +444,30 @@ backend:
         agent: "main"
         comment: "User reported (1) nav items overlapping the centered logo (CONTACT was drawn on top of the WTH logo), (2) SHOP still title-case, (3) global QR not visible anywhere on the storefront. Fix: (1) restructured Navbar from absolute-positioned logo to a 3-column CSS grid (grid-cols-[1fr_auto_1fr]) with Home/SHOP/Collections on the LEFT and About/Journal/Contact on the RIGHT — logo sits in center column with guaranteed spacing. (2) SHOP button label + all uppercase text-transform (already correct in code, restored after refactor). (3) Added a global Review QR block to the Footer above the main footer grid, with QR image + 'Leave a review' CTA + Instagram tag CTA. Also made subscribe form mobile-safe (`min-w-0` + collapsed 'Subscribe' text under sm breakpoint). New PUBLIC endpoint GET /api/reviews/generic-qr.png (no auth, cacheable) returns the same QR PNG used by the admin variant but usable directly from the storefront."
 
+  - task: "Enhanced /api/reviews list with source/rating filters + aggregate stats"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Replaced simple bare-list response with {items, total, stats, skip, limit}. New query params: source ('google'|'qr'|'manual'), min_rating, limit, skip. 'google' filters by google_review_id existing; 'qr' filters by source='QR'; 'manual' filters by both NOT google AND source != 'QR'. Stats.breakdown is computed against ALL published reviews (independent of filter) so the summary card stays stable while user filters. stats.average is a 1-decimal float. stats.total is the filter-matched total; stats.total_all_published is the base for the star-breakdown. Backward-compat: frontend fetchReviews() unwraps items[] transparently."
+
+  - task: "Storefront reviews section wired to filtered API"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/ReviewsSection.jsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Rendered on Home between USBanner and Testimonials. Shows summary KPI card (average / count / 5-bar breakdown), 4 filter chips (All / Google / Verified purchase / From our team), review cards with avatar + source badge + verified badge + read-more expander + photo thumbnails with lightbox. Verified via screenshot with 16 reviews (13×5★, 3×4★, avg 4.8)."
+
 frontend:
   - task: "Storefront + Admin panel wiring (React 19)"
     implemented: true
@@ -465,7 +489,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Bug fixes: nav overlap (SHOP uppercase + logo overlap) + Footer global QR"
+    - "Enhanced /api/reviews list with source/rating filters + aggregate stats"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
