@@ -16,15 +16,17 @@ export const CartProvider = ({ children }) => {
 
   const addToCart = (product, qty = 1) => {
     setItems(prev => {
-      const found = prev.find(p => p.id === product.id);
-      if (found) return prev.map(p => p.id === product.id ? { ...p, qty: p.qty + qty } : p);
+      const key = product.variant_id ? `${product.id}::${product.variant_id}` : product.id;
+      const found = prev.find(p => (p.variant_id ? `${p.id}::${p.variant_id}` : p.id) === key);
+      if (found) return prev.map(p => (p.variant_id ? `${p.id}::${p.variant_id}` : p.id) === key ? { ...p, qty: p.qty + qty } : p);
       return [...prev, { ...product, qty }];
     });
     setCartOpen(true);
   };
 
-  const removeItem = (id) => setItems(prev => prev.filter(p => p.id !== id));
-  const updateQty = (id, qty) => setItems(prev => prev.map(p => p.id === id ? { ...p, qty: Math.max(1, qty) } : p));
+  const _keyOf = (p) => p.variant_id ? `${p.id}::${p.variant_id}` : p.id;
+  const removeItem = (key) => setItems(prev => prev.filter(p => _keyOf(p) !== key));
+  const updateQty = (key, qty) => setItems(prev => prev.map(p => _keyOf(p) === key ? { ...p, qty: Math.max(1, qty) } : p));
   const clearCart = () => setItems([]);
 
   const toggleWishlist = (product) => {

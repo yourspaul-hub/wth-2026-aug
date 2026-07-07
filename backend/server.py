@@ -33,6 +33,7 @@ api = APIRouter(prefix='/api')
 from models import (
     AdminUser, Category, CategoryCreate,
     Product, ProductCreate, ProductUpdate,
+    Collection, CollectionCreate,
     Review, ReviewCreate, ReviewUpdate,
     Coupon, CouponCreate, CouponUpdate, CouponValidate,
     Order, OrderCreate, OrderStatusUpdate, OrderItem, ShippingAddress,
@@ -224,6 +225,51 @@ async def delete_product(pid: str, user: dict = Depends(require_admin)):
     return {'ok': True}
 
 
+# ================= COLLECTIONS =================
+@api.get('/collections')
+async def list_collections(featured: Optional[bool] = None):
+    filt = {'active': True}
+    if featured is not None:
+        filt['featured'] = featured
+    return await db.collections.find(filt, {'_id': 0}).sort('order', 1).to_list(200)
+
+
+@api.get('/collections/{slug}')
+async def get_collection(slug: str):
+    c = await db.collections.find_one({'slug': slug, 'active': True}, {'_id': 0})
+    if not c:
+        raise HTTPException(status_code=404, detail='Collection not found')
+    prods = await db.products.find({'id': {'$in': c.get('product_ids', [])}, 'active': True}, {'_id': 0}).to_list(200)
+    return {'collection': c, 'products': prods}
+
+
+@api.get('/admin/collections')
+async def admin_list_collections(user: dict = Depends(require_admin)):
+    return await db.collections.find({}, {'_id': 0}).sort('order', 1).to_list(500)
+
+
+@api.post('/admin/collections')
+async def create_collection(payload: CollectionCreate, user: dict = Depends(require_admin)):
+    doc = Collection(**payload.model_dump()).model_dump()
+    if await db.collections.find_one({'slug': doc['slug']}):
+        raise HTTPException(status_code=400, detail='Collection slug already exists')
+    await db.collections.insert_one(doc)
+    doc.pop('_id', None)
+    return doc
+
+
+@api.patch('/admin/collections/{cid}')
+async def update_collection(cid: str, payload: dict, user: dict = Depends(require_admin)):
+    await db.collections.update_one({'id': cid}, {'$set': payload})
+    return await db.collections.find_one({'id': cid}, {'_id': 0})
+
+
+@api.delete('/admin/collections/{cid}')
+async def delete_collection(cid: str, user: dict = Depends(require_admin)):
+    await db.collections.delete_one({'id': cid})
+    return {'ok': True}
+
+
 # ================= REVIEWS =================
 @api.get('/reviews')
 async def list_reviews(published: Optional[bool] = True):
@@ -323,20 +369,51 @@ async def create_order(payload: OrderCreate):
     if not payload.items:
         raise HTTPException(status_code=400, detail='No items in order')
 
-    # Recalculate subtotal server-side from DB prices
+    # Recalculate subtotal server-side from DB prices; enforce inventory
     subtotal = 0
     fresh_items: List[dict] = []
+    stock_updates = []  # [(product_id, variant_id_or_none, qty)]
     for it in payload.items:
         p = await db.products.find_one({'id': it.product_id, 'active': True}, {'_id': 0})
         if not p:
             raise HTTPException(status_code=400, detail=f'Product {it.product_id} not found')
+
+        variant = None
         line_price = int(p['price'])
+        avail = int(p.get('stock', 0))
+        sku = p.get('sku')
+        image = p.get('image')
+        variant_label = None
+
+        if it.variant_id and p.get('variants'):
+            variant = next((v for v in p['variants'] if v.get('id') == it.variant_id), None)
+            if not variant:
+                raise HTTPException(status_code=400, detail=f'Variant {it.variant_id} not found')
+            line_price = int(variant.get('price') or line_price)
+            avail = int(variant.get('stock', 0))
+            sku = variant.get('sku') or sku
+            image = variant.get('image') or image
+            attrs = variant.get('attrs') or {}
+            variant_label = ', '.join(f'{k}: {v}' for k, v in attrs.items())
+
+        if avail < it.qty:
+            raise HTTPException(status_code=400, detail=f'Insufficient stock for {p["name"]}{" (" + variant_label + ")" if variant_label else ""}')
+
         subtotal += line_price * it.qty
         fresh_items.append({
-            'product_id': p['id'], 'name': p['name'], 'image': p['image'],
-            'price': line_price, 'qty': it.qty, 'verse': p.get('verse'),
+            'product_id': p['id'],
+            'variant_id': it.variant_id,
+            'variant_label': variant_label,
+            'name': p['name'],
+            'image': image,
+            'price': line_price,
+            'qty': it.qty,
+            'verse': p.get('verse'),
             'customization': it.customization,
+            'sku': sku,
+            'product_type': p.get('product_type', 'physical'),
         })
+        stock_updates.append((p['id'], it.variant_id, it.qty))
 
     discount = 0
     coupon_code = None
@@ -346,7 +423,9 @@ async def create_order(payload: OrderCreate):
             discount = v['discount']
             coupon_code = v['code']
 
-    shipping_fee = 0 if subtotal >= 999 else 99
+    # Digital-only orders skip shipping
+    has_physical = any(fi['product_type'] == 'physical' for fi in fresh_items)
+    shipping_fee = 0 if (not has_physical or subtotal >= 999) else 99
     total = max(0, subtotal - discount + shipping_fee)
 
     order_number = _gen_order_number()
@@ -364,16 +443,25 @@ async def create_order(payload: OrderCreate):
     ).model_dump()
     await db.orders.insert_one(doc)
 
+    # Decrement stock (product-level & variant-level)
+    for pid, vid, qty in stock_updates:
+        if vid:
+            await db.products.update_one(
+                {'id': pid, 'variants.id': vid},
+                {'$inc': {'variants.$.stock': -qty}}
+            )
+        else:
+            await db.products.update_one({'id': pid}, {'$inc': {'stock': -qty}})
+
     if coupon_code:
         await db.coupons.update_one({'code': coupon_code}, {'$inc': {'used_count': 1}})
 
     doc.pop('_id', None)
-    # Return the mocked razorpay init payload
     return {
         'order': doc,
         'razorpay': {
             'order_id': mock_razorpay_id,
-            'amount': total * 100,  # paise
+            'amount': total * 100,
             'currency': 'INR',
             'key_id': 'rzp_test_MOCKED_KEY',
             'name': 'Wear The Hope',
@@ -691,6 +779,7 @@ async def startup_event():
     await db.reviews.create_index('id', unique=True)
     await db.seo_meta.create_index('path', unique=True)
     await db.newsletter.create_index('email', unique=True)
+    await db.collections.create_index('slug', unique=True)
 
 
 @app.on_event('shutdown')

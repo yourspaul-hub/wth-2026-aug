@@ -45,7 +45,7 @@ const Checkout = () => {
     setProcessing(true);
     try {
       const payload = {
-        items: items.map(it => ({ product_id: it.id, name: it.name, image: it.image, price: it.price, qty: it.qty, verse: it.verse })),
+        items: items.map(it => ({ product_id: it.id, variant_id: it.variant_id, variant_label: it.variant_label, name: it.name, image: it.image, price: it.price, qty: it.qty, verse: it.verse, customization: it.customization })),
         shipping_address: addr,
         coupon_code: coupon?.code,
       };

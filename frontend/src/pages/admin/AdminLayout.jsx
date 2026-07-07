@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Tag, Star, Search, Send, ArrowUpRight, LogOut, ExternalLink } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Tag, Star, Search, Send, ArrowUpRight, LogOut, ExternalLink, Layers } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Logo from '../../components/Logo';
 
@@ -8,6 +8,7 @@ const nav = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/admin/orders', label: 'Orders', icon: ShoppingCart },
   { to: '/admin/products', label: 'Products', icon: Package },
+  { to: '/admin/collections', label: 'Collections', icon: Layers },
   { to: '/admin/coupons', label: 'Coupons', icon: Tag },
   { to: '/admin/reviews', label: 'Reviews', icon: Star },
   { to: '/admin/seo', label: 'SEO', icon: Search },

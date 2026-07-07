@@ -61,3 +61,11 @@ export const adminDeleteRedirect = (id) => api.delete(`/admin/redirects/${id}`).
 export const adminNewsletter = () => api.get('/admin/newsletter').then(r => r.data);
 
 export const adminListCategories = () => api.get('/categories').then(r => r.data);
+
+// Collections
+export const fetchCollections = (featured) => api.get('/collections', { params: featured !== undefined ? { featured } : {} }).then(r => r.data);
+export const fetchCollection = (slug) => api.get(`/collections/${slug}`).then(r => r.data);
+export const adminListCollections = () => api.get('/admin/collections').then(r => r.data);
+export const adminCreateCollection = (payload) => api.post('/admin/collections', payload).then(r => r.data);
+export const adminUpdateCollection = (id, patch) => api.patch(`/admin/collections/${id}`, patch).then(r => r.data);
+export const adminDeleteCollection = (id) => api.delete(`/admin/collections/${id}`).then(r => r.data);

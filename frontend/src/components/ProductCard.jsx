@@ -32,9 +32,11 @@ const ProductCard = ({ product }) => {
         <img src={product.image} alt={product.name} className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${hover ? 'opacity-0' : 'opacity-100'}`} />
         <img src={product.hoverImage} alt={product.name} className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${hover ? 'opacity-100' : 'opacity-0'}`} />
 
-        {/* Tag */}
-        {product.tag && (
-          <span className="absolute top-3 left-3 shimmer-badge text-white text-[10px] uppercase tracking-[0.15em] px-3 py-1 rounded-full">{product.tag}</span>
+        {/* Ribbon */}
+        {(product.ribbon || product.tag) && (
+          <span className={`absolute top-3 left-3 text-white text-[10px] uppercase tracking-[0.15em] px-3 py-1 rounded-full ${(product.ribbon === 'Sale' || product.ribbon === 'Best Seller' || product.tag?.toLowerCase().includes('bestseller')) ? 'shimmer-badge' : product.ribbon === 'New' ? 'bg-emerald-600' : product.ribbon === 'Trending' ? 'bg-[#B4593F]' : 'shimmer-badge'}`}>
+            {product.ribbon || product.tag}
+          </span>
         )}
         {discount > 0 && (
           <span className="absolute top-3 right-3 bg-[#1A1A1A] text-white text-[10px] uppercase tracking-[0.15em] px-3 py-1 rounded-full">-{discount}%</span>

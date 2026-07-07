@@ -56,18 +56,31 @@ class Product(BaseModel):
     name: str
     slug: str
     category: str  # category id
+    collections: List[str] = []  # list of collection ids
     price: int
     original_price: int
     image: str
     hover_image: Optional[str] = None
+    gallery: List[str] = []  # additional image URLs
+    videos: List[str] = []  # YouTube/mp4 URLs
     verse: str = ''
-    tag: str = ''
+    tag: str = ''  # legacy tag
+    ribbon: Optional[str] = None  # 'New' | 'Sale' | 'Best Seller' | custom
     rating: float = 4.8
     reviews: int = 0
     colors: List[str] = []
     description: str = ''
     stock: int = 100
+    sku: Optional[str] = None
     active: bool = True
+    product_type: str = 'physical'  # 'physical' | 'digital'
+    digital_file_url: Optional[str] = None
+    weight_grams: int = 500
+    personalization_enabled: bool = False
+    personalization_label: str = 'Personalize (optional)'
+    personalization_max_length: int = 40
+    variant_options: List[dict] = []  # [{name:'Size', values:['S','M','L']}]
+    variants: List[dict] = []  # [{id, attrs:{Size:'M',Color:'Black'}, price, original_price, stock, sku, image}]
     seo_title: Optional[str] = None
     seo_description: Optional[str] = None
     seo_keywords: Optional[str] = None
@@ -78,16 +91,29 @@ class ProductCreate(BaseModel):
     name: str
     slug: str
     category: str
+    collections: List[str] = []
     price: int
     original_price: int
     image: str
     hover_image: Optional[str] = None
+    gallery: List[str] = []
+    videos: List[str] = []
     verse: str = ''
     tag: str = ''
+    ribbon: Optional[str] = None
     colors: List[str] = []
     description: str = ''
     stock: int = 100
+    sku: Optional[str] = None
     active: bool = True
+    product_type: str = 'physical'
+    digital_file_url: Optional[str] = None
+    weight_grams: int = 500
+    personalization_enabled: bool = False
+    personalization_label: str = 'Personalize (optional)'
+    personalization_max_length: int = 40
+    variant_options: List[dict] = []
+    variants: List[dict] = []
     seo_title: Optional[str] = None
     seo_description: Optional[str] = None
     seo_keywords: Optional[str] = None
@@ -97,19 +123,63 @@ class ProductUpdate(BaseModel):
     name: Optional[str] = None
     slug: Optional[str] = None
     category: Optional[str] = None
+    collections: Optional[List[str]] = None
     price: Optional[int] = None
     original_price: Optional[int] = None
     image: Optional[str] = None
     hover_image: Optional[str] = None
+    gallery: Optional[List[str]] = None
+    videos: Optional[List[str]] = None
     verse: Optional[str] = None
     tag: Optional[str] = None
+    ribbon: Optional[str] = None
     colors: Optional[List[str]] = None
     description: Optional[str] = None
     stock: Optional[int] = None
+    sku: Optional[str] = None
     active: Optional[bool] = None
+    product_type: Optional[str] = None
+    digital_file_url: Optional[str] = None
+    weight_grams: Optional[int] = None
+    personalization_enabled: Optional[bool] = None
+    personalization_label: Optional[str] = None
+    personalization_max_length: Optional[int] = None
+    variant_options: Optional[List[dict]] = None
+    variants: Optional[List[dict]] = None
     seo_title: Optional[str] = None
     seo_description: Optional[str] = None
     seo_keywords: Optional[str] = None
+
+
+# ---------- Collections (marketing groupings) ----------
+class Collection(BaseModel):
+    id: str = Field(default_factory=lambda: _uid('col_'))
+    name: str
+    slug: str
+    tagline: str = ''
+    image: str = ''
+    description: str = ''
+    product_ids: List[str] = []
+    featured: bool = False
+    active: bool = True
+    order: int = 0
+    seo_title: Optional[str] = None
+    seo_description: Optional[str] = None
+    created_at: datetime = Field(default_factory=_now)
+
+
+class CollectionCreate(BaseModel):
+    name: str
+    slug: str
+    tagline: str = ''
+    image: str = ''
+    description: str = ''
+    product_ids: List[str] = []
+    featured: bool = False
+    active: bool = True
+    order: int = 0
+    seo_title: Optional[str] = None
+    seo_description: Optional[str] = None
 
 
 # ---------- Reviews ----------
@@ -205,12 +275,16 @@ class ShippingAddress(BaseModel):
 
 class OrderItem(BaseModel):
     product_id: str
+    variant_id: Optional[str] = None
+    variant_label: Optional[str] = None  # 'Size: M, Color: Black'
     name: str
     image: str
     price: int
     qty: int
     verse: Optional[str] = None
     customization: Optional[str] = None
+    sku: Optional[str] = None
+    product_type: str = 'physical'
 
 
 class Order(BaseModel):

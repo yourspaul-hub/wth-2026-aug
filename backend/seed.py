@@ -81,28 +81,72 @@ async def seed_all(db):
     if await db.products.count_documents({}) == 0:
         pdocs = []
         for i, p in enumerate(PRODUCTS_SEED):
-            pdocs.append({
-                'id': f'p_{i+1:03d}',
+            pid = f'p_{i+1:03d}'
+            sku_base = f'WTH-{p["slug"].upper()[:12].replace("-", "")}'
+            product_doc = {
+                'id': pid,
                 'slug': p['slug'],
                 'name': p['name'],
                 'category': cat_map.get(p['cat_slug'], ''),
+                'collections': [],
                 'price': p['price'],
                 'original_price': p['original_price'],
                 'image': p['image'],
                 'hover_image': p.get('hover_image'),
+                'gallery': [p.get('hover_image')] if p.get('hover_image') else [],
+                'videos': [],
                 'verse': p.get('verse', ''),
                 'tag': p.get('tag', ''),
+                'ribbon': None,
                 'rating': p.get('rating', 4.8),
                 'reviews': p.get('reviews', 0),
                 'colors': p.get('colors', []),
                 'description': p.get('description', ''),
                 'stock': 100,
+                'sku': sku_base,
                 'active': True,
+                'product_type': 'physical',
+                'digital_file_url': None,
+                'weight_grams': 500,
+                'personalization_enabled': False,
+                'personalization_label': 'Personalize (optional)',
+                'personalization_max_length': 40,
+                'variant_options': [],
+                'variants': [],
                 'seo_title': None,
                 'seo_description': None,
                 'seo_keywords': None,
                 'created_at': datetime.now(timezone.utc),
-            })
+            }
+            # Ribbons for common tags
+            tag = (p.get('tag') or '').lower()
+            if 'bestseller' in tag: product_doc['ribbon'] = 'Best Seller'
+            elif tag == 'new': product_doc['ribbon'] = 'New'
+            elif tag == 'trending': product_doc['ribbon'] = 'Trending'
+            elif tag == 'signature': product_doc['ribbon'] = 'Signature'
+
+            # Personalization on customizable products
+            if p['slug'] in ('scripture-wallet', 'wood-keychain', 'scripture-pen-stand', 'god-will-make-way-tag'):
+                product_doc['personalization_enabled'] = True
+                product_doc['personalization_label'] = 'Engrave name / short verse'
+
+            # Variants: T-shirt has sizes; Cap has color options
+            if p['slug'] == 'psalm-46-tee':
+                product_doc['variant_options'] = [{'name': 'Size', 'values': ['S', 'M', 'L', 'XL']}]
+                product_doc['variants'] = [
+                    {'id': f'v_{pid}_S', 'attrs': {'Size': 'S'}, 'price': p['price'], 'original_price': p['original_price'], 'stock': 15, 'sku': f'{sku_base}-S', 'image': p['image']},
+                    {'id': f'v_{pid}_M', 'attrs': {'Size': 'M'}, 'price': p['price'], 'original_price': p['original_price'], 'stock': 25, 'sku': f'{sku_base}-M', 'image': p['image']},
+                    {'id': f'v_{pid}_L', 'attrs': {'Size': 'L'}, 'price': p['price'], 'original_price': p['original_price'], 'stock': 20, 'sku': f'{sku_base}-L', 'image': p['image']},
+                    {'id': f'v_{pid}_XL', 'attrs': {'Size': 'XL'}, 'price': p['price'] + 100, 'original_price': p['original_price'] + 100, 'stock': 10, 'sku': f'{sku_base}-XL', 'image': p['image']},
+                ]
+            elif p['slug'] == 'faith-cap-blessed':
+                product_doc['variant_options'] = [{'name': 'Color', 'values': ['Navy', 'Black', 'Charcoal']}]
+                product_doc['variants'] = [
+                    {'id': f'v_{pid}_navy', 'attrs': {'Color': 'Navy'}, 'price': p['price'], 'original_price': p['original_price'], 'stock': 30, 'sku': f'{sku_base}-NVY', 'image': p['image']},
+                    {'id': f'v_{pid}_black', 'attrs': {'Color': 'Black'}, 'price': p['price'], 'original_price': p['original_price'], 'stock': 30, 'sku': f'{sku_base}-BLK', 'image': p['image']},
+                    {'id': f'v_{pid}_charcoal', 'attrs': {'Color': 'Charcoal'}, 'price': p['price'], 'original_price': p['original_price'], 'stock': 20, 'sku': f'{sku_base}-CHR', 'image': p['image']},
+                ]
+            pdocs.append(product_doc)
         await db.products.insert_many(pdocs)
 
     # Reviews
@@ -163,3 +207,79 @@ async def seed_all(db):
     for slug, cid in cat_map.items():
         n = await db.products.count_documents({'category': cid, 'active': True})
         await db.categories.update_one({'id': cid}, {'$set': {'count': n}})
+
+    # Migration: back-fill new Phase A fields onto existing products
+    async for p in db.products.find({}, {'_id': 0}):
+        updates = {}
+        if 'sku' not in p or not p.get('sku'):
+            updates['sku'] = f'WTH-{p["slug"].upper()[:12].replace("-", "")}'
+        for field, default in [
+            ('collections', []), ('gallery', [p.get('hover_image')] if p.get('hover_image') else []),
+            ('videos', []), ('ribbon', None),
+            ('product_type', 'physical'), ('digital_file_url', None), ('weight_grams', 500),
+            ('personalization_enabled', False),
+            ('personalization_label', 'Personalize (optional)'),
+            ('personalization_max_length', 40),
+            ('variant_options', []), ('variants', []),
+        ]:
+            if field not in p:
+                updates[field] = default
+        if updates:
+            await db.products.update_one({'id': p['id']}, {'$set': updates})
+
+    # One-time: seed variants for tee + cap if empty
+    tee = await db.products.find_one({'slug': 'psalm-46-tee'}, {'_id': 0, 'id': 1, 'variants': 1, 'price': 1, 'original_price': 1, 'image': 1, 'sku': 1})
+    if tee and not tee.get('variants'):
+        pid = tee['id']; sku_base = tee.get('sku') or f'WTH-{pid.upper()}'
+        variants = [
+            {'id': f'v_{pid}_S', 'attrs': {'Size': 'S'}, 'price': tee['price'], 'original_price': tee['original_price'], 'stock': 15, 'sku': f'{sku_base}-S', 'image': tee['image']},
+            {'id': f'v_{pid}_M', 'attrs': {'Size': 'M'}, 'price': tee['price'], 'original_price': tee['original_price'], 'stock': 25, 'sku': f'{sku_base}-M', 'image': tee['image']},
+            {'id': f'v_{pid}_L', 'attrs': {'Size': 'L'}, 'price': tee['price'], 'original_price': tee['original_price'], 'stock': 20, 'sku': f'{sku_base}-L', 'image': tee['image']},
+            {'id': f'v_{pid}_XL', 'attrs': {'Size': 'XL'}, 'price': tee['price'] + 100, 'original_price': tee['original_price'] + 100, 'stock': 10, 'sku': f'{sku_base}-XL', 'image': tee['image']},
+        ]
+        await db.products.update_one({'id': pid}, {'$set': {'variant_options': [{'name': 'Size', 'values': ['S','M','L','XL']}], 'variants': variants}})
+
+    cap = await db.products.find_one({'slug': 'faith-cap-blessed'}, {'_id': 0, 'id': 1, 'variants': 1, 'price': 1, 'original_price': 1, 'image': 1, 'sku': 1})
+    if cap and not cap.get('variants'):
+        pid = cap['id']; sku_base = cap.get('sku') or f'WTH-{pid.upper()}'
+        variants = [
+            {'id': f'v_{pid}_navy', 'attrs': {'Color': 'Navy'}, 'price': cap['price'], 'original_price': cap['original_price'], 'stock': 30, 'sku': f'{sku_base}-NVY', 'image': cap['image']},
+            {'id': f'v_{pid}_black', 'attrs': {'Color': 'Black'}, 'price': cap['price'], 'original_price': cap['original_price'], 'stock': 30, 'sku': f'{sku_base}-BLK', 'image': cap['image']},
+            {'id': f'v_{pid}_charcoal', 'attrs': {'Color': 'Charcoal'}, 'price': cap['price'], 'original_price': cap['original_price'], 'stock': 20, 'sku': f'{sku_base}-CHR', 'image': cap['image']},
+        ]
+        await db.products.update_one({'id': pid}, {'$set': {'variant_options': [{'name': 'Color', 'values': ['Navy','Black','Charcoal']}], 'variants': variants}})
+
+    # Enable personalization on customizable products
+    for slug in ('scripture-wallet', 'wood-keychain', 'scripture-pen-stand', 'god-will-make-way-tag'):
+        await db.products.update_one({'slug': slug}, {'$set': {'personalization_enabled': True, 'personalization_label': 'Engrave name / short verse'}})
+
+    # Set ribbons based on tags
+    tag_to_ribbon = {'Bestseller': 'Best Seller', 'New': 'New', 'Trending': 'Trending', 'Signature': 'Signature', 'Festive': 'Sale'}
+    for tag, ribbon in tag_to_ribbon.items():
+        await db.products.update_many({'tag': tag, 'ribbon': None}, {'$set': {'ribbon': ribbon}})
+
+    # Sample collections
+    if await db.collections.count_documents({}) == 0:
+        # gather product ids by tag
+        bestsellers, new_arrivals, gift_ready = [], [], []
+        async for p in db.products.find({}, {'_id': 0, 'id': 1, 'tag': 1, 'ribbon': 1}):
+            t = ((p.get('tag') or '') + ' ' + (p.get('ribbon') or '')).lower()
+            if 'bestseller' in t or 'best seller' in t: bestsellers.append(p['id'])
+            if 'new' in t: new_arrivals.append(p['id'])
+            if 'gift' in t or 'signature' in t or 'festive' in t: gift_ready.append(p['id'])
+        cols = [
+            {'name': 'Bestsellers', 'slug': 'bestsellers', 'tagline': 'Loved by thousands', 'description': 'Our most-loved faith gifts.', 'image': 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=800', 'product_ids': bestsellers, 'featured': True, 'order': 1},
+            {'name': 'New Arrivals', 'slug': 'new-arrivals', 'tagline': 'Fresh drops this month', 'description': 'The latest additions to our collection.', 'image': 'https://images.unsplash.com/photo-1699465301322-362016624dd7?w=800', 'product_ids': new_arrivals, 'featured': True, 'order': 2},
+            {'name': 'Gift Ready', 'slug': 'gift-ready', 'tagline': 'Perfect for every occasion', 'description': 'Curated gifts that arrive wrapped and ready.', 'image': 'https://images.unsplash.com/photo-1554230253-017daba2b631?w=800', 'product_ids': gift_ready, 'featured': True, 'order': 3},
+        ]
+        cdocs = []
+        for i, c in enumerate(cols):
+            cdocs.append({
+                'id': f'col_{i+1:02d}', 'name': c['name'], 'slug': c['slug'],
+                'tagline': c['tagline'], 'description': c['description'], 'image': c['image'],
+                'product_ids': c['product_ids'], 'featured': c['featured'], 'active': True, 'order': c['order'],
+                'seo_title': None, 'seo_description': None,
+                'created_at': datetime.now(timezone.utc),
+            })
+        if cdocs:
+            await db.collections.insert_many(cdocs)

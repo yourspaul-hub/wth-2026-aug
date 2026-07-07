@@ -1,38 +1,98 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { adminListProducts, adminCreateProduct, adminUpdateProduct, adminDeleteProduct, adminListCategories } from '../../lib/api';
 import { toast } from 'sonner';
-import { Plus, Edit3, Trash2, X, Search } from 'lucide-react';
+import { Plus, Edit3, Trash2, X, Search, Layers, Image as ImageIcon, Sparkles, Info, Tag as TagIcon } from 'lucide-react';
 
-const empty = { name: '', slug: '', category: '', price: 0, original_price: 0, image: '', hover_image: '', verse: '', tag: '', description: '', colors: '', stock: 100, active: true, seo_title: '', seo_description: '', seo_keywords: '' };
+const empty = {
+  name: '', slug: '', category: '', collections: [], price: 0, original_price: 0,
+  image: '', hover_image: '', gallery: [], videos: [], verse: '',
+  tag: '', ribbon: '', colors: [], description: '', stock: 100, sku: '',
+  active: true, product_type: 'physical', digital_file_url: '',
+  weight_grams: 500,
+  personalization_enabled: false, personalization_label: 'Personalize (optional)', personalization_max_length: 40,
+  variant_options: [], variants: [],
+  seo_title: '', seo_description: '', seo_keywords: '',
+};
+
+const cartesian = (arrs) => arrs.reduce((acc, arr) => acc.flatMap(a => arr.map(v => [...a, v])), [[]]);
 
 const AdminProducts = () => {
   const [items, setItems] = useState([]);
   const [cats, setCats] = useState([]);
   const [q, setQ] = useState('');
   const [editing, setEditing] = useState(null);
+  const [tab, setTab] = useState('basic');
 
   const load = () => adminListProducts().then(setItems).catch(() => setItems([]));
   useEffect(() => { load(); adminListCategories().then(setCats); }, []);
 
-  const filtered = useMemo(() => items.filter(p => !q || p.name.toLowerCase().includes(q.toLowerCase())), [items, q]);
+  const filtered = useMemo(() => items.filter(p => !q || p.name.toLowerCase().includes(q.toLowerCase()) || (p.sku || '').toLowerCase().includes(q.toLowerCase())), [items, q]);
+
+  const startEdit = (p) => {
+    setTab('basic');
+    setEditing(p ? {
+      ...empty, ...p,
+      gallery: p.gallery || [], videos: p.videos || [], variants: p.variants || [], variant_options: p.variant_options || [],
+      colors: (p.colors || []).join(', '),
+    } : { ...empty });
+  };
 
   const onSave = async () => {
-    const payload = { ...editing, price: +editing.price, original_price: +editing.original_price, stock: +editing.stock, colors: (editing.colors || '').split(',').map(s => s.trim()).filter(Boolean) };
+    const payload = {
+      ...editing,
+      price: +editing.price, original_price: +editing.original_price, stock: +editing.stock,
+      weight_grams: +editing.weight_grams,
+      colors: typeof editing.colors === 'string' ? editing.colors.split(',').map(s => s.trim()).filter(Boolean) : (editing.colors || []),
+      personalization_max_length: +editing.personalization_max_length,
+    };
     try {
       if (editing.id) await adminUpdateProduct(editing.id, payload); else await adminCreateProduct(payload);
       toast.success(editing.id ? 'Product updated' : 'Product created');
       setEditing(null); load();
     } catch (e) { toast.error(e?.response?.data?.detail || 'Save failed'); }
   };
+
   const onDelete = async (p) => {
     if (!window.confirm(`Delete ${p.name}?`)) return;
-    await adminDeleteProduct(p.id);
-    toast.success('Deleted'); load();
+    await adminDeleteProduct(p.id); toast.success('Deleted'); load();
   };
 
-  const startEdit = (p) => {
-    setEditing(p ? { ...p, colors: (p.colors || []).join(', ') } : { ...empty });
+  // Variant helpers
+  const addOption = () => setEditing(e => ({ ...e, variant_options: [...(e.variant_options || []), { name: '', values: [] }] }));
+  const updateOption = (idx, patch) => setEditing(e => { const o = [...e.variant_options]; o[idx] = { ...o[idx], ...patch }; return { ...e, variant_options: o }; });
+  const removeOption = (idx) => setEditing(e => { const o = e.variant_options.filter((_, i) => i !== idx); return { ...e, variant_options: o }; });
+
+  const generateVariants = () => {
+    const opts = (editing.variant_options || []).filter(o => o.name && o.values?.length);
+    if (opts.length === 0) { toast.error('Add at least one option with values'); return; }
+    const combos = cartesian(opts.map(o => o.values.map(v => [o.name, v])));
+    const skuBase = editing.sku || `WTH-${(editing.name || 'PROD').toUpperCase().slice(0, 8).replace(/\s+/g, '')}`;
+    const variants = combos.map((combo, idx) => {
+      const attrs = Object.fromEntries(combo);
+      const suffix = combo.map(([, v]) => v.slice(0, 3).toUpperCase()).join('-');
+      const existing = (editing.variants || []).find(v => Object.keys(attrs).every(k => v.attrs?.[k] === attrs[k]));
+      return existing || {
+        id: `v_${Date.now()}_${idx}`,
+        attrs, price: +editing.price, original_price: +editing.original_price,
+        stock: 10, sku: `${skuBase}-${suffix}`, image: editing.image,
+      };
+    });
+    setEditing(e => ({ ...e, variants }));
+    toast.success(`Generated ${variants.length} variants`);
   };
+
+  const updateVariant = (idx, patch) => setEditing(e => { const v = [...e.variants]; v[idx] = { ...v[idx], ...patch }; return { ...e, variants: v }; });
+
+  const setListField = (field, arr) => setEditing(e => ({ ...e, [field]: arr }));
+
+  const TABS = [
+    { id: 'basic', label: 'Basic', icon: Info },
+    { id: 'media', label: 'Media', icon: ImageIcon },
+    { id: 'pricing', label: 'Pricing & SKU', icon: TagIcon },
+    { id: 'variants', label: 'Variants', icon: Layers },
+    { id: 'personalization', label: 'Personalization', icon: Sparkles },
+    { id: 'seo', label: 'SEO', icon: Search },
+  ];
 
   return (
     <div>
@@ -44,7 +104,7 @@ const AdminProducts = () => {
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search products" className="pl-10 pr-4 py-2.5 bg-white border border-[#EBD9CE] rounded-full text-sm outline-none focus:border-[#B4593F] w-64" />
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Name or SKU" className="pl-10 pr-4 py-2.5 bg-white border border-[#EBD9CE] rounded-full text-sm outline-none focus:border-[#B4593F] w-64" />
           </div>
           <button onClick={() => startEdit(null)} className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest transition-colors"><Plus className="w-4 h-4" /> New</button>
         </div>
@@ -52,14 +112,20 @@ const AdminProducts = () => {
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {filtered.map(p => (
-          <div key={p.id} className="bg-white rounded-xl border border-[#EBD9CE] overflow-hidden group">
-            <div className="aspect-square overflow-hidden bg-neutral-100"><img src={p.image} alt={p.name} className="w-full h-full object-cover" /></div>
+          <div key={p.id} className="bg-white rounded-xl border border-[#EBD9CE] overflow-hidden">
+            <div className="aspect-square overflow-hidden bg-neutral-100 relative">
+              <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+              {p.ribbon && <span className="absolute top-2 left-2 shimmer-badge text-white text-[9px] uppercase tracking-widest px-2 py-0.5 rounded">{p.ribbon}</span>}
+              {p.variants?.length > 0 && <span className="absolute bottom-2 left-2 bg-white/90 text-[10px] uppercase tracking-widest px-2 py-0.5 rounded">{p.variants.length} variants</span>}
+            </div>
             <div className="p-4">
               <div className="text-sm font-medium line-clamp-1">{p.name}</div>
+              <div className="text-[10px] font-mono text-neutral-500 mt-0.5">{p.sku || '—'}</div>
               <div className="flex items-center justify-between mt-1">
                 <span className="text-[#B4593F] font-semibold text-sm">₹{p.price}</span>
                 <span className={`text-[10px] uppercase px-2 py-0.5 rounded ${p.active ? 'bg-green-50 text-green-700' : 'bg-neutral-100 text-neutral-500'}`}>{p.active ? 'Active' : 'Hidden'}</span>
               </div>
+              <div className="text-[11px] text-neutral-500 mt-1">Stock: {p.stock ?? 0}</div>
               <div className="flex items-center gap-2 mt-3">
                 <button onClick={() => startEdit(p)} className="flex-1 inline-flex items-center justify-center gap-1 text-xs border border-[#EBD9CE] rounded-full py-2 hover:border-[#B4593F] hover:text-[#B4593F]"><Edit3 className="w-3 h-3" /> Edit</button>
                 <button onClick={() => onDelete(p)} className="px-3 py-2 text-xs border border-[#EBD9CE] rounded-full hover:border-red-500 hover:text-red-500"><Trash2 className="w-3 h-3" /></button>
@@ -72,38 +138,173 @@ const AdminProducts = () => {
       {editing && (
         <>
           <div onClick={() => setEditing(null)} className="fixed inset-0 bg-black/50 z-50" />
-          <aside className="fixed top-0 right-0 h-full w-full sm:w-[600px] bg-white z-50 overflow-y-auto shadow-2xl">
-            <div className="px-6 py-5 border-b border-[#EBD9CE] flex items-center justify-between">
-              <h3 className="font-serif-display text-2xl">{editing.id ? 'Edit Product' : 'New Product'}</h3>
+          <aside className="fixed top-0 right-0 h-full w-full sm:w-[720px] bg-white z-50 overflow-y-auto shadow-2xl flex flex-col">
+            <div className="px-6 py-5 border-b border-[#EBD9CE] flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="font-serif-display text-2xl">{editing.id ? 'Edit Product' : 'New Product'}</h3>
+                {editing.sku && <div className="text-[11px] font-mono text-neutral-500 mt-0.5">{editing.sku}</div>}
+              </div>
               <button onClick={() => setEditing(null)}><X className="w-5 h-5" /></button>
             </div>
-            <div className="px-6 py-5 space-y-4">
-              {[['name','Name'],['slug','Slug'],['verse','Verse/Subtitle'],['image','Image URL'],['hover_image','Hover Image URL'],['description','Description','textarea'],['colors','Colors (comma separated)'],['tag','Tag (e.g. Bestseller)'],['seo_title','SEO Title'],['seo_description','SEO Description','textarea'],['seo_keywords','SEO Keywords']].map(([k,label,type]) => (
-                <label key={k} className="block">
-                  <span className="text-[11px] uppercase tracking-widest text-neutral-600">{label}</span>
-                  {type === 'textarea' ? (
-                    <textarea rows="3" value={editing[k] || ''} onChange={e => setEditing({ ...editing, [k]: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" />
-                  ) : (
-                    <input value={editing[k] || ''} onChange={e => setEditing({ ...editing, [k]: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" />
-                  )}
-                </label>
-              ))}
-              <div className="grid grid-cols-3 gap-3">
-                <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Price</span><input type="number" value={editing.price} onChange={e => setEditing({ ...editing, price: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
-                <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">MRP</span><input type="number" value={editing.original_price} onChange={e => setEditing({ ...editing, original_price: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
-                <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Stock</span><input type="number" value={editing.stock} onChange={e => setEditing({ ...editing, stock: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
+
+            <div className="border-b border-[#EBD9CE] px-6 shrink-0 overflow-x-auto">
+              <div className="flex gap-1">
+                {TABS.map(t => {
+                  const I = t.icon;
+                  return (
+                    <button key={t.id} onClick={() => setTab(t.id)} className={`inline-flex items-center gap-1.5 px-4 py-3 text-xs uppercase tracking-widest border-b-2 whitespace-nowrap transition-colors ${tab === t.id ? 'border-[#B4593F] text-[#B4593F]' : 'border-transparent text-neutral-500 hover:text-[#1A1A1A]'}`}>
+                      <I className="w-3.5 h-3.5" /> {t.label}
+                    </button>
+                  );
+                })}
               </div>
-              <label className="block">
-                <span className="text-[11px] uppercase tracking-widest text-neutral-600">Category</span>
-                <select value={editing.category} onChange={e => setEditing({ ...editing, category: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]">
-                  <option value="">Select category</option>
-                  {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </label>
-              <label className="inline-flex items-center gap-2"><input type="checkbox" checked={!!editing.active} onChange={e => setEditing({ ...editing, active: e.target.checked })} /> <span className="text-sm">Active (visible on storefront)</span></label>
             </div>
-            <div className="px-6 py-5 border-t border-[#EBD9CE] flex items-center gap-3">
-              <button onClick={onSave} className="flex-1 bg-[#1A1A1A] hover:bg-[#B4593F] text-white py-3 rounded-full text-xs uppercase tracking-widest transition-colors">Save</button>
+
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+              {tab === 'basic' && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="block col-span-2"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Name</span><input value={editing.name || ''} onChange={e => setEditing({ ...editing, name: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
+                    <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Slug</span><input value={editing.slug || ''} onChange={e => setEditing({ ...editing, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F] font-mono" /></label>
+                    <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Category</span><select value={editing.category || ''} onChange={e => setEditing({ ...editing, category: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]"><option value="">Select</option>{cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+                  </div>
+                  <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Verse / Subtitle</span><input value={editing.verse || ''} onChange={e => setEditing({ ...editing, verse: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
+                  <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Description</span><textarea rows="4" value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Ribbon</span><select value={editing.ribbon || ''} onChange={e => setEditing({ ...editing, ribbon: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]"><option value="">None</option><option value="New">New</option><option value="Sale">Sale</option><option value="Best Seller">Best Seller</option><option value="Trending">Trending</option><option value="Signature">Signature</option></select></label>
+                    <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Product Type</span><select value={editing.product_type || 'physical'} onChange={e => setEditing({ ...editing, product_type: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]"><option value="physical">Physical</option><option value="digital">Digital</option></select></label>
+                  </div>
+                  {editing.product_type === 'digital' && (
+                    <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Digital File URL (delivered on purchase)</span><input value={editing.digital_file_url || ''} onChange={e => setEditing({ ...editing, digital_file_url: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F] font-mono" /></label>
+                  )}
+                  <label className="inline-flex items-center gap-2"><input type="checkbox" checked={!!editing.active} onChange={e => setEditing({ ...editing, active: e.target.checked })} /> <span className="text-sm">Active (visible on storefront)</span></label>
+                </>
+              )}
+
+              {tab === 'media' && (
+                <>
+                  <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Primary Image URL</span><input value={editing.image || ''} onChange={e => setEditing({ ...editing, image: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" />{editing.image && <img src={editing.image} alt="" className="mt-2 h-32 rounded-lg object-cover" />}</label>
+                  <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Hover Image URL</span><input value={editing.hover_image || ''} onChange={e => setEditing({ ...editing, hover_image: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] uppercase tracking-widest text-neutral-600">Gallery Images</span>
+                      <button onClick={() => setListField('gallery', [...(editing.gallery || []), ''])} className="text-xs text-[#B4593F] inline-flex items-center gap-1"><Plus className="w-3 h-3" /> Add</button>
+                    </div>
+                    <div className="space-y-2">
+                      {(editing.gallery || []).map((g, i) => (
+                        <div key={i} className="flex gap-2">
+                          <input value={g} onChange={e => { const arr = [...editing.gallery]; arr[i] = e.target.value; setListField('gallery', arr); }} placeholder="Image URL" className="flex-1 bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2 text-sm outline-none focus:border-[#B4593F]" />
+                          <button onClick={() => setListField('gallery', editing.gallery.filter((_, k) => k !== i))} className="px-3 border border-[#EBD9CE] rounded-full text-neutral-500 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] uppercase tracking-widest text-neutral-600">Videos (YouTube URLs)</span>
+                      <button onClick={() => setListField('videos', [...(editing.videos || []), ''])} className="text-xs text-[#B4593F] inline-flex items-center gap-1"><Plus className="w-3 h-3" /> Add</button>
+                    </div>
+                    <div className="space-y-2">
+                      {(editing.videos || []).map((v, i) => (
+                        <div key={i} className="flex gap-2">
+                          <input value={v} onChange={e => { const arr = [...editing.videos]; arr[i] = e.target.value; setListField('videos', arr); }} placeholder="https://youtube.com/watch?v=..." className="flex-1 bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2 text-sm outline-none focus:border-[#B4593F]" />
+                          <button onClick={() => setListField('videos', editing.videos.filter((_, k) => k !== i))} className="px-3 border border-[#EBD9CE] rounded-full text-neutral-500 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {tab === 'pricing' && (
+                <>
+                  <div className="grid grid-cols-3 gap-3">
+                    <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Price ₹</span><input type="number" value={editing.price} onChange={e => setEditing({ ...editing, price: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
+                    <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">MRP ₹</span><input type="number" value={editing.original_price} onChange={e => setEditing({ ...editing, original_price: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
+                    <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Stock</span><input type="number" value={editing.stock} onChange={e => setEditing({ ...editing, stock: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
+                  </div>
+                  <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">SKU</span><input value={editing.sku || ''} onChange={e => setEditing({ ...editing, sku: e.target.value.toUpperCase() })} placeholder="WTH-XXXXX" className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F] font-mono" /></label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Weight (grams)</span><input type="number" value={editing.weight_grams || 500} onChange={e => setEditing({ ...editing, weight_grams: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
+                    <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Colors (comma sep)</span><input value={editing.colors || ''} onChange={e => setEditing({ ...editing, colors: e.target.value })} placeholder="#000, #fff" className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
+                  </div>
+                </>
+              )}
+
+              {tab === 'variants' && (
+                <>
+                  <div className="bg-[#FDF3EB] rounded-xl p-4 text-xs text-neutral-600">
+                    Define variant options (e.g. Size, Color). Then click <b>Generate Combinations</b> to auto-create all variants with individual price/stock/SKU.
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] uppercase tracking-widest text-neutral-600">Option Types</span>
+                      <button onClick={addOption} className="text-xs text-[#B4593F] inline-flex items-center gap-1"><Plus className="w-3 h-3" /> Add Option</button>
+                    </div>
+                    <div className="space-y-3">
+                      {(editing.variant_options || []).map((opt, i) => (
+                        <div key={i} className="border border-[#EBD9CE] rounded-xl p-3 space-y-2">
+                          <div className="flex gap-2">
+                            <input value={opt.name} onChange={e => updateOption(i, { name: e.target.value })} placeholder="Option name (Size, Color…)" className="flex-1 bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2 text-sm outline-none focus:border-[#B4593F]" />
+                            <button onClick={() => removeOption(i)} className="px-3 border border-[#EBD9CE] rounded-full text-neutral-500 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                          </div>
+                          <input value={(opt.values || []).join(', ')} onChange={e => updateOption(i, { values: e.target.value.split(',').map(v => v.trim()).filter(Boolean) })} placeholder="Values (comma separated) e.g. S, M, L" className="w-full bg-white border border-[#EBD9CE] rounded-full px-4 py-2 text-sm outline-none focus:border-[#B4593F]" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <button onClick={generateVariants} className="w-full border border-dashed border-[#B4593F] text-[#B4593F] rounded-full py-3 text-xs uppercase tracking-widest hover:bg-[#B4593F] hover:text-white transition-colors">Generate Combinations</button>
+
+                  {(editing.variants || []).length > 0 && (
+                    <div>
+                      <div className="text-[11px] uppercase tracking-widest text-neutral-600 mb-2">Variants ({editing.variants.length})</div>
+                      <div className="border border-[#EBD9CE] rounded-xl overflow-hidden">
+                        <table className="w-full text-xs">
+                          <thead className="bg-[#FDF3EB] text-neutral-600">
+                            <tr><th className="text-left px-3 py-2">Options</th><th className="text-left px-3 py-2">Price</th><th className="text-left px-3 py-2">Stock</th><th className="text-left px-3 py-2">SKU</th></tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#EBD9CE]">
+                            {editing.variants.map((v, i) => (
+                              <tr key={v.id || i}>
+                                <td className="px-3 py-2">{Object.entries(v.attrs || {}).map(([k, val]) => `${k}: ${val}`).join(', ')}</td>
+                                <td className="px-3 py-2"><input type="number" value={v.price} onChange={e => updateVariant(i, { price: +e.target.value })} className="w-20 bg-transparent border border-[#EBD9CE] rounded px-2 py-1" /></td>
+                                <td className="px-3 py-2"><input type="number" value={v.stock} onChange={e => updateVariant(i, { stock: +e.target.value })} className="w-20 bg-transparent border border-[#EBD9CE] rounded px-2 py-1" /></td>
+                                <td className="px-3 py-2"><input value={v.sku || ''} onChange={e => updateVariant(i, { sku: e.target.value })} className="w-40 bg-transparent border border-[#EBD9CE] rounded px-2 py-1 font-mono" /></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {tab === 'personalization' && (
+                <>
+                  <label className="inline-flex items-center gap-2"><input type="checkbox" checked={!!editing.personalization_enabled} onChange={e => setEditing({ ...editing, personalization_enabled: e.target.checked })} /> <span className="text-sm">Enable personalization on this product</span></label>
+                  {editing.personalization_enabled && (
+                    <>
+                      <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Field label</span><input value={editing.personalization_label || ''} onChange={e => setEditing({ ...editing, personalization_label: e.target.value })} placeholder="e.g. Engrave a name or verse" className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
+                      <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Max length</span><input type="number" value={editing.personalization_max_length || 40} onChange={e => setEditing({ ...editing, personalization_max_length: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
+                    </>
+                  )}
+                </>
+              )}
+
+              {tab === 'seo' && (
+                <>
+                  <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">SEO Title</span><input value={editing.seo_title || ''} onChange={e => setEditing({ ...editing, seo_title: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
+                  <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">SEO Description</span><textarea rows="3" value={editing.seo_description || ''} onChange={e => setEditing({ ...editing, seo_description: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
+                  <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">SEO Keywords (comma separated)</span><input value={editing.seo_keywords || ''} onChange={e => setEditing({ ...editing, seo_keywords: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
+                </>
+              )}
+            </div>
+
+            <div className="px-6 py-5 border-t border-[#EBD9CE] flex items-center gap-3 shrink-0 bg-white">
+              <button onClick={onSave} className="flex-1 bg-[#1A1A1A] hover:bg-[#B4593F] text-white py-3 rounded-full text-xs uppercase tracking-widest transition-colors">Save Product</button>
               <button onClick={() => setEditing(null)} className="px-6 py-3 border border-[#EBD9CE] rounded-full text-xs uppercase tracking-widest">Cancel</button>
             </div>
           </aside>

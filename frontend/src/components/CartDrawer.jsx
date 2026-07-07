@@ -36,28 +36,32 @@ const CartDrawer = () => {
               </div>
             ) : (
               <div className="space-y-5">
-                {items.map(it => (
-                  <div key={it.id} className="flex gap-4 bg-white p-3 rounded-xl border border-[#EBD9CE]">
+                {items.map(it => {
+                  const key = it.variant_id ? `${it.id}::${it.variant_id}` : it.id;
+                  return (
+                  <div key={key} className="flex gap-4 bg-white p-3 rounded-xl border border-[#EBD9CE]">
                     <img src={it.image} alt={it.name} className="w-20 h-24 object-cover rounded-lg" />
                     <div className="flex-1 flex flex-col">
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="text-sm font-medium line-clamp-2 leading-snug">{it.name}</div>
+                          {it.variant_label && <div className="text-[11px] text-neutral-500 mt-0.5">{it.variant_label}</div>}
                           <div className="text-[11px] italic text-neutral-500 mt-0.5">{it.verse}</div>
+                          {it.customization && <div className="text-[10px] italic text-[#B4593F] mt-0.5">✎ {it.customization}</div>}
                         </div>
-                        <button onClick={() => removeItem(it.id)} aria-label="Remove" className="text-neutral-400 hover:text-[#B4593F] transition-colors"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => removeItem(key)} aria-label="Remove" className="text-neutral-400 hover:text-[#B4593F] transition-colors"><Trash2 className="w-4 h-4" /></button>
                       </div>
                       <div className="mt-auto flex items-center justify-between pt-2">
                         <div className="inline-flex items-center border border-[#EBD9CE] rounded-full">
-                          <button onClick={() => updateQty(it.id, it.qty - 1)} className="w-7 h-7 flex items-center justify-center hover:bg-[#FDF3EB] rounded-full" aria-label="Decrease"><Minus className="w-3 h-3" /></button>
+                          <button onClick={() => updateQty(key, it.qty - 1)} className="w-7 h-7 flex items-center justify-center hover:bg-[#FDF3EB] rounded-full" aria-label="Decrease"><Minus className="w-3 h-3" /></button>
                           <span className="w-8 text-center text-sm">{it.qty}</span>
-                          <button onClick={() => updateQty(it.id, it.qty + 1)} className="w-7 h-7 flex items-center justify-center hover:bg-[#FDF3EB] rounded-full" aria-label="Increase"><Plus className="w-3 h-3" /></button>
+                          <button onClick={() => updateQty(key, it.qty + 1)} className="w-7 h-7 flex items-center justify-center hover:bg-[#FDF3EB] rounded-full" aria-label="Increase"><Plus className="w-3 h-3" /></button>
                         </div>
                         <div className="text-[#B4593F] font-semibold text-sm">₹{(it.price * it.qty).toLocaleString('en-IN')}</div>
                       </div>
                     </div>
                   </div>
-                ))}
+                );})}
                 <button onClick={clearCart} className="text-xs text-neutral-500 hover:text-[#B4593F] uppercase tracking-widest">Clear bag</button>
               </div>
             )}

@@ -24,6 +24,7 @@ import AdminLayout from './pages/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
 import AdminOrders from './pages/admin/Orders';
 import AdminProducts from './pages/admin/Products';
+import AdminCollections from './pages/admin/Collections';
 import AdminCoupons from './pages/admin/Coupons';
 import AdminReviews from './pages/admin/Reviews';
 import AdminSeo from './pages/admin/Seo';
@@ -65,6 +66,7 @@ function AppRouter() {
           <Route index element={<Dashboard />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="products" element={<AdminProducts />} />
+          <Route path="collections" element={<AdminCollections />} />
           <Route path="coupons" element={<AdminCoupons />} />
           <Route path="reviews" element={<AdminReviews />} />
           <Route path="seo" element={<AdminSeo />} />
