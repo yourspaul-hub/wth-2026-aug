@@ -31,7 +31,7 @@ class Session(BaseModel):
 
 # ---------- Catalog ----------
 class Category(BaseModel):
-    id: str = Field(default_factory=lambda: _uid())
+    id: str = Field(default_factory=lambda: _uid('c_'))
     name: str
     slug: str
     tagline: str = ''

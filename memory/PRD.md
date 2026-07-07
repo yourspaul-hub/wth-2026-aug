@@ -1,56 +1,61 @@
 # Wear The Hope — Product Requirements
 
 ## Original Problem Statement
-Clone www.wearthehope.com with a dynamic UI, highly interactive e-commerce features, and Instagram integration. Add a comprehensive admin panel for managing orders, variants, collections, reviews, SEO, coupons, shipping rules, mock payments, and order operations. Contact page should list multiple branches. Admins should bulk-upload products via Google Sheets or Excel with a downloadable template. Add analytics dashboard (mocked GA/FB Pixel), blog, curated Instagram feed with shoppable tags, and direct Google Sheets link importer. **Full reviews module**: QR-based customer review collection (admin generates per-order QR, customer scans → submits) + multi-location Google Business review sync (real when GOOGLE_PLACES_API_KEY set, mocked otherwise).
+Full-featured, dynamic e-commerce clone of www.wearthehope.com with a comprehensive admin panel: orders, variants, collections, reviews, SEO, coupons, shipping rules, mocked payments/emails/shipping, refunds, invoices, abandoned cart recovery, multi-branch contact, bulk product upload (Google Sheets & Excel + link importer), analytics dashboard (mocked GA/FB Pixel), blog, curated shoppable Instagram feed, full reviews module (QR-per-customer + Google Business sync), **multi-role team access (Admin / Store Manager / Blogger)**, and a **unified Integrations Hub** for every third-party key.
 
 ## Architecture
-- Frontend: React 19 + Tailwind + Shadcn + react-helmet-async + recharts
+- Frontend: React 19 + Tailwind + Shadcn + react-helmet-async + recharts + qrcode client PNG
 - Backend: FastAPI + Motor + openpyxl + httpx + qrcode + Pillow
-- Auth: Emergent Google Auth (cookie + Bearer session token)
+- Auth: Emergent Google Auth with **RBAC**: admin | store_manager | blogger. First login bootstraps as admin; further logins require an admin invite.
 
 ## Implemented (through 2026-02-07)
 
 ### Storefront
 - Home, Shop, ProductDetail, Cart Drawer, Checkout, Order Success
-- About, **Contact (multiple branches)**, Blog list + BlogPost detail
-- Shoppable Instagram feed
-- **Public QR review submission page** `/r/:token` — pre-fills product/customer context, 5-star selector, submit → moderation-pending
-- Client-side `AnalyticsTracker` — fires `page_view` on every route
+- About, Contact (multiple branches), Blog list + BlogPost detail
+- Shoppable Instagram feed (from live `/api/instagram`)
+- **Public QR review submission** `/r/:token` (per-customer) + `/review` (generic/public)
+- Navbar shows **SHOP** in uppercase; Journal (blog) link added
 
-### Admin Panel
-Dashboard · Analytics · Orders (Refund + Invoice) · Products (**Bulk Upload + Google Sheets importer**) · Collections · Coupons · Shipping · Tax · **Reviews Hub (3 tabs: All Reviews / QR Codes / Google Locations)** · Blog · Instagram · SEO · Redirects · Newsletter · Emails · Abandoned Carts · Locations
+### Admin Panel (role-gated sidebar)
+Dashboard · Analytics · Orders · Products (bulk upload + Google Sheets import) · **Categories** · Collections · Coupons · Shipping · Tax · Reviews Hub (All / QR / Google Locations, with **Generic public QR card** at top of QR tab) · Blog · Instagram · SEO · Redirects · Newsletter · Emails · Abandoned Carts · Locations · **Team & Access** · **Integrations Hub**
 
-### Phase A — Store Depth ✅ (variants, personalization, digital products, ribbons)
-### Phase B — Payments & Tax ✅ (mocked Razorpay/Stripe/PayPal/COD, tax slabs, shipping rules)
-### Phase C — Order Operations ✅ 18/18 pytest (refund, invoice, abandoned carts, email outbox)
-### Phase D — Locations + Bulk Upload ✅ 19/19 pytest
-### Phase E — Content + Analytics + Sheets ✅ 32/32 pytest (blog, Instagram, analytics, Google Sheets link importer)
-### Phase F — Reviews Module ✅ 37/37 pytest (2026-02-07)
-- QR review flow: `POST /api/admin/reviews/qr/generate` → `GET /api/admin/reviews/qr/{token}/image.png` (PNG bytes) → public `/api/r/{token}` GET/POST (single-use, expiry-guarded, redacts customer email)
-- Google Business locations: full CRUD + `/sync` + `/sync-all`. Deterministic mocked feed keyed by place_id; auto-publish based on min_rating_to_publish (preserves admin's manual publish overrides on re-sync)
-- Extended `Review` model with source (Manual/QR/google location name), verified, photos, order_number, product_id, google_review_id
-- Hardening applied: photos capped to 6 http(s) URLs ≤ 2KB each; unique index on qr_tokens.token; email redacted in public info; admin published decisions preserved on re-sync
+### Delivered Phases
+- Phase A — Store Depth ✅ (variants, personalization, digital products, ribbons)
+- Phase B — Payments & Tax ✅ (mocked Razorpay/Stripe/PayPal/COD)
+- Phase C — Order Operations ✅ 18/18
+- Phase D — Locations + Bulk Upload ✅ 19/19
+- Phase E — Content + Analytics + Sheets link importer ✅ 32/32
+- Phase F — Reviews Module (QR + Google Business sync) ✅ 37/37
+- **Phase G — RBAC + Categories admin + Generic QR + Integrations Hub ✅ 56/56** (2026-02-07)
 
-**Total backend tests**: 106/106 across all phases.
+**Total backend tests**: 162 across all phases (161 pass; 1 stale Phase D data blip fixed).
+
+### Phase G highlights
+- **RBAC** — 3 roles with `require_role` factory. `admin` full, `store_manager` scoped to products/categories/collections/shipping/tax + bulk upload, `blogger` scoped to blog only. First user bootstraps as admin; further logins require an invite (403 otherwise).
+- **Users CRUD** — invite/list/patch/delete with guards (can't delete self, can't demote/delete last admin).
+- **Categories admin** — full CRUD, slug uniqueness enforced, delete blocked when products still assigned.
+- **Generic public review** — `/api/reviews/public` (no auth) + admin-viewable generic QR card with printable PNG + shareable URL.
+- **Integrations Hub** — DB-backed settings for 10 sections (Instagram, Shiprocket, Razorpay, Stripe, PayPal, Gmail SMTP, GA4, Meta Pixel, Google Places, Public App URL). Secrets masked; reveal endpoint; env fallback via `get_setting(key)` helper. Sensitive keys never leave the backend except via the explicit reveal endpoint.
+- **Hardening** — unique indexes on `categories.slug`, `settings.key`, `qr_tokens.token`; TTL index on `admin_sessions.expires_at`; deterministic mocked Google review sync; email redaction in public QR info; input caps on photos/text.
 
 ## Backlog / Roadmap
 ### P1
-- Storefront reviews section: filter by source (Google/QR/Manual), star breakdown, photo gallery
-- Meta Graph API for live Instagram sync (swap curated mocks)
-- GA4 + Meta Pixel real event ingestion (swap mocked baseline)
-- Search: full-text on products + blog + reviews
+- Split `server.py` (~2400 lines) into modules per phase
+- Storefront reviews section (Google + QR + Manual with source badges + star breakdown + photo gallery)
+- Full-text search across products + blog + reviews
 - Wishlist server-side persistence
+- Rate limiting on public `/api/r/{token}` and `/api/reviews/public`
 
 ### P2
-- Split `server.py` (~2000 lines) into modules (reviews_qr.py, google_locations.py, blog.py, instagram.py, analytics.py, sheets.py, locations.py, bulk_upload.py, orders.py, admin.py)
-- Rate limiting on public `/api/r/{token}` POST
-- `GoogleBusinessLocationUpdate` + `LocationUpdate` Pydantic models
-- Coupon usage decrement on refund
-- Batch bulk-upload writes (bulkWrite) + upload size cap
-- Prevent deletion of is_primary location
+- Return `201 Created` on POST creates
+- Auto-generate review-request QR on order "shipped" event
+- Meta Graph API for live Instagram sync
+- Real GA4 + FB Pixel event ingestion
+- Distinguish `explicitly cleared` vs `unset` in settings
 
-### P3 (Live keys)
-- Swap Razorpay / Stripe / PayPal / Shiprocket / Gmail SMTP / GA4 / FB Pixel / Instagram Graph / Google Places mocks with real credentials
+### P3 (Live keys — just drop into Integrations Hub)
+- Razorpay / Stripe / PayPal / Shiprocket / Gmail SMTP / GA4 / FB Pixel / Instagram Graph / Google Places API
 
 ## Testing
 - Admin session minted via mongosh — see /app/memory/test_credentials.md
@@ -58,8 +63,6 @@ Dashboard · Analytics · Orders (Refund + Invoice) · Products (**Bulk Upload +
 - Phase D: `pytest tests/test_phase_d_locations_bulk.py -v -n 0`
 - Phase E: `pytest tests/test_phase_e_blog_ig_analytics_sheets.py -v`
 - Phase F: `pytest tests/test_phase_f_reviews_qr_google.py -v -n 0`
-- All tests self-mint admin tokens and clean up after themselves.
-- Pydantic EmailStr rejects `.test` TLD (RFC 2606) → use `.io`
-- /api/products returns paginated `{items, total, page, limit}` — not a bare list
-- Public QR endpoint redacts customer email (e.g. `p***r@example.com`)
-- PUBLIC_APP_URL in backend/.env drives review_url; set to preview URL for demo
+- Phase G: `pytest tests/test_phase_g_rbac_categories_integrations.py -v -n 0`
+- PUBLIC_APP_URL, INSTAGRAM_HANDLE stored in DB `settings` via Integrations Hub
+- /api/products returns paginated `{items, total, page, limit}`

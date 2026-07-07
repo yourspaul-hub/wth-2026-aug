@@ -162,6 +162,8 @@ async def list_categories():
 
 @api.post('/admin/categories')
 async def create_category(payload: CategoryCreate, user: dict = Depends(require_store)):
+    if await db.categories.find_one({'slug': payload.slug}):
+        raise HTTPException(status_code=400, detail='A category with that slug already exists')
     doc = Category(**payload.model_dump()).model_dump()
     await db.categories.insert_one(doc)
     doc.pop('_id', None)
@@ -170,6 +172,12 @@ async def create_category(payload: CategoryCreate, user: dict = Depends(require_
 
 @api.patch('/admin/categories/{cid}')
 async def update_category(cid: str, payload: dict, user: dict = Depends(require_store)):
+    payload.pop('id', None)
+    payload.pop('_id', None)
+    if 'slug' in payload:
+        clash = await db.categories.find_one({'slug': payload['slug'], 'id': {'$ne': cid}})
+        if clash:
+            raise HTTPException(status_code=400, detail='Another category already uses that slug')
     await db.categories.update_one({'id': cid}, {'$set': payload})
     return await db.categories.find_one({'id': cid}, {'_id': 0})
 
@@ -2341,6 +2349,13 @@ async def startup_event():
     await db.reviews.create_index('id', unique=True)
     await db.reviews.create_index('google_review_id', sparse=True)
     await db.qr_tokens.create_index('token', unique=True)
+    await db.categories.create_index('slug', unique=True)
+    await db.settings.create_index('key', unique=True)
+    # TTL: auto-purge expired admin sessions
+    try:
+        await db.admin_sessions.create_index('expires_at', expireAfterSeconds=0)
+    except Exception:
+        pass
     await db.seo_meta.create_index('path', unique=True)
     await db.newsletter.create_index('email', unique=True)
     await db.collections.create_index('slug', unique=True)

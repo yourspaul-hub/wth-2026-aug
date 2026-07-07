@@ -517,10 +517,8 @@ class TestGenericReview:
             'https://example.com/7.jpg',
             'https://example.com/8.jpg',
         ]
-        # Include javascript: which must be dropped
-        malicious = ['javascript:alert(1)', 'ftp://x.com/a.jpg']
-        # Pass all 8 https/http + malicious. Slice happens BEFORE filter,
-        # so we send [http/https × 8] to ensure exactly 6 survive.
+        # Non-http URLs like javascript: and ftp: must be dropped.
+        # Slice happens BEFORE filter, so we send [http/https × 8] to ensure exactly 6 survive.
         r = requests.post(f"{API}/reviews/public",
                           json={'name': 'PyG Photos', 'rating': 5,
                                 'text': 'Testing photo sanitisation.',
