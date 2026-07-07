@@ -1852,10 +1852,10 @@ async def public_generic_review(payload: QRReviewSubmission):
 
 
 @api.get('/reviews/generic-qr.png')
-async def public_generic_qr_image():
+async def public_generic_qr_image(request: Request):
     """Public PNG QR pointing to /review — usable in the footer / packing slips."""
-    base = await get_setting('PUBLIC_APP_URL', '')
-    review_url = f'{base}/review' if base else '/review'
+    base = await get_setting('PUBLIC_APP_URL', '') or str(request.base_url).rstrip('/').replace('/api', '')
+    review_url = f'{base}/review'
     img = qrcode.make(review_url)
     buf = BytesIO()
     img.save(buf, format='PNG')
