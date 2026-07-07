@@ -523,13 +523,16 @@ async def create_order(payload: OrderCreate):
     doc.pop('_id', None)
 
     # Queue order_placed email
-    try: await emit_order_email(doc, 'order_placed')
-    except Exception as _e: logger.warning('order_placed email failed: %s', _e)
+    try:
+        await emit_order_email(doc, 'order_placed')
+    except Exception as _e:
+        logger.warning('order_placed email failed: %s', _e)
 
     # Mark abandoned cart recovered if exists
     try:
         await db.abandoned_carts.update_one({'email': payload.shipping_address.email, 'recovered': False}, {'$set': {'recovered': True}})
-    except Exception: pass
+    except Exception:
+        pass
 
     # Build provider-specific mocked payment payload
     payment = {'provider': provider, 'mocked': True, 'amount': total * 100, 'currency': 'INR', 'order_number': order_number}
@@ -614,8 +617,10 @@ async def verify_payment(payload: PaymentVerify):
         )
 
     order = await db.orders.find_one({'order_number': payload.order_number}, {'_id': 0})
-    try: await emit_order_email(order, 'order_paid')
-    except Exception as _e: logger.warning('order_paid email failed: %s', _e)
+    try:
+        await emit_order_email(order, 'order_paid')
+    except Exception as _e:
+        logger.warning('order_paid email failed: %s', _e)
     return {'ok': True, 'mocked': True, 'provider': provider, 'reference': reference, 'order': order}
 
 
@@ -750,14 +755,17 @@ async def admin_list_orders(status: Optional[str] = None, limit: int = 100, user
 
 @api.patch('/admin/orders/{order_number}')
 async def admin_update_order(order_number: str, payload: OrderStatusUpdate, user: dict = Depends(require_admin)):
+    prev = await db.orders.find_one({'order_number': order_number}, {'_id': 0, 'status': 1})
     updates = {k: v for k, v in payload.model_dump().items() if v is not None}
     updates['updated_at'] = datetime.now(timezone.utc)
     if updates:
         await db.orders.update_one({'order_number': order_number}, {'$set': updates})
     updated = await db.orders.find_one({'order_number': order_number}, {'_id': 0})
-    if payload.status == 'shipped':
-        try: await emit_order_email(updated, 'order_shipped')
-        except Exception as _e: logger.warning('order_shipped email failed: %s', _e)
+    if payload.status == 'shipped' and (not prev or prev.get('status') != 'shipped'):
+        try:
+            await emit_order_email(updated, 'order_shipped')
+        except Exception as _e:
+            logger.warning('order_shipped email failed: %s', _e)
     return updated
 
 
@@ -1111,8 +1119,6 @@ async def list_newsletter(user: dict = Depends(require_admin)):
 # ================= ADMIN STATS =================
 @api.get('/admin/stats')
 async def admin_stats(user: dict = Depends(require_admin)):
-    now = datetime.now(timezone.utc)
-    since = now - timedelta(days=30)
     total_orders = await db.orders.count_documents({})
     paid_orders = await db.orders.count_documents({'payment_status': 'paid'})
     pending = await db.orders.count_documents({'status': 'pending'})

@@ -120,10 +120,14 @@ async def seed_all(db):
             }
             # Ribbons for common tags
             tag = (p.get('tag') or '').lower()
-            if 'bestseller' in tag: product_doc['ribbon'] = 'Best Seller'
-            elif tag == 'new': product_doc['ribbon'] = 'New'
-            elif tag == 'trending': product_doc['ribbon'] = 'Trending'
-            elif tag == 'signature': product_doc['ribbon'] = 'Signature'
+            if 'bestseller' in tag:
+                product_doc['ribbon'] = 'Best Seller'
+            elif tag == 'new':
+                product_doc['ribbon'] = 'New'
+            elif tag == 'trending':
+                product_doc['ribbon'] = 'Trending'
+            elif tag == 'signature':
+                product_doc['ribbon'] = 'Signature'
 
             # Personalization on customizable products
             if p['slug'] in ('scripture-wallet', 'wood-keychain', 'scripture-pen-stand', 'god-will-make-way-tag'):
@@ -230,7 +234,8 @@ async def seed_all(db):
     # One-time: seed variants for tee + cap if empty
     tee = await db.products.find_one({'slug': 'psalm-46-tee'}, {'_id': 0, 'id': 1, 'variants': 1, 'price': 1, 'original_price': 1, 'image': 1, 'sku': 1})
     if tee and not tee.get('variants'):
-        pid = tee['id']; sku_base = tee.get('sku') or f'WTH-{pid.upper()}'
+        pid = tee['id']
+        sku_base = tee.get('sku') or f'WTH-{pid.upper()}'
         variants = [
             {'id': f'v_{pid}_S', 'attrs': {'Size': 'S'}, 'price': tee['price'], 'original_price': tee['original_price'], 'stock': 15, 'sku': f'{sku_base}-S', 'image': tee['image']},
             {'id': f'v_{pid}_M', 'attrs': {'Size': 'M'}, 'price': tee['price'], 'original_price': tee['original_price'], 'stock': 25, 'sku': f'{sku_base}-M', 'image': tee['image']},
@@ -241,7 +246,8 @@ async def seed_all(db):
 
     cap = await db.products.find_one({'slug': 'faith-cap-blessed'}, {'_id': 0, 'id': 1, 'variants': 1, 'price': 1, 'original_price': 1, 'image': 1, 'sku': 1})
     if cap and not cap.get('variants'):
-        pid = cap['id']; sku_base = cap.get('sku') or f'WTH-{pid.upper()}'
+        pid = cap['id']
+        sku_base = cap.get('sku') or f'WTH-{pid.upper()}'
         variants = [
             {'id': f'v_{pid}_navy', 'attrs': {'Color': 'Navy'}, 'price': cap['price'], 'original_price': cap['original_price'], 'stock': 30, 'sku': f'{sku_base}-NVY', 'image': cap['image']},
             {'id': f'v_{pid}_black', 'attrs': {'Color': 'Black'}, 'price': cap['price'], 'original_price': cap['original_price'], 'stock': 30, 'sku': f'{sku_base}-BLK', 'image': cap['image']},
@@ -287,9 +293,12 @@ async def seed_all(db):
         bestsellers, new_arrivals, gift_ready = [], [], []
         async for p in db.products.find({}, {'_id': 0, 'id': 1, 'tag': 1, 'ribbon': 1}):
             t = ((p.get('tag') or '') + ' ' + (p.get('ribbon') or '')).lower()
-            if 'bestseller' in t or 'best seller' in t: bestsellers.append(p['id'])
-            if 'new' in t: new_arrivals.append(p['id'])
-            if 'gift' in t or 'signature' in t or 'festive' in t: gift_ready.append(p['id'])
+            if 'bestseller' in t or 'best seller' in t:
+                bestsellers.append(p['id'])
+            if 'new' in t:
+                new_arrivals.append(p['id'])
+            if 'gift' in t or 'signature' in t or 'festive' in t:
+                gift_ready.append(p['id'])
         cols = [
             {'name': 'Bestsellers', 'slug': 'bestsellers', 'tagline': 'Loved by thousands', 'description': 'Our most-loved faith gifts.', 'image': 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=800', 'product_ids': bestsellers, 'featured': True, 'order': 1},
             {'name': 'New Arrivals', 'slug': 'new-arrivals', 'tagline': 'Fresh drops this month', 'description': 'The latest additions to our collection.', 'image': 'https://images.unsplash.com/photo-1699465301322-362016624dd7?w=800', 'product_ids': new_arrivals, 'featured': True, 'order': 2},
