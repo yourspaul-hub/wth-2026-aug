@@ -125,3 +125,19 @@ export const adminDeleteInstagram = (id) => api.delete(`/admin/instagram/${id}`)
 // Analytics
 export const trackEvent = (evt) => api.post('/analytics/track', evt).then(r => r.data).catch(() => null);
 export const adminAnalyticsSummary = (days = 30) => api.get('/admin/analytics/summary', { params: { days } }).then(r => r.data);
+
+// QR reviews (customer-side)
+export const getQrReviewContext = (token) => api.get(`/r/${token}`).then(r => r.data);
+export const submitQrReview = (token, payload) => api.post(`/r/${token}`, payload).then(r => r.data);
+export const adminGenerateQr = (payload) => api.post('/admin/reviews/qr/generate', payload).then(r => r.data);
+export const adminListQrTokens = () => api.get('/admin/reviews/qr').then(r => r.data);
+export const adminDeleteQrToken = (token) => api.delete(`/admin/reviews/qr/${token}`).then(r => r.data);
+export const qrImageUrl = (token) => `${API_BASE}/admin/reviews/qr/${token}/image.png`;
+
+// Google Business Locations
+export const adminListGoogleLocations = () => api.get('/admin/google-locations').then(r => r.data);
+export const adminCreateGoogleLocation = (p) => api.post('/admin/google-locations', p).then(r => r.data);
+export const adminUpdateGoogleLocation = (id, p) => api.patch(`/admin/google-locations/${id}`, p).then(r => r.data);
+export const adminDeleteGoogleLocation = (id) => api.delete(`/admin/google-locations/${id}`).then(r => r.data);
+export const adminSyncGoogleLocation = (id) => api.post(`/admin/google-locations/${id}/sync`).then(r => r.data);
+export const adminSyncAllGoogleLocations = () => api.post('/admin/google-locations/sync-all').then(r => r.data);

@@ -47,6 +47,8 @@ from models import (
     InstagramPost, InstagramPostCreate,
     AnalyticsEvent, AnalyticsEventCreate,
     SheetsImportRequest,
+    QRReviewToken, QRTokenCreate, QRReviewSubmission,
+    GoogleBusinessLocation, GoogleBusinessLocationCreate,
 )
 from auth import exchange_session_id, get_session_from_request, ensure_aware
 
@@ -1646,6 +1648,278 @@ async def admin_analytics_summary(days: int = 30, user: dict = Depends(require_a
         'pixel_ga_id': 'G-MOCKED-XXXXX',
         'pixel_fb_id': 'FBPIXEL_MOCKED',
     }
+
+
+# ================= QR REVIEW TOKENS =================
+import qrcode
+from io import BytesIO
+
+
+def _gen_token(length: int = 10) -> str:
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+
+
+def _public_review_url(token: str) -> str:
+    # Frontend URL is inferred from a common env; else default to a relative path.
+    base = os.environ.get('PUBLIC_APP_URL', '')
+    return f'{base}/r/{token}' if base else f'/r/{token}'
+
+
+@api.post('/admin/reviews/qr/generate')
+async def qr_generate(payload: QRTokenCreate, user: dict = Depends(require_admin)):
+    tok = _gen_token(10)
+    while await db.qr_tokens.find_one({'token': tok}):
+        tok = _gen_token(10)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=max(1, payload.expires_days))
+    doc = QRReviewToken(
+        token=tok, order_number=payload.order_number, product_id=payload.product_id,
+        customer_name=payload.customer_name, customer_email=payload.customer_email,
+        expires_at=expires_at,
+    ).model_dump()
+    await db.qr_tokens.insert_one(doc)
+    doc.pop('_id', None)
+    doc['review_url'] = _public_review_url(tok)
+    return doc
+
+
+@api.get('/admin/reviews/qr')
+async def qr_list(user: dict = Depends(require_admin)):
+    items = await db.qr_tokens.find({}, {'_id': 0}).sort('created_at', -1).to_list(500)
+    for it in items:
+        it['review_url'] = _public_review_url(it['token'])
+    return items
+
+
+@api.get('/admin/reviews/qr/{token}/image.png')
+async def qr_image(token: str, user: dict = Depends(require_admin)):
+    doc = await db.qr_tokens.find_one({'token': token})
+    if not doc:
+        raise HTTPException(status_code=404, detail='Token not found')
+    url = _public_review_url(token)
+    img = qrcode.make(url)
+    buf = BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    return StreamingResponse(iter([buf.getvalue()]), media_type='image/png', headers={'Content-Disposition': f'inline; filename="qr-{token}.png"'})
+
+
+@api.delete('/admin/reviews/qr/{token}')
+async def qr_delete(token: str, user: dict = Depends(require_admin)):
+    await db.qr_tokens.delete_one({'token': token})
+    return {'ok': True}
+
+
+# ---- Public QR review endpoints ----
+@api.get('/r/{token}')
+async def public_qr_info(token: str):
+    """Validate token and return context (product/order info) for the review form."""
+    tok = await db.qr_tokens.find_one({'token': token}, {'_id': 0})
+    if not tok:
+        raise HTTPException(status_code=404, detail='Invalid or expired review link')
+    exp = tok.get('expires_at')
+    if exp and isinstance(exp, datetime) and ensure_aware(exp) < datetime.now(timezone.utc):
+        raise HTTPException(status_code=410, detail='This review link has expired')
+    if tok.get('used'):
+        raise HTTPException(status_code=410, detail='This review link has already been used')
+
+    product = None
+    if tok.get('product_id'):
+        product = await db.products.find_one({'id': tok['product_id']}, {'_id': 0, 'id': 1, 'name': 1, 'image': 1, 'slug': 1})
+    order = None
+    if tok.get('order_number'):
+        order = await db.orders.find_one({'order_number': tok['order_number']}, {'_id': 0, 'order_number': 1, 'items': 1})
+    return {
+        'token': token,
+        'customer_name': tok.get('customer_name'),
+        'customer_email': tok.get('customer_email'),
+        'product': product,
+        'order': order,
+    }
+
+
+@api.post('/r/{token}')
+async def public_qr_submit(token: str, payload: QRReviewSubmission):
+    tok = await db.qr_tokens.find_one({'token': token})
+    if not tok:
+        raise HTTPException(status_code=404, detail='Invalid review link')
+    exp = tok.get('expires_at')
+    if exp and isinstance(exp, datetime) and ensure_aware(exp) < datetime.now(timezone.utc):
+        raise HTTPException(status_code=410, detail='This review link has expired')
+    if tok.get('used'):
+        raise HTTPException(status_code=410, detail='This review link has already been used')
+    if not (1 <= payload.rating <= 5):
+        raise HTTPException(status_code=400, detail='Rating must be 1-5')
+    if len(payload.text.strip()) < 5:
+        raise HTTPException(status_code=400, detail='Please write at least a few words about your experience')
+
+    review = Review(
+        name=payload.name, rating=payload.rating, text=payload.text.strip(),
+        when='just now', source='QR', published=False,  # requires moderation
+        order_number=tok.get('order_number'), product_id=tok.get('product_id'),
+        email=payload.email or tok.get('customer_email'),
+        photos=payload.photos, verified=True,
+    ).model_dump()
+    await db.reviews.insert_one(review)
+    await db.qr_tokens.update_one({'token': token}, {'$set': {
+        'used': True, 'used_at': datetime.now(timezone.utc), 'review_id': review['id']
+    }})
+    return {'ok': True, 'review_id': review['id'], 'message': 'Thanks! Your review is submitted and will appear after a quick check.'}
+
+
+# ================= GOOGLE BUSINESS LOCATIONS + REVIEW SYNC =================
+_MOCK_GOOGLE_REVIEWERS = [
+    ('Anita Sharma', 5, "Beautiful craftsmanship and quick delivery. The engraved wallet was gift-perfect!", 'https://i.pravatar.cc/80?u=anita'),
+    ('Rohit Menon', 5, "Ordered the Christmas glass set — packaging was gorgeous, everyone loved it.", 'https://i.pravatar.cc/80?u=rohit'),
+    ('Grace Thomas', 4, "Lovely faith cap, exactly as pictured. Shipping was a day late but worth it.", 'https://i.pravatar.cc/80?u=grace'),
+    ('Sanjay Nair', 5, "The wood keychains are next-level. Ordered 12 for our team retreat.", 'https://i.pravatar.cc/80?u=sanjay'),
+    ('Priya Kurien', 5, "Faith-filled products with real quality. Will keep coming back.", 'https://i.pravatar.cc/80?u=priya'),
+    ('Aakash Verma', 4, "Great customer service. My personalization was corrected within a day.", 'https://i.pravatar.cc/80?u=aakash'),
+    ('Deepika Rao', 5, "Wearthehope stands for what it says. Beautiful message on every piece.", 'https://i.pravatar.cc/80?u=deepika'),
+]
+
+
+async def _fetch_google_reviews(place_id: str) -> dict:
+    """Fetch reviews from Google Places API v1. Falls back to a realistic mock when key is missing."""
+    key = os.environ.get('GOOGLE_PLACES_API_KEY')
+    if not key:
+        # MOCKED response — random subset
+        picks = random.sample(_MOCK_GOOGLE_REVIEWERS, k=min(5, len(_MOCK_GOOGLE_REVIEWERS)))
+        now = datetime.now(timezone.utc)
+        return {
+            'mocked': True,
+            'rating': round(sum(p[1] for p in picks) / len(picks), 1),
+            'review_count': 148 + random.randint(0, 50),
+            'reviews': [
+                {
+                    'google_review_id': f'gmock_{place_id}_{i}',
+                    'author': p[0], 'rating': p[1], 'text': p[2], 'avatar': p[3],
+                    'time': (now - timedelta(days=random.randint(2, 120))).isoformat(),
+                }
+                for i, p in enumerate(picks)
+            ],
+        }
+    # Real call (Places API v1 - Place Details)
+    url = f'https://places.googleapis.com/v1/places/{place_id}'
+    headers = {
+        'X-Goog-Api-Key': key,
+        'X-Goog-FieldMask': 'rating,userRatingCount,reviews',
+    }
+    async with httpx.AsyncClient(timeout=15) as ch:
+        r = await ch.get(url, headers=headers)
+    if r.status_code != 200:
+        raise HTTPException(status_code=502, detail=f'Google Places API error {r.status_code}: {r.text[:300]}')
+    data = r.json()
+    reviews = []
+    for rv in (data.get('reviews') or []):
+        author = rv.get('authorAttribution', {})
+        reviews.append({
+            'google_review_id': rv.get('name', f"gplc_{len(reviews)}"),
+            'author': author.get('displayName', 'Google User'),
+            'avatar': author.get('photoUri'),
+            'rating': int(rv.get('rating', 5)),
+            'text': (rv.get('text') or {}).get('text', '') or (rv.get('originalText') or {}).get('text', ''),
+            'time': rv.get('publishTime'),
+        })
+    return {
+        'mocked': False,
+        'rating': data.get('rating'),
+        'review_count': data.get('userRatingCount', 0),
+        'reviews': reviews,
+    }
+
+
+@api.get('/admin/google-locations')
+async def admin_list_google_locations(user: dict = Depends(require_admin)):
+    return await db.google_locations.find({}, {'_id': 0}).sort('order', 1).to_list(200)
+
+
+@api.post('/admin/google-locations')
+async def create_google_location(payload: GoogleBusinessLocationCreate, user: dict = Depends(require_admin)):
+    doc = GoogleBusinessLocation(**payload.model_dump()).model_dump()
+    await db.google_locations.insert_one(doc)
+    doc.pop('_id', None)
+    return doc
+
+
+@api.patch('/admin/google-locations/{gid}')
+async def update_google_location(gid: str, payload: dict, user: dict = Depends(require_admin)):
+    payload.pop('id', None)
+    payload.pop('_id', None)
+    await db.google_locations.update_one({'id': gid}, {'$set': payload})
+    return await db.google_locations.find_one({'id': gid}, {'_id': 0})
+
+
+@api.delete('/admin/google-locations/{gid}')
+async def delete_google_location(gid: str, user: dict = Depends(require_admin)):
+    await db.google_locations.delete_one({'id': gid})
+    return {'ok': True}
+
+
+@api.post('/admin/google-locations/{gid}/sync')
+async def sync_google_location(gid: str, user: dict = Depends(require_admin)):
+    loc = await db.google_locations.find_one({'id': gid}, {'_id': 0})
+    if not loc:
+        raise HTTPException(status_code=404, detail='Location not found')
+    result = await _fetch_google_reviews(loc['place_id'])
+    now = datetime.now(timezone.utc)
+
+    imported = 0
+    updated = 0
+    for rv in result['reviews']:
+        gid_key = rv['google_review_id']
+        existing = await db.reviews.find_one({'google_review_id': gid_key})
+        should_publish = loc.get('auto_publish', True) and rv['rating'] >= loc.get('min_rating_to_publish', 4)
+        rv_doc = {
+            'name': rv['author'],
+            'rating': int(rv['rating']),
+            'text': rv['text'],
+            'when': 'via Google',
+            'avatar': rv.get('avatar'),
+            'source': loc['label'] or 'Google',
+            'published': should_publish,
+            'google_review_id': gid_key,
+            'google_place_id': loc['place_id'],
+            'google_location_id': loc['id'],
+            'verified': True,
+        }
+        if existing:
+            await db.reviews.update_one({'id': existing['id']}, {'$set': rv_doc})
+            updated += 1
+        else:
+            rv_doc = Review(**rv_doc).model_dump()
+            await db.reviews.insert_one(rv_doc)
+            imported += 1
+
+    # Update location stats
+    upd = {
+        'last_synced_at': now,
+        'rating': result.get('rating'),
+        'review_count': result.get('review_count', 0),
+    }
+    await db.google_locations.update_one({'id': gid}, {'$set': upd})
+
+    return {
+        'ok': True,
+        'mocked': result.get('mocked', False),
+        'imported': imported,
+        'updated': updated,
+        'total_reviews_fetched': len(result['reviews']),
+        'location_rating': result.get('rating'),
+        'location_review_count': result.get('review_count'),
+    }
+
+
+@api.post('/admin/google-locations/sync-all')
+async def sync_all_google_locations(user: dict = Depends(require_admin)):
+    locs = await db.google_locations.find({'active': True}, {'_id': 0}).to_list(200)
+    results = []
+    for loc in locs:
+        try:
+            r = await sync_google_location(loc['id'], user)
+            results.append({'id': loc['id'], 'label': loc['label'], **r})
+        except HTTPException as e:
+            results.append({'id': loc['id'], 'label': loc['label'], 'ok': False, 'error': e.detail})
+    return {'ok': True, 'count': len(results), 'results': results}
 
 
 # --- Mount ---

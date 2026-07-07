@@ -360,6 +360,30 @@ backend:
         agent: "main"
         comment: "Accepts any Google Sheets URL variant (edit#gid=0 / view / already-csv). Extracts spreadsheet id + gid via regex, builds /export?format=csv&gid= URL, fetches via httpx (follow_redirects, 20s timeout), then reuses bulk_upload_products pipeline. Errors: 400 if URL not parseable, 400 if sheet is HTML (not shared publicly), 502 on network error."
 
+  - task: "QR Reviews — token generation, public submission, expiry & single-use guard"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "POST /api/admin/reviews/qr/generate returns {token, review_url, expires_at, ...}. GET /api/admin/reviews/qr lists all. GET /api/admin/reviews/qr/{token}/image.png returns PNG bytes (Content-Type image/png). Public GET /api/r/{token} returns {product, order, customer_name} or 404/410. Public POST /api/r/{token} validates 1<=rating<=5 and text length>=5, creates a Review(source='QR', published=False, verified=True), marks token used, links to order/product from token. Reusing returns 410. Uses PUBLIC_APP_URL env var to build review_url."
+
+  - task: "Google Business Locations — CRUD + review sync (mocked when no API key)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Admin CRUD on /api/admin/google-locations. POST /api/admin/google-locations/{id}/sync fetches reviews via Google Places API v1 when GOOGLE_PLACES_API_KEY is set; falls back to _fetch_google_reviews MOCKED data (5 reviews from a curated pool) when key is absent. Imports/updates reviews (idempotent via google_review_id), auto-publishes when rating>=min_rating_to_publish (default 4). Updates location.rating + review_count + last_synced_at. POST /api/admin/google-locations/sync-all iterates active locations. Seeded 2 locations (gbl_01 Mumbai, gbl_02 Ernakulam)."
+
 frontend:
   - task: "Storefront + Admin panel wiring (React 19)"
     implemented: true
@@ -381,10 +405,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Blog CRUD (public GET /api/blog, /api/blog/{slug} + admin /api/admin/blog)"
-    - "Instagram Feed (curated / mocked) — public /api/instagram + admin CRUD"
-    - "Analytics — track events + admin summary (mocked GA/FB Pixel + real orders)"
-    - "Google Sheets import for products (POST /api/admin/products/import-sheet)"
+    - "QR Reviews — token generation, public submission, expiry & single-use guard"
+    - "Google Business Locations — CRUD + review sync (mocked when no API key)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

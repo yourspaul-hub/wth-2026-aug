@@ -41,6 +41,7 @@ import AdminInstagram from './pages/admin/Instagram';
 import AdminAnalytics from './pages/admin/Analytics';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
+import QrReviewSubmit from './pages/QrReviewSubmit';
 import { Toaster } from './components/ui/sonner';
 
 // Storefront chrome (navbar, footer, cart, announcement) — hidden on /admin routes and /admin/callback
@@ -70,6 +71,7 @@ function AppRouter() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:slug" element={<BlogPost />} />
+        <Route path="/r/:token" element={<QrReviewSubmit />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/order/:orderNumber" element={<OrderSuccess />} />
 

@@ -431,3 +431,32 @@ async def seed_all(db):
              'active': True, 'order': 6, 'created_at': datetime.now(timezone.utc)},
         ]
         await db.instagram_posts.insert_many(ig)
+
+    # ---------- Seed Google Business locations (place_ids are mocked; swap when live) ----------
+    if await db.google_locations.count_documents({}) == 0:
+        gbls = [
+            {
+                'id': 'gbl_01', 'label': 'Mumbai — Design Center',
+                'place_id': 'ChIJXX_MockedMumbai_XX',
+                'address': 'Raheja Vihar, Chandivali, Mumbai 400072',
+                'map_url': 'https://maps.google.com/?q=Raheja+Vihar+Chandivali+Mumbai',
+                'rating': None, 'review_count': 0,
+                'auto_publish': True, 'min_rating_to_publish': 4,
+                'active': True, 'order': 1,
+                'last_synced_at': None,
+                'created_at': datetime.now(timezone.utc),
+            },
+            {
+                'id': 'gbl_02', 'label': 'Ernakulam — Registered Office',
+                'place_id': 'ChIJXX_MockedErnakulam_XX',
+                'address': 'Kakkanad, Ernakulam, Kerala 682030',
+                'map_url': 'https://maps.google.com/?q=Kakkanad+Ernakulam+Kerala',
+                'rating': None, 'review_count': 0,
+                'auto_publish': True, 'min_rating_to_publish': 4,
+                'active': True, 'order': 2,
+                'last_synced_at': None,
+                'created_at': datetime.now(timezone.utc),
+            },
+        ]
+        await db.google_locations.insert_many(gbls)
+

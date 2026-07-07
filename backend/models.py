@@ -190,9 +190,20 @@ class Review(BaseModel):
     text: str
     when: str = 'recently'  # 'X months ago'
     avatar: Optional[str] = None
-    source: str = 'Google'
+    source: str = 'Google'  # Google | Manual | QR | (google location name)
     published: bool = True
     order: int = 0
+    # QR/customer submissions
+    order_number: Optional[str] = None
+    product_id: Optional[str] = None
+    email: Optional[str] = None
+    photos: List[str] = []
+    verified: bool = False
+    # Google sync fields
+    google_place_id: Optional[str] = None
+    google_review_id: Optional[str] = None
+    google_location_id: Optional[str] = None  # our internal location id
+    reply_text: Optional[str] = None
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -205,6 +216,10 @@ class ReviewCreate(BaseModel):
     source: str = 'Google'
     published: bool = True
     order: int = 0
+    order_number: Optional[str] = None
+    product_id: Optional[str] = None
+    email: Optional[str] = None
+    photos: List[str] = []
 
 
 class ReviewUpdate(BaseModel):
@@ -616,3 +631,62 @@ class AnalyticsEventCreate(BaseModel):
 # ---------- Google Sheets import ----------
 class SheetsImportRequest(BaseModel):
     url: str  # public Google Sheet URL (any edit/view/csv variant)
+
+# ---------- QR review token ----------
+class QRReviewToken(BaseModel):
+    id: str = Field(default_factory=lambda: _uid('qr_'))
+    token: str  # unique short token used in /r/{token}
+    order_number: Optional[str] = None
+    product_id: Optional[str] = None
+    customer_name: Optional[str] = None
+    customer_email: Optional[str] = None
+    used: bool = False
+    used_at: Optional[datetime] = None
+    review_id: Optional[str] = None
+    expires_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=_now)
+
+
+class QRTokenCreate(BaseModel):
+    order_number: Optional[str] = None
+    product_id: Optional[str] = None
+    customer_name: Optional[str] = None
+    customer_email: Optional[str] = None
+    expires_days: int = 90
+
+
+class QRReviewSubmission(BaseModel):
+    name: str
+    rating: int
+    text: str
+    email: Optional[str] = None
+    photos: List[str] = []
+
+
+# ---------- Google Business Location ----------
+class GoogleBusinessLocation(BaseModel):
+    id: str = Field(default_factory=lambda: _uid('gbl_'))
+    label: str  # human name, e.g. "Mumbai Design Center"
+    place_id: str  # Google Places ID
+    address: Optional[str] = None
+    map_url: Optional[str] = None
+    rating: Optional[float] = None
+    review_count: int = 0
+    last_synced_at: Optional[datetime] = None
+    auto_publish: bool = True  # publish pulled reviews automatically
+    min_rating_to_publish: int = 4
+    active: bool = True
+    order: int = 0
+    created_at: datetime = Field(default_factory=_now)
+
+
+class GoogleBusinessLocationCreate(BaseModel):
+    label: str
+    place_id: str
+    address: Optional[str] = None
+    map_url: Optional[str] = None
+    auto_publish: bool = True
+    min_rating_to_publish: int = 4
+    active: bool = True
+    order: int = 0
+
