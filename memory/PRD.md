@@ -1,7 +1,7 @@
 # Wear The Hope — Product Requirements
 
 ## Original Problem Statement
-Clone www.wearthehope.com with a dynamic UI, highly interactive e-commerce features, and Instagram integration. The user subsequently requested a comprehensive admin panel (Phase-wise implementation) for managing orders, variants, collections, reviews, SEO, coupons, shipping rules, mock payments (Razorpay/Stripe/PayPal), and order operations (refunds, invoices, emails, abandoned carts).
+Clone www.wearthehope.com with a dynamic UI, highly interactive e-commerce features, and Instagram integration. Then add a comprehensive admin panel (Phase-wise implementation) for managing orders, variants, collections, reviews, SEO, coupons, shipping rules, mock payments (Razorpay/Stripe/PayPal), and order operations (refunds, invoices, emails, abandoned carts). Additionally, contact page should list multiple branch locations, and admins should be able to bulk-upload products via Google Sheets or Excel with a downloadable template.
 
 ## Core Product Pillars
 1. Storefront faithful to brand (colors #FDF3EB / #B4593F, serif-display, ribbon accents)
@@ -9,68 +9,50 @@ Clone www.wearthehope.com with a dynamic UI, highly interactive e-commerce featu
 3. All third-party services are MOCKED until user provides real keys
 4. Server-side price recalculation for orders (no client trust)
 5. Rendered email outbox as a mocked preview layer
+6. Real WTH multi-branch presence on Contact
 
 ## Architecture
 - Frontend: React 19 + Tailwind + Shadcn UI + react-helmet-async
-- Backend: FastAPI + Motor (async MongoDB)
+- Backend: FastAPI + Motor (async MongoDB) + openpyxl for XLSX
 - Auth: Emergent Google Auth (cookie + Bearer session token) — see /app/auth_testing.md
-- Deployment: Kubernetes ingress; backend on `/api`, frontend on `/`
 
-## Implemented (as of 2026-02-07)
+## Implemented (through 2026-02-07)
 
 ### Storefront
 - Home, Shop, ProductDetail, Cart Drawer, Checkout, Order Success
+- **Contact page** with multiple branch locations (fetched from /api/locations, seeded with real WTH addresses: Mumbai Design Center + Kerala Registered Office)
 - SEO helmet per route + client-side RedirectGate
-- Dynamic product filtering (category / query / sort / tag / skip / limit)
 
 ### Admin Panel
-- Dashboard (revenue, order counts, recent orders)
-- Products (CRUD + variants + personalization + digital products + ribbons)
-- Collections (many-to-many product tagging)
-- Orders (list, status update, detail drawer, **refund**, **invoice**)
-- Coupons (percent/flat/max_discount/min_subtotal/usage_limit)
-- Shipping Rules (per-state, per-pincode, free-above-N)
-- Tax Rates (GST slabs, scoped)
-- Reviews (published/order/rating)
-- SEO manager + redirects + sitemap.xml + robots.txt
-- Newsletter subscribers
-- **Emails outbox** (mocked, previewable in iframe)
-- **Abandoned Carts** (stale filter, send recovery)
+- Dashboard, Products (with **Bulk Upload** modal), Collections, Orders (Refund + Invoice), Coupons, Shipping, Tax, Reviews, SEO, Redirects, Newsletter, Emails, Abandoned Carts, **Locations**
 
 ### Phase A — Store Depth ✅
-Variants, inventory, digital products, personalization, collections, ribbons
-
 ### Phase B — Payments & Tax ✅
-Tax slabs, Shipping rules, mocked Razorpay/Stripe/PayPal/COD verify
-
-### Phase C — Order Operations ✅ (2026-02-07)
-- Refund endpoint restocks + emits mocked `order_refunded` email
-- Invoice HTML (brand-styled, print-ready)
-- Abandoned cart upsert + admin list (stale ≥30 min) + recovery email
-- Email outbox: order_placed, order_paid, order_shipped, order_refunded, abandoned_cart templates
-- 18/18 backend tests pass (pytest at /app/backend/tests/test_phase_c_orders.py)
+### Phase C — Order Operations ✅ (18/18 pytest)
+### Phase D — Locations + Bulk Upload ✅ (19/19 pytest) 2026-02-07
+- `Location` model + `/api/locations` (public) and `/api/admin/locations` (CRUD)
+- Seeded 2 real WTH addresses (Mumbai primary, Kerala)
+- Bulk upload: `GET /api/admin/products/template.csv` (CSV template with live category slugs), `POST /api/admin/products/bulk` (multipart file — .csv/.xlsx/.xls). Upserts by SKU or slug. Handles UTF-8 BOM (Google Sheets exports) and boolean strings. Returns row-level errors.
 
 ## Backlog / Roadmap
 ### P1 (Next)
-- **Instagram Feed integration** (user’s original ask — multi-channel selling) ← **NEXT**
+- **Instagram Feed integration** ← user's original ask
 - Blog integration & management
-- Analytics dashboard (Sales reports, traffic, conversion; mocked GA/FB Pixel)
+- Analytics dashboard (mocked GA/FB Pixel)
 
 ### P2
-- Custom dashboards
-- Custom checkout logic (loyalty, gift cards, wishlists)
-- Coupon usage decrement on refund (accounting fix noted by test agent)
+- Product model: prevent deletion of is_primary location; add LocationUpdate Pydantic model
+- Batch bulk-upload writes (bulkWrite) + upload size cap
+- Coupon usage decrement on refund
 - Auto-restock on abandoned/pending order timeout
-- Split server.py into modules (orders.py, payments.py, admin.py, emails.py, invoices.py, seo.py) — currently ~1189 lines
+- Split `server.py` (~1420 lines) into modules
 
 ### P3 (Live keys)
-- Swap Razorpay mock → real
-- Swap Stripe mock → real
-- Swap PayPal mock → real
-- Swap Shiprocket mock → real
-- Swap Gmail SMTP mock → real (set `provider='gmail'` in queue_email)
+- Swap Razorpay / Stripe / PayPal / Shiprocket / Gmail SMTP mocks with real credentials
 
 ## Testing
 - Admin session minted via mongosh — see /app/memory/test_credentials.md
+- Phase C tests: `pytest tests/test_phase_c_orders.py -v -n 0`
+- Phase D tests: `pytest tests/test_phase_d_locations_bulk.py -v -n 0`
 - Pydantic EmailStr rejects `.test` TLD (RFC 2606) → use `.io` in tests
-- Run backend tests: `cd /app/backend && set -a && source .env && set +a && python -m pytest tests/test_phase_c_orders.py -v -n 0`
+- /api/products returns paginated `{items, total, page, limit}` — not a bare list

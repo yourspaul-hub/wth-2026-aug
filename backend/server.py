@@ -1206,21 +1206,18 @@ _SAMPLE_ROWS = [
 
 @api.get('/admin/products/template.csv')
 async def download_product_template(user: dict = Depends(require_admin)):
-    # Fetch live category slugs so instructions match reality
     cat_slugs = await db.categories.distinct('slug')
-    slugs_str = ' / '.join(sorted(cat_slugs)) if cat_slugs else 'drinkware / clothing / bags / head-gear / boards / tags / badges-magnets / stickers'
+    slugs_str = ' / '.join(sorted(cat_slugs))
     buf = io.StringIO()
     writer = csv.writer(buf)
     writer.writerow(PRODUCT_TEMPLATE_COLUMNS)
     for row in _SAMPLE_ROWS:
         writer.writerow(row)
-    writer.writerow([])
-    writer.writerow(['# INSTRUCTIONS'])
+    writer.writerow(['# INSTRUCTIONS — remove this and any # lines before uploading'])
     writer.writerow(['# Required: sku (or slug), name, category_slug, price'])
-    writer.writerow([f'# category_slug must match one of: {slugs_str}'])
-    writer.writerow(['# active/personalization_enabled: true/false or 1/0'])
-    writer.writerow(['# Rows matching an existing sku OR slug will be UPDATED; others CREATED.'])
-    writer.writerow(['# Remove the sample rows and instruction lines before uploading.'])
+    writer.writerow([f'# category_slug must be one of: {slugs_str}'])
+    writer.writerow(['# active / personalization_enabled accept: true/false or 1/0'])
+    writer.writerow(['# Existing SKU or slug -> UPDATED. Otherwise -> CREATED.'])
     buf.seek(0)
     return StreamingResponse(
         iter([buf.getvalue()]),
