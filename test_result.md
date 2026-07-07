@@ -432,6 +432,18 @@ backend:
         agent: "main"
         comment: "GET /api/admin/integrations returns 10 sections (instagram/shipping/payments razorpay/stripe/paypal/email gmail/analytics ga4/meta pixel/google places/general public url) with per-section status configured|partial|unconfigured and masked display for secret fields. PUT /api/admin/integrations upserts (validates key against INTEGRATIONS_SCHEMA). GET /api/admin/integrations/{key}/reveal returns full value. DELETE /api/admin/integrations/{key} clears. Helper get_setting(key) reads DB first, falls back to env var, then default. Google Places sync now uses this helper."
 
+  - task: "Bug fixes: nav overlap (SHOP uppercase + logo overlap) + Footer global QR"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/Navbar.jsx, /app/frontend/src/components/Footer.jsx, /app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "User reported (1) nav items overlapping the centered logo (CONTACT was drawn on top of the WTH logo), (2) SHOP still title-case, (3) global QR not visible anywhere on the storefront. Fix: (1) restructured Navbar from absolute-positioned logo to a 3-column CSS grid (grid-cols-[1fr_auto_1fr]) with Home/SHOP/Collections on the LEFT and About/Journal/Contact on the RIGHT — logo sits in center column with guaranteed spacing. (2) SHOP button label + all uppercase text-transform (already correct in code, restored after refactor). (3) Added a global Review QR block to the Footer above the main footer grid, with QR image + 'Leave a review' CTA + Instagram tag CTA. Also made subscribe form mobile-safe (`min-w-0` + collapsed 'Subscribe' text under sm breakpoint). New PUBLIC endpoint GET /api/reviews/generic-qr.png (no auth, cacheable) returns the same QR PNG used by the admin variant but usable directly from the storefront."
+
 frontend:
   - task: "Storefront + Admin panel wiring (React 19)"
     implemented: true
@@ -453,10 +465,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Multi-role users (RBAC): invite/list/update/delete users + role-gated endpoints"
-    - "Categories admin CRUD (with product-linked delete guard)"
-    - "Generic (public) review submission + QR"
-    - "Integrations Hub — DB-backed settings with masked secrets"
+    - "Bug fixes: nav overlap (SHOP uppercase + logo overlap) + Footer global QR"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

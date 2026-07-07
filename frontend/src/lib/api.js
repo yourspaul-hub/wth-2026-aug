@@ -145,6 +145,7 @@ export const adminSyncAllGoogleLocations = () => api.post('/admin/google-locatio
 // Generic (non-user-specific) review QR + public submission
 export const adminGetGenericQr = () => api.get('/admin/reviews/generic-qr').then(r => r.data);
 export const genericQrImageUrl = () => `${API_BASE}/admin/reviews/generic-qr/image.png`;
+export const publicGenericQrImageUrl = () => `${API_BASE}/reviews/generic-qr.png`;
 export const submitPublicReview = (payload) => api.post('/reviews/public', payload).then(r => r.data);
 
 // Integration settings

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Instagram, Facebook, Youtube, Mail, Phone, MapPin, Send } from 'lucide-react';
 import { categories, brandInfo } from '../mock/mock';
-import { subscribeNewsletter } from '../lib/api';
+import { subscribeNewsletter, publicGenericQrImageUrl } from '../lib/api';
 import { toast } from 'sonner';
 import Logo from './Logo';
 
@@ -30,11 +30,31 @@ const Footer = () => {
             <p className="mt-3 text-white/70 max-w-md">Subscribe for scripture drops, new collections and exclusive gifts — straight to your inbox.</p>
           </div>
           <form onSubmit={subscribe} className="flex items-center bg-white/10 border border-white/20 rounded-full pl-6 pr-2 py-2 focus-within:border-[#E88864] transition-colors">
-            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email" className="flex-1 bg-transparent outline-none text-sm placeholder:text-white/50 py-2" />
-            <button type="submit" className="bg-[#B4593F] hover:bg-[#E88864] transition-colors text-white px-5 py-3 rounded-full text-xs uppercase tracking-[0.2em] inline-flex items-center gap-2">
-              <Send className="w-3.5 h-3.5" /> Subscribe
+            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email" className="flex-1 bg-transparent outline-none text-sm placeholder:text-white/50 py-2 min-w-0" />
+            <button type="submit" className="shrink-0 bg-[#B4593F] hover:bg-[#E88864] transition-colors text-white px-4 md:px-5 py-3 rounded-full text-xs uppercase tracking-[0.2em] inline-flex items-center gap-2">
+              <Send className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Subscribe</span>
             </button>
           </form>
+        </div>
+
+        {/* Global review QR — scan to leave a review */}
+        <div className="py-14 border-b border-white/10 grid md:grid-cols-[auto_1fr] gap-8 items-center" data-testid="footer-review-qr">
+          <div className="bg-white p-3 rounded-xl w-max mx-auto md:mx-0">
+            <img src={publicGenericQrImageUrl()} alt="Scan to leave a review" className="w-32 h-32 md:w-36 md:h-36" />
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-[0.3em] text-[#E88864] mb-2">Share your story</div>
+            <h3 className="font-serif-display text-2xl md:text-3xl leading-tight">Loved your Wear The Hope piece? <span className="italic text-[#E88864]">Tell the world.</span></h3>
+            <p className="mt-3 text-white/70 text-sm max-w-md leading-relaxed">Scan the QR — or use the link below — to leave a review. Your words help other believers find us.</p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link to="/review" data-testid="footer-review-link" className="inline-flex items-center gap-2 bg-[#B4593F] hover:bg-[#E88864] transition-colors text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-[0.2em]">
+                Leave a review
+              </Link>
+              <a href="https://www.instagram.com/wearthehope" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 transition-colors text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-[0.2em]">
+                <Instagram className="w-3.5 h-3.5" /> Tag @wearthehope
+              </a>
+            </div>
+          </div>
         </div>
 
         {/* Main */}

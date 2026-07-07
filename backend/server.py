@@ -1851,6 +1851,21 @@ async def public_generic_review(payload: QRReviewSubmission):
     return {'ok': True, 'review_id': review['id'], 'message': 'Thanks! Your review is submitted and will appear after a quick check.'}
 
 
+@api.get('/reviews/generic-qr.png')
+async def public_generic_qr_image():
+    """Public PNG QR pointing to /review — usable in the footer / packing slips."""
+    base = await get_setting('PUBLIC_APP_URL', '')
+    review_url = f'{base}/review' if base else '/review'
+    img = qrcode.make(review_url)
+    buf = BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    return StreamingResponse(iter([buf.getvalue()]), media_type='image/png', headers={
+        'Cache-Control': 'public, max-age=86400',
+        'Content-Disposition': 'inline; filename="wth-review-qr.png"',
+    })
+
+
 @api.get('/admin/reviews/generic-qr')
 async def admin_generic_qr(user: dict = Depends(require_admin)):
     """Return the URL + PNG endpoint for the single generic (non-user-specific) review QR."""
