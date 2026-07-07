@@ -1709,6 +1709,15 @@ async def qr_delete(token: str, user: dict = Depends(require_admin)):
     return {'ok': True}
 
 
+def _redact_email(email: Optional[str]) -> Optional[str]:
+    if not email or '@' not in email:
+        return email
+    user, _, domain = email.partition('@')
+    if len(user) <= 2:
+        return f'{user[0]}***@{domain}'
+    return f'{user[0]}***{user[-1]}@{domain}'
+
+
 # ---- Public QR review endpoints ----
 @api.get('/r/{token}')
 async def public_qr_info(token: str):
@@ -1731,7 +1740,7 @@ async def public_qr_info(token: str):
     return {
         'token': token,
         'customer_name': tok.get('customer_name'),
-        'customer_email': tok.get('customer_email'),
+        'customer_email': _redact_email(tok.get('customer_email')),
         'product': product,
         'order': order,
     }
@@ -1752,12 +1761,19 @@ async def public_qr_submit(token: str, payload: QRReviewSubmission):
     if len(payload.text.strip()) < 5:
         raise HTTPException(status_code=400, detail='Please write at least a few words about your experience')
 
+    # Cap photos to 6, each URL ≤ 2KB, http(s) only
+    safe_photos = []
+    for p in (payload.photos or [])[:6]:
+        s = str(p).strip()
+        if len(s) <= 2048 and (s.startswith('http://') or s.startswith('https://')):
+            safe_photos.append(s)
+
     review = Review(
-        name=payload.name, rating=payload.rating, text=payload.text.strip(),
+        name=payload.name.strip()[:120], rating=payload.rating, text=payload.text.strip()[:2000],
         when='just now', source='QR', published=False,  # requires moderation
         order_number=tok.get('order_number'), product_id=tok.get('product_id'),
-        email=payload.email or tok.get('customer_email'),
-        photos=payload.photos, verified=True,
+        email=(payload.email or tok.get('customer_email')),
+        photos=safe_photos, verified=True,
     ).model_dump()
     await db.reviews.insert_one(review)
     await db.qr_tokens.update_one({'token': token}, {'$set': {
@@ -1779,21 +1795,22 @@ _MOCK_GOOGLE_REVIEWERS = [
 
 
 async def _fetch_google_reviews(place_id: str) -> dict:
-    """Fetch reviews from Google Places API v1. Falls back to a realistic mock when key is missing."""
+    """Fetch reviews from Google Places API v1. Falls back to a deterministic mock when key is missing."""
     key = os.environ.get('GOOGLE_PLACES_API_KEY')
     if not key:
-        # MOCKED response — random subset
-        picks = random.sample(_MOCK_GOOGLE_REVIEWERS, k=min(5, len(_MOCK_GOOGLE_REVIEWERS)))
+        # Deterministic mock: seed randomness with a stable hash of place_id so rating & count don't jump between syncs.
+        rng = random.Random(hash(place_id) & 0xFFFFFFFF)
+        picks = rng.sample(_MOCK_GOOGLE_REVIEWERS, k=min(5, len(_MOCK_GOOGLE_REVIEWERS)))
         now = datetime.now(timezone.utc)
         return {
             'mocked': True,
             'rating': round(sum(p[1] for p in picks) / len(picks), 1),
-            'review_count': 148 + random.randint(0, 50),
+            'review_count': 148 + (hash(place_id) & 0x3F),  # stable 148..211
             'reviews': [
                 {
                     'google_review_id': f'gmock_{place_id}_{i}',
                     'author': p[0], 'rating': p[1], 'text': p[2], 'avatar': p[3],
-                    'time': (now - timedelta(days=random.randint(2, 120))).isoformat(),
+                    'time': (now - timedelta(days=(hash(place_id + p[0]) & 0x7F))).isoformat(),
                 }
                 for i, p in enumerate(picks)
             ],
@@ -1876,16 +1893,18 @@ async def sync_google_location(gid: str, user: dict = Depends(require_admin)):
             'when': 'via Google',
             'avatar': rv.get('avatar'),
             'source': loc['label'] or 'Google',
-            'published': should_publish,
             'google_review_id': gid_key,
             'google_place_id': loc['place_id'],
             'google_location_id': loc['id'],
             'verified': True,
         }
         if existing:
+            # PRESERVE admin's published decision on re-sync — only update Google-sourced fields
             await db.reviews.update_one({'id': existing['id']}, {'$set': rv_doc})
             updated += 1
         else:
+            # First import — set published based on min_rating_to_publish
+            rv_doc['published'] = should_publish
             rv_doc = Review(**rv_doc).model_dump()
             await db.reviews.insert_one(rv_doc)
             imported += 1
@@ -1953,6 +1972,8 @@ async def startup_event():
     await db.orders.create_index('order_number', unique=True)
     await db.coupons.create_index('code', unique=True)
     await db.reviews.create_index('id', unique=True)
+    await db.reviews.create_index('google_review_id', sparse=True)
+    await db.qr_tokens.create_index('token', unique=True)
     await db.seo_meta.create_index('path', unique=True)
     await db.newsletter.create_index('email', unique=True)
     await db.collections.create_index('slug', unique=True)

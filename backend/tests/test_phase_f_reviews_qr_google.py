@@ -222,7 +222,9 @@ class TestQRPublicInfo:
         d = r.json()
         assert d['token'] == tok
         assert d['customer_name'] == 'PyF Buyer'
-        assert d['customer_email'] == STATE['main_customer_email']
+        # Email is redacted in public response for privacy (e.g. p***r@example.com)
+        assert '***' in d['customer_email']
+        assert d['customer_email'].endswith('@example.com')
         # product should be present since we passed product_id
         assert d['product'] is not None
         assert d['product']['id'] == STATE['main_product_id']
