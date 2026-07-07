@@ -16,6 +16,8 @@ const nav = [
   { to: '/admin/seo', label: 'SEO', icon: Search },
   { to: '/admin/redirects', label: 'Redirects', icon: ArrowUpRight },
   { to: '/admin/newsletter', label: 'Newsletter', icon: Send },
+  { to: '/admin/emails', label: 'Emails', icon: Mail },
+  { to: '/admin/abandoned-carts', label: 'Abandoned Carts', icon: Clock },
 ];
 
 const AdminLayout = () => {

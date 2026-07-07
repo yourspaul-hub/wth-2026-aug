@@ -1,0 +1,39 @@
+{
+  "summary": "Phase C (Order Operations) backend testing — all 18 pytest cases PASS. Verified admin auth via mongosh-minted Bearer token, full order lifecycle (create → pay → ship → refund) with email_outbox emissions, invoice HTML rendering, abandoned cart dedupe + recovery + auto-mark-recovered on order placement, email outbox admin list/filter/get, and regression sanity (HOPE10 coupon, /api/products, 401 without Bearer). All payment/shipping/email flows are MOCKED as expected (mocked:true in payment response; SR-prefixed AWB; email_outbox status='mocked').",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/orders (shipping_address.email)", "issue": "Pydantic EmailStr rejects reserved TLDs like `.test` (RFC 2606) with 422 — tests must use routable-looking TLDs (`.io`, `.com`). Not a bug, just documenting for next test iteration. Existing default in test_credentials.md uses `.test` which will not work as a shipping/buyer email."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_phase_c_orders.py",
+    "/app/test_reports/pytest/phase_c_results.xml"
+  ],
+  "action_items": [
+    "None blocking. All Phase C acceptance criteria verified end-to-end.",
+    "(Optional hardening) Consider trimming EmailStr validation strictness for buyer/shipping email if you want to accept .test domains, or update test_credentials.md example emails to `.io`."
+  ],
+  "critical_code_review_comments": [
+    "server.py is ~1189 lines — nearing the 700-line soft cap. Recommend splitting into modules: orders.py, payments.py, admin.py, emails.py, invoices.py, seo.py.",
+    "queue_email() and emit_order_email() log & swallow exceptions with warning — acceptable for a mocked outbox, but when Gmail SMTP is wired in, ensure retry/backoff and status='failed' persistence with the error.",
+    "refund_order() does not decrement coupons.used_count on refund; if a coupon was used and then refunded, the coupon usage count remains inflated. Minor accounting drift.",
+    "create_order marks abandoned_carts as recovered by shipping_address.email — good. However refund flow does not revert the recovered flag; acceptable but worth documenting.",
+    "Order stock decrement happens BEFORE payment verify; if verify never happens, stock is held. There is no auto-release on pending timeout. Consider a background job or explicit cancel endpoint that restocks. (Out of Phase C scope.)",
+    "PATCH /api/admin/orders/{order_number} emits 'order_shipped' whenever status=='shipped' — even if the order was already shipped (duplicate emails possible on re-PATCH). Add guard: only emit if previous status != 'shipped'.",
+    "Invoice HTML embeds only the total once; if you later add a customer-provided PO/GST number, add SEO/no-index headers on the invoice HTML endpoint (currently indexable if crawled).",
+    "abandoned_carts.updated_at is set by track_cart() only on update path; on create it defaults to _now() via model — consistent, OK."
+  ],
+  "updated_files": [
+    "/app/backend/tests/__init__.py (created)",
+    "/app/backend/tests/test_phase_c_orders.py (created)"
+  ],
+  "success_rate": {"backend": "100% (18/18)", "frontend": "n/a (skipped per request)"},
+  "test_credentials": "Admin session minted via mongosh (see /app/memory/test_credentials.md). Fixture `_mint_admin_token()` in test_phase_c_orders.py auto-mints a fresh Bearer token per pytest session using MONGO_URL + DB_NAME from backend/.env.",
+  "seed_data_creation": "Each test session creates: (1) fresh Product `TEST Phase C Product ...` with stock=20 for deterministic restock assertions (auto-deleted on teardown), (2) admin_users + admin_sessions rows in MongoDB (session-scoped), (3) several orders with `WTH-YYYYMMDD-XXXXX` numbers, (4) abandoned cart with `cart.<hex>@wearthehope.io`, (5) email_outbox rows for order_placed/order_paid/order_shipped/order_refunded/abandoned_cart templates.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run this suite with `cd /app/backend && set -a && source .env && set +a && python -m pytest tests/test_phase_c_orders.py -v -n 0`. The `-n 0` disables xdist parallel execution — REQUIRED because TestOrderLifecycle chains order state across test methods via module-level attributes (loadscope pins by class, which would put them on different workers). Fresh product + fresh admin token are minted per session; no manual setup needed. `.test` TLD is rejected by Pydantic EmailStr — always use `.io` or similar routable-looking domain.",
+  "rca of the issue": "N/A — no bugs surfaced. Initial run showed spurious failures because (a) EmailStr rejects `.test` TLD (fixed by switching to `.io`), (b) pytest-xdist ran classes on separate workers breaking cross-class state (fixed by forcing `-n 0`). Both are test-infra issues, not app bugs."
+}

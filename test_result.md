@@ -240,6 +240,54 @@ backend:
         agent: "testing"
         comment: "✅ TESTED: GET /api/admin/stats returns all required fields: total_orders, paid_orders, pending_orders, revenue, recent_orders (includes test order created), products, newsletter_subscribers, active_coupons, published_reviews. All working correctly."
 
+  - task: "Phase C — Refund order (POST /api/admin/orders/{order_number}/refund)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "New endpoint requires admin auth. Validates payment_status=='paid'. Sets status=refunded, payment_status=refunded, restocks variant/product stock, appends refund note, queues 'order_refunded' mocked email. Refunding a non-paid order returns 400."
+
+  - task: "Phase C — Invoice HTML (GET /api/invoices/{order_number})"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Public HTML invoice with brand styling, itemised lines, tax breakdown, discount, print button. Returns 404 for unknown order."
+
+  - task: "Phase C — Abandoned Cart tracking + admin list + recovery email"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "POST /api/cart/track upserts by email+recovered=false. GET /api/admin/abandoned-carts returns {stale (>30min old), all}. POST /api/admin/abandoned-carts/{id}/send-recovery queues mocked recovery email and marks recovery_email_sent=true. Placing an order for that email should mark cart recovered=true."
+
+  - task: "Phase C — Email Outbox (mocked). Emit on order_placed/paid/shipped/refunded"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "queue_email writes to email_outbox with rendered HTML, status='mocked'. Emit points: order_placed on POST /api/orders, order_paid on /payments/verify, order_shipped on admin PATCH status=shipped, order_refunded on refund. Admin endpoints GET /api/admin/emails (optional ?template=) and GET /api/admin/emails/{id}."
+
 frontend:
   - task: "Storefront + Admin panel wiring (React 19)"
     implemented: true
@@ -260,7 +308,11 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Phase C — Refund order (POST /api/admin/orders/{order_number}/refund)"
+    - "Phase C — Invoice HTML (GET /api/invoices/{order_number})"
+    - "Phase C — Abandoned Cart tracking + admin list + recovery email"
+    - "Phase C — Email Outbox (mocked). Emit on order_placed/paid/shipped/refunded"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -270,3 +322,5 @@ agent_communication:
     message: "Backend v1 implemented. All admin endpoints require session_token cookie or Bearer header — use the mongo test-user technique from /app/auth_testing.md to create a session for admin endpoints. Razorpay + Shiprocket integrations are explicitly MOCKED (endpoints return mocked=true). Please test all backend flows: public catalog fetching, coupon validation (HOPE10 with subtotal 1000 → 100 off; FLAT100 with 800 → 100 off), order creation → payment verify (auto success + Shiprocket AWB), admin listing/updating orders/coupons/reviews/SEO, sitemap.xml + robots.txt content. Base URL comes from REACT_APP_BACKEND_URL — please use that public URL, NOT localhost."
   - agent: "testing"
     message: "Backend testing complete. 40/42 tests passed. All core functionality working correctly including auth, products, categories, reviews, coupons, orders, payments (MOCKED), shipping (MOCKED), newsletter, SEO, and admin endpoints. Two issues found: (1) sitemap.xml and robots.txt not accessible via public URL due to ingress routing to frontend (backend endpoints verified working on localhost:8001) - this is an infrastructure issue, not backend code bug; (2) OrderCreate model requires full OrderItem structure forcing clients to fetch product details before order creation - recommend creating OrderItemCreate model with just product_id, qty, customization for cleaner API. All MOCKED integrations clearly marked with mocked=true in responses."
+  - agent: "main"
+    message: "Phase C is implemented. Please test the four NEW backend flows against REACT_APP_BACKEND_URL. Use /app/memory/test_credentials.md to create an admin session via mongosh and pass Bearer token. Flows to verify: (1) Full order lifecycle → order_placed email queued in email_outbox → verify payment → order_paid email + Shiprocket AWB + tracking → PATCH admin/orders/{on} status=shipped → order_shipped email → POST admin/orders/{on}/refund with reason → refunded status + order_refunded email + stock restored. (2) Refund on non-paid order returns 400. (3) GET /api/invoices/{order_number} returns HTML containing order_number and total; 404 for unknown. (4) Abandoned cart: POST /api/cart/track (twice with same email upserts), GET /api/admin/abandoned-carts returns {stale, all}, POST /api/admin/abandoned-carts/{id}/send-recovery queues abandoned_cart email and sets recovery_email_sent=true. Placing a real order for that email should mark recovered=true. (5) GET /api/admin/emails lists mocked emails, filter by ?template=order_paid works, GET /api/admin/emails/{id} returns single. Backend only — DO NOT run frontend tests yet."

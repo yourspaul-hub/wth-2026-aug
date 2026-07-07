@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { adminListOrders, adminUpdateOrder } from '../../lib/api';
+import { adminListOrders, adminUpdateOrder, refundOrder, invoiceUrl } from '../../lib/api';
 import { toast } from 'sonner';
-import { X, Truck, ExternalLink } from 'lucide-react';
+import { X, Truck, ExternalLink, FileText, RotateCcw } from 'lucide-react';
 
 const STATUSES = ['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'refunded'];
 
@@ -20,6 +20,17 @@ const AdminOrders = () => {
       setOrders(prev => prev.map(o => o.order_number === order_number ? updated : o));
       if (selected?.order_number === order_number) setSelected(updated);
     } catch { toast.error('Failed to update'); }
+  };
+
+  const doRefund = async (order) => {
+    const reason = window.prompt('Refund reason (optional):', '');
+    if (reason === null) return;
+    try {
+      const res = await refundOrder(order.order_number, reason);
+      toast.success('Refund processed (mocked)');
+      setOrders(prev => prev.map(o => o.order_number === order.order_number ? res.order : o));
+      setSelected(res.order);
+    } catch (e) { toast.error(e?.response?.data?.detail || 'Refund failed'); }
   };
 
   return (
@@ -114,6 +125,31 @@ const AdminOrders = () => {
                   <div>AWB: {selected.shiprocket_awb || 'Not assigned'}</div>
                   {selected.tracking_url && <a href={selected.tracking_url} target="_blank" rel="noreferrer" className="text-[#B4593F] inline-flex items-center gap-1">Track <ExternalLink className="w-3 h-3" /></a>}
                 </div>
+              </div>
+              <div className="pt-4 border-t border-[#EBD9CE] flex flex-wrap gap-2">
+                <a
+                  href={invoiceUrl(selected.order_number)}
+                  target="_blank"
+                  rel="noreferrer"
+                  data-testid="order-invoice-btn"
+                  className="inline-flex items-center gap-2 text-xs uppercase tracking-widest bg-white border border-[#EBD9CE] hover:border-[#B4593F] text-[#1A1A1A] px-4 py-2.5 rounded-full transition-colors"
+                >
+                  <FileText className="w-3.5 h-3.5" /> Invoice / Print
+                </a>
+                {selected.payment_status === 'paid' && selected.status !== 'refunded' && (
+                  <button
+                    onClick={() => doRefund(selected)}
+                    data-testid="order-refund-btn"
+                    className="inline-flex items-center gap-2 text-xs uppercase tracking-widest bg-white border border-rose-300 hover:bg-rose-50 text-rose-700 px-4 py-2.5 rounded-full transition-colors"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" /> Refund
+                  </button>
+                )}
+                {selected.status === 'refunded' && (
+                  <span className="inline-flex items-center gap-2 text-xs uppercase tracking-widest bg-rose-50 text-rose-700 px-4 py-2.5 rounded-full">
+                    <RotateCcw className="w-3.5 h-3.5" /> Refunded
+                  </span>
+                )}
               </div>
             </div>
           </aside>
