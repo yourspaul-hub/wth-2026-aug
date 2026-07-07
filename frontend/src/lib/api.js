@@ -69,3 +69,15 @@ export const adminListCollections = () => api.get('/admin/collections').then(r =
 export const adminCreateCollection = (payload) => api.post('/admin/collections', payload).then(r => r.data);
 export const adminUpdateCollection = (id, patch) => api.patch(`/admin/collections/${id}`, patch).then(r => r.data);
 export const adminDeleteCollection = (id) => api.delete(`/admin/collections/${id}`).then(r => r.data);
+
+// Shipping rules & Tax rates
+export const fetchShippingOptions = (params = {}) => api.get('/shipping/options', { params }).then(r => r.data);
+export const fetchTaxRates = () => api.get('/tax/rates').then(r => r.data);
+export const adminListShippingRules = () => api.get('/admin/shipping-rules').then(r => r.data);
+export const adminCreateShippingRule = (p) => api.post('/admin/shipping-rules', p).then(r => r.data);
+export const adminUpdateShippingRule = (id, p) => api.patch(`/admin/shipping-rules/${id}`, p).then(r => r.data);
+export const adminDeleteShippingRule = (id) => api.delete(`/admin/shipping-rules/${id}`).then(r => r.data);
+export const adminListTaxRates = () => api.get('/admin/tax-rates').then(r => r.data);
+export const adminCreateTaxRate = (p) => api.post('/admin/tax-rates', p).then(r => r.data);
+export const adminUpdateTaxRate = (id, p) => api.patch(`/admin/tax-rates/${id}`, p).then(r => r.data);
+export const adminDeleteTaxRate = (id) => api.delete(`/admin/tax-rates/${id}`).then(r => r.data);

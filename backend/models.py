@@ -260,6 +260,58 @@ class CouponValidate(BaseModel):
     subtotal: int
 
 
+# ---------- Shipping Rules & Tax Rates (Phase B) ----------
+class ShippingRule(BaseModel):
+    id: str = Field(default_factory=lambda: _uid('sr_'))
+    name: str
+    kind: str = 'flat'  # 'flat' | 'free' | 'pickup' | 'express'
+    price: int = 0
+    min_subtotal: int = 0  # for free shipping / free-over-N
+    max_weight_grams: Optional[int] = None
+    eta_days: str = '3-5'
+    states: List[str] = []  # if empty, applies to all
+    pincodes: List[str] = []  # optional pincode allowlist
+    pickup_address: Optional[str] = None  # for kind='pickup'
+    active: bool = True
+    order: int = 0
+    created_at: datetime = Field(default_factory=_now)
+
+
+class ShippingRuleCreate(BaseModel):
+    name: str
+    kind: str = 'flat'
+    price: int = 0
+    min_subtotal: int = 0
+    max_weight_grams: Optional[int] = None
+    eta_days: str = '3-5'
+    states: List[str] = []
+    pincodes: List[str] = []
+    pickup_address: Optional[str] = None
+    active: bool = True
+    order: int = 0
+
+
+class TaxRate(BaseModel):
+    id: str = Field(default_factory=lambda: _uid('tx_'))
+    name: str  # 'GST 18%', 'GST 12%'
+    percent: float = 18.0
+    scope: str = 'all'  # 'all' | 'category' | 'product'
+    category_id: Optional[str] = None
+    active: bool = True
+    order: int = 0
+    created_at: datetime = Field(default_factory=_now)
+
+
+class TaxRateCreate(BaseModel):
+    name: str
+    percent: float = 18.0
+    scope: str = 'all'
+    category_id: Optional[str] = None
+    active: bool = True
+    order: int = 0
+
+
+
 # ---------- Orders ----------
 class ShippingAddress(BaseModel):
     full_name: str
@@ -296,12 +348,19 @@ class Order(BaseModel):
     discount: int = 0
     coupon_code: Optional[str] = None
     shipping_fee: int = 0
+    shipping_option_id: Optional[str] = None
+    shipping_option_name: Optional[str] = None
+    tax: int = 0
+    tax_breakdown: List[dict] = []  # [{name, percent, amount}]
     total: int
     status: str = 'pending'  # pending | paid | shipped | delivered | cancelled | refunded
     payment_status: str = 'unpaid'  # unpaid | paid | refunded | failed
-    payment_provider: str = 'razorpay'
+    payment_provider: str = 'razorpay'  # razorpay | stripe | paypal | cod
+    payment_reference: Optional[str] = None
     razorpay_order_id: Optional[str] = None
     razorpay_payment_id: Optional[str] = None
+    stripe_session_id: Optional[str] = None
+    paypal_order_id: Optional[str] = None
     shiprocket_awb: Optional[str] = None
     shiprocket_shipment_id: Optional[str] = None
     tracking_url: Optional[str] = None
@@ -314,6 +373,8 @@ class OrderCreate(BaseModel):
     items: List[OrderItem]
     shipping_address: ShippingAddress
     coupon_code: Optional[str] = None
+    shipping_option_id: Optional[str] = None
+    payment_provider: str = 'razorpay'
     notes: Optional[str] = None
 
 

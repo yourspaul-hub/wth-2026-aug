@@ -258,6 +258,29 @@ async def seed_all(db):
     for tag, ribbon in tag_to_ribbon.items():
         await db.products.update_many({'tag': tag, 'ribbon': None}, {'$set': {'ribbon': ribbon}})
 
+    # Seed default shipping rules
+    if await db.shipping_rules.count_documents({}) == 0:
+        rules = [
+            {'id': 'sr_01', 'name': 'Standard Shipping', 'kind': 'flat', 'price': 99, 'min_subtotal': 0, 'eta_days': '3-5', 'states': [], 'pincodes': [], 'active': True, 'order': 1},
+            {'id': 'sr_02', 'name': 'Free Shipping (orders ₹999+)', 'kind': 'free', 'price': 0, 'min_subtotal': 999, 'eta_days': '3-5', 'states': [], 'pincodes': [], 'active': True, 'order': 2},
+            {'id': 'sr_03', 'name': 'Express (BlueDart)', 'kind': 'express', 'price': 199, 'min_subtotal': 0, 'eta_days': '1-2', 'states': [], 'pincodes': [], 'active': True, 'order': 3},
+            {'id': 'sr_04', 'name': 'Local Pickup — Mumbai Studio', 'kind': 'pickup', 'price': 0, 'min_subtotal': 0, 'eta_days': '0', 'pickup_address': 'Wear The Hope Studio, Bandra West, Mumbai 400050', 'states': ['Maharashtra'], 'pincodes': [], 'active': True, 'order': 4},
+        ]
+        for r in rules:
+            r['created_at'] = datetime.now(timezone.utc)
+        await db.shipping_rules.insert_many(rules)
+
+    # Seed default tax rates (India GST slabs)
+    if await db.tax_rates.count_documents({}) == 0:
+        rates = [
+            {'id': 'tx_01', 'name': 'GST 5%', 'percent': 5.0, 'scope': 'all', 'category_id': None, 'active': False, 'order': 1},
+            {'id': 'tx_02', 'name': 'GST 12%', 'percent': 12.0, 'scope': 'all', 'category_id': None, 'active': True, 'order': 2},
+            {'id': 'tx_03', 'name': 'GST 18%', 'percent': 18.0, 'scope': 'all', 'category_id': None, 'active': False, 'order': 3},
+        ]
+        for t in rates:
+            t['created_at'] = datetime.now(timezone.utc)
+        await db.tax_rates.insert_many(rates)
+
     # Sample collections
     if await db.collections.count_documents({}) == 0:
         # gather product ids by tag

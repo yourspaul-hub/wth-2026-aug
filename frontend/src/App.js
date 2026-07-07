@@ -26,6 +26,8 @@ import AdminOrders from './pages/admin/Orders';
 import AdminProducts from './pages/admin/Products';
 import AdminCollections from './pages/admin/Collections';
 import AdminCoupons from './pages/admin/Coupons';
+import AdminShipping from './pages/admin/Shipping';
+import AdminTax from './pages/admin/Tax';
 import AdminReviews from './pages/admin/Reviews';
 import AdminSeo from './pages/admin/Seo';
 import AdminRedirects from './pages/admin/Redirects';
@@ -68,6 +70,8 @@ function AppRouter() {
           <Route path="products" element={<AdminProducts />} />
           <Route path="collections" element={<AdminCollections />} />
           <Route path="coupons" element={<AdminCoupons />} />
+          <Route path="shipping" element={<AdminShipping />} />
+          <Route path="tax" element={<AdminTax />} />
           <Route path="reviews" element={<AdminReviews />} />
           <Route path="seo" element={<AdminSeo />} />
           <Route path="redirects" element={<AdminRedirects />} />

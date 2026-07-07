@@ -37,6 +37,7 @@ from models import (
     Review, ReviewCreate, ReviewUpdate,
     Coupon, CouponCreate, CouponUpdate, CouponValidate,
     Order, OrderCreate, OrderStatusUpdate, OrderItem, ShippingAddress,
+    ShippingRule, ShippingRuleCreate, TaxRate, TaxRateCreate,
     SeoMeta, SeoMetaCreate,
     Redirect, RedirectCreate,
     Newsletter, NewsletterCreate,
@@ -425,20 +426,82 @@ async def create_order(payload: OrderCreate):
 
     # Digital-only orders skip shipping
     has_physical = any(fi['product_type'] == 'physical' for fi in fresh_items)
-    shipping_fee = 0 if (not has_physical or subtotal >= 999) else 99
-    total = max(0, subtotal - discount + shipping_fee)
+
+    # Shipping resolution
+    shipping_fee = 0
+    shipping_option_name = None
+    shipping_option_id = payload.shipping_option_id
+    if has_physical:
+        rule = None
+        if shipping_option_id:
+            rule = await db.shipping_rules.find_one({'id': shipping_option_id, 'active': True}, {'_id': 0})
+        if not rule:
+            # Default: first active flat rule, or free if subtotal >= 999
+            if subtotal >= 999:
+                rule = await db.shipping_rules.find_one({'kind': 'free', 'active': True}, {'_id': 0})
+            if not rule:
+                rule = await db.shipping_rules.find_one({'kind': 'flat', 'active': True}, {'_id': 0}, sort=[('order', 1)])
+        if rule:
+            shipping_option_id = rule['id']
+            shipping_option_name = rule['name']
+            if rule['kind'] == 'free' or (rule.get('min_subtotal', 0) and subtotal >= rule['min_subtotal'] and rule['kind'] == 'free'):
+                shipping_fee = 0
+            else:
+                shipping_fee = int(rule.get('price', 0))
+        else:
+            shipping_fee = 0 if subtotal >= 999 else 99
+            shipping_option_name = 'Standard'
+
+    # Tax calculation (per-category aware; falls back to global rate)
+    tax_amount = 0
+    tax_breakdown_map = {}  # {rate_id: {name, percent, amount}}
+    taxable = max(0, subtotal - discount)
+    if taxable > 0:
+        global_rate = await db.tax_rates.find_one({'scope': 'all', 'active': True}, {'_id': 0}, sort=[('order', 1)])
+        for fi in fresh_items:
+            p = await db.products.find_one({'id': fi['product_id']}, {'_id': 0, 'category': 1})
+            cat_id = (p or {}).get('category')
+            rate = None
+            if cat_id:
+                rate = await db.tax_rates.find_one({'scope': 'category', 'category_id': cat_id, 'active': True}, {'_id': 0})
+            if not rate:
+                rate = global_rate
+            if not rate:
+                continue
+            # Apply proportional discount to line
+            line_total = fi['price'] * fi['qty']
+            line_discount = int(discount * line_total / subtotal) if subtotal else 0
+            line_taxable = max(0, line_total - line_discount)
+            line_tax = int(round(line_taxable * rate['percent'] / 100))
+            tax_amount += line_tax
+            key = rate['id']
+            if key not in tax_breakdown_map:
+                tax_breakdown_map[key] = {'name': rate['name'], 'percent': rate['percent'], 'amount': 0}
+            tax_breakdown_map[key]['amount'] += line_tax
+    tax_breakdown = list(tax_breakdown_map.values())
+
+    total = max(0, subtotal - discount + shipping_fee + tax_amount)
 
     order_number = _gen_order_number()
-    mock_razorpay_id = f'order_mock_{uuid.uuid4().hex[:16]}'
+    provider = (payload.payment_provider or 'razorpay').lower()
+    mock_razorpay_id = f'order_mock_{uuid.uuid4().hex[:16]}' if provider == 'razorpay' else None
+    mock_stripe_id = f'cs_test_mock_{uuid.uuid4().hex[:20]}' if provider == 'stripe' else None
+    mock_paypal_id = f'PAYPAL_MOCK_{uuid.uuid4().hex[:16].upper()}' if provider == 'paypal' else None
 
     doc = Order(
         order_number=order_number,
         items=[OrderItem(**i) for i in fresh_items],
         shipping_address=payload.shipping_address,
         subtotal=subtotal, discount=discount, coupon_code=coupon_code,
-        shipping_fee=shipping_fee, total=total,
+        shipping_fee=shipping_fee, shipping_option_id=shipping_option_id,
+        shipping_option_name=shipping_option_name,
+        tax=tax_amount, tax_breakdown=tax_breakdown,
+        total=total,
         status='pending', payment_status='unpaid',
+        payment_provider=provider,
         razorpay_order_id=mock_razorpay_id,
+        stripe_session_id=mock_stripe_id,
+        paypal_order_id=mock_paypal_id,
         notes=payload.notes,
     ).model_dump()
     await db.orders.insert_one(doc)
@@ -457,24 +520,33 @@ async def create_order(payload: OrderCreate):
         await db.coupons.update_one({'code': coupon_code}, {'$inc': {'used_count': 1}})
 
     doc.pop('_id', None)
-    return {
-        'order': doc,
-        'razorpay': {
+
+    # Build provider-specific mocked payment payload
+    payment = {'provider': provider, 'mocked': True, 'amount': total * 100, 'currency': 'INR', 'order_number': order_number}
+    if provider == 'razorpay':
+        payment.update({
             'order_id': mock_razorpay_id,
-            'amount': total * 100,
-            'currency': 'INR',
             'key_id': 'rzp_test_MOCKED_KEY',
             'name': 'Wear The Hope',
             'description': f'Order {order_number}',
-            'prefill': {
-                'name': payload.shipping_address.full_name,
-                'email': payload.shipping_address.email,
-                'contact': payload.shipping_address.phone,
-            },
-            'notes': {'order_number': order_number},
-            'mocked': True,
-        }
-    }
+            'prefill': {'name': payload.shipping_address.full_name, 'email': payload.shipping_address.email, 'contact': payload.shipping_address.phone},
+        })
+    elif provider == 'stripe':
+        payment.update({
+            'session_id': mock_stripe_id,
+            'publishable_key': 'pk_test_MOCKED_KEY',
+            'checkout_url': f'#mock-stripe-checkout/{mock_stripe_id}',
+        })
+    elif provider == 'paypal':
+        payment.update({
+            'paypal_order_id': mock_paypal_id,
+            'client_id': 'PAYPAL_CLIENT_MOCKED',
+            'approve_url': f'#mock-paypal-approve/{mock_paypal_id}',
+        })
+    elif provider == 'cod':
+        payment.update({'cod': True, 'note': 'Cash on delivery selected'})
+
+    return {'order': doc, 'payment': payment, 'razorpay': payment if provider == 'razorpay' else None}
 
 
 @api.get('/orders/{order_number}')
@@ -485,42 +557,135 @@ async def get_order(order_number: str):
     return o
 
 
-# --- Payments (MOCK Razorpay) ---
+# --- Payments (MOCK Razorpay + Stripe + PayPal) ---
 class PaymentVerify(BaseModel):
-    razorpay_order_id: str
+    order_number: str
+    provider: Optional[str] = None
+    razorpay_order_id: Optional[str] = None
     razorpay_payment_id: Optional[str] = None
     razorpay_signature: Optional[str] = None
-    order_number: str
+    stripe_session_id: Optional[str] = None
+    paypal_order_id: Optional[str] = None
+    paypal_capture_id: Optional[str] = None
 
 
+@api.post('/payments/verify')
 @api.post('/payments/razorpay/verify')
 async def verify_payment(payload: PaymentVerify):
-    """MOCKED — always succeeds. Real integration signs & verifies with Razorpay SDK."""
+    """MOCKED payment verify — accepts any provider and marks order paid."""
     order = await db.orders.find_one({'order_number': payload.order_number}, {'_id': 0})
     if not order:
         raise HTTPException(status_code=404, detail='Order not found')
-    payment_id = payload.razorpay_payment_id or f'pay_mock_{uuid.uuid4().hex[:16]}'
-    await db.orders.update_one(
-        {'order_number': payload.order_number},
-        {'$set': {
-            'payment_status': 'paid', 'status': 'paid',
-            'razorpay_payment_id': payment_id,
-            'updated_at': datetime.now(timezone.utc),
-        }}
-    )
-    # Mock: create Shiprocket shipment
-    awb = f'SR{random.randint(100000000, 999999999)}'
-    shipment_id = f'ship_mock_{uuid.uuid4().hex[:10]}'
-    tracking_url = f'https://shiprocket.co/tracking/{awb}'
-    await db.orders.update_one(
-        {'order_number': payload.order_number},
-        {'$set': {
-            'shiprocket_awb': awb, 'shiprocket_shipment_id': shipment_id,
-            'tracking_url': tracking_url,
-        }}
-    )
+    provider = (payload.provider or order.get('payment_provider') or 'razorpay').lower()
+
+    reference = None
+    updates = {'payment_status': 'paid', 'status': 'paid', 'payment_provider': provider, 'updated_at': datetime.now(timezone.utc)}
+    if provider == 'razorpay':
+        reference = payload.razorpay_payment_id or f'pay_mock_{uuid.uuid4().hex[:16]}'
+        updates['razorpay_payment_id'] = reference
+    elif provider == 'stripe':
+        reference = payload.stripe_session_id or f'pi_mock_{uuid.uuid4().hex[:16]}'
+    elif provider == 'paypal':
+        reference = payload.paypal_capture_id or f'CAPTURE_MOCK_{uuid.uuid4().hex[:12].upper()}'
+    else:
+        reference = f'{provider}_mock_{uuid.uuid4().hex[:12]}'
+    updates['payment_reference'] = reference
+
+    await db.orders.update_one({'order_number': payload.order_number}, {'$set': updates})
+
+    # Mock Shiprocket for physical orders
+    if any(it.get('product_type') == 'physical' for it in order.get('items', [])):
+        awb = f'SR{random.randint(100000000, 999999999)}'
+        shipment_id = f'ship_mock_{uuid.uuid4().hex[:10]}'
+        tracking_url = f'https://shiprocket.co/tracking/{awb}'
+        await db.orders.update_one(
+            {'order_number': payload.order_number},
+            {'$set': {'shiprocket_awb': awb, 'shiprocket_shipment_id': shipment_id, 'tracking_url': tracking_url}}
+        )
+
     order = await db.orders.find_one({'order_number': payload.order_number}, {'_id': 0})
-    return {'ok': True, 'mocked': True, 'order': order}
+    return {'ok': True, 'mocked': True, 'provider': provider, 'reference': reference, 'order': order}
+
+
+# ================= SHIPPING RULES =================
+@api.get('/shipping/options')
+async def public_shipping_options(pincode: Optional[str] = None, subtotal: int = 0, state: Optional[str] = None):
+    rules = await db.shipping_rules.find({'active': True}, {'_id': 0}).sort('order', 1).to_list(100)
+    out = []
+    for r in rules:
+        # Filter by state / pincode if specified
+        if r.get('states') and state and state not in r['states']:
+            continue
+        if r.get('pincodes') and pincode and pincode not in r['pincodes']:
+            continue
+        price = int(r.get('price', 0))
+        # Free shipping rule with min_subtotal
+        if r['kind'] == 'free' and subtotal < r.get('min_subtotal', 0):
+            continue
+        out.append({**r, 'effective_price': 0 if r['kind'] == 'free' else price})
+    return {'options': out, 'mocked': True}
+
+
+@api.get('/admin/shipping-rules')
+async def admin_list_shipping_rules(user: dict = Depends(require_admin)):
+    return await db.shipping_rules.find({}, {'_id': 0}).sort('order', 1).to_list(500)
+
+
+@api.post('/admin/shipping-rules')
+async def create_shipping_rule(payload: ShippingRuleCreate, user: dict = Depends(require_admin)):
+    doc = ShippingRule(**payload.model_dump()).model_dump()
+    await db.shipping_rules.insert_one(doc)
+    doc.pop('_id', None)
+    return doc
+
+
+@api.patch('/admin/shipping-rules/{rid}')
+async def update_shipping_rule(rid: str, payload: dict, user: dict = Depends(require_admin)):
+    await db.shipping_rules.update_one({'id': rid}, {'$set': payload})
+    return await db.shipping_rules.find_one({'id': rid}, {'_id': 0})
+
+
+@api.delete('/admin/shipping-rules/{rid}')
+async def delete_shipping_rule(rid: str, user: dict = Depends(require_admin)):
+    await db.shipping_rules.delete_one({'id': rid})
+    return {'ok': True}
+
+
+# ================= TAX RATES =================
+@api.get('/tax/rates')
+async def public_tax_rates():
+    return await db.tax_rates.find({'active': True}, {'_id': 0}).sort('order', 1).to_list(50)
+
+
+@api.get('/admin/tax-rates')
+async def admin_list_tax_rates(user: dict = Depends(require_admin)):
+    return await db.tax_rates.find({}, {'_id': 0}).sort('order', 1).to_list(500)
+
+
+@api.post('/admin/tax-rates')
+async def create_tax_rate(payload: TaxRateCreate, user: dict = Depends(require_admin)):
+    doc = TaxRate(**payload.model_dump()).model_dump()
+    await db.tax_rates.insert_one(doc)
+    doc.pop('_id', None)
+    return doc
+
+
+@api.patch('/admin/tax-rates/{tid}')
+async def update_tax_rate(tid: str, payload: dict, user: dict = Depends(require_admin)):
+    await db.tax_rates.update_one({'id': tid}, {'$set': payload})
+    return await db.tax_rates.find_one({'id': tid}, {'_id': 0})
+
+
+@api.delete('/admin/tax-rates/{tid}')
+async def delete_tax_rate(tid: str, user: dict = Depends(require_admin)):
+    await db.tax_rates.delete_one({'id': tid})
+    return {'ok': True}
+
+
+# --- Legacy alias (kept for existing frontend calls) ---
+@api.post('/payments/razorpay/create-order')
+async def razorpay_create_order_legacy():
+    return {'mocked': True, 'note': 'Use POST /api/orders which returns mocked payment payload'}
 
 
 # --- Shipping (MOCK Shiprocket) ---
