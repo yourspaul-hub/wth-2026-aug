@@ -11,8 +11,8 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, Query
-from fastapi.responses import PlainTextResponse
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, Query, UploadFile, File
+from fastapi.responses import PlainTextResponse, StreamingResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
@@ -42,6 +42,7 @@ from models import (
     Redirect, RedirectCreate,
     Newsletter, NewsletterCreate,
     EmailOutbox, AbandonedCart, AbandonedCartTrack, RefundRequest,
+    Location, LocationCreate,
 )
 from auth import exchange_session_id, get_session_from_request, ensure_aware
 
@@ -1151,6 +1152,233 @@ async def admin_stats(user: dict = Depends(require_admin)):
 @api.get('/')
 async def root():
     return {'ok': True, 'service': 'wear-the-hope', 'time': datetime.now(timezone.utc).isoformat()}
+
+
+# ================= LOCATIONS (Contact / Stores) =================
+@api.get('/locations')
+async def public_locations():
+    return await db.locations.find({'active': True}, {'_id': 0}).sort('order', 1).to_list(100)
+
+
+@api.get('/admin/locations')
+async def admin_list_locations(user: dict = Depends(require_admin)):
+    return await db.locations.find({}, {'_id': 0}).sort('order', 1).to_list(500)
+
+
+@api.post('/admin/locations')
+async def create_location(payload: LocationCreate, user: dict = Depends(require_admin)):
+    doc = Location(**payload.model_dump()).model_dump()
+    await db.locations.insert_one(doc)
+    doc.pop('_id', None)
+    return doc
+
+
+@api.patch('/admin/locations/{lid}')
+async def update_location(lid: str, payload: dict, user: dict = Depends(require_admin)):
+    payload.pop('id', None)
+    payload.pop('_id', None)
+    await db.locations.update_one({'id': lid}, {'$set': payload})
+    return await db.locations.find_one({'id': lid}, {'_id': 0})
+
+
+@api.delete('/admin/locations/{lid}')
+async def delete_location(lid: str, user: dict = Depends(require_admin)):
+    await db.locations.delete_one({'id': lid})
+    return {'ok': True}
+
+
+# ================= BULK PRODUCT UPLOAD =================
+import csv
+import io
+
+PRODUCT_TEMPLATE_COLUMNS = [
+    'sku', 'slug', 'name', 'category_slug', 'price', 'original_price',
+    'stock', 'description', 'image', 'tag', 'product_type', 'active',
+    'personalization_enabled', 'personalization_label',
+]
+
+_SAMPLE_ROWS = [
+    ['WTH-CAP-001', 'faith-cap-blessed', 'Faith Cap — Blessed', 'head-gear', '899', '1199', '25', 'Embroidered faith cap in soft cotton twill.', 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=800', 'bestseller', 'physical', 'true', 'false', ''],
+    ['WTH-TEE-001', 'psalm-46-tee', 'Psalm 46 Tee', 'clothing', '699', '899', '40', '100% cotton, unisex fit.', 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800', 'trending', 'physical', 'true', 'false', ''],
+    ['WTH-MUG-001', 'grace-mug', 'Grace Ceramic Mug', 'drinkware', '449', '', '60', 'Microwave & dishwasher safe.', 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=800', 'new', 'physical', 'true', 'true', 'Engrave name (max 12 chars)'],
+]
+
+
+@api.get('/admin/products/template.csv')
+async def download_product_template(user: dict = Depends(require_admin)):
+    # Fetch live category slugs so instructions match reality
+    cat_slugs = await db.categories.distinct('slug')
+    slugs_str = ' / '.join(sorted(cat_slugs)) if cat_slugs else 'drinkware / clothing / bags / head-gear / boards / tags / badges-magnets / stickers'
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(PRODUCT_TEMPLATE_COLUMNS)
+    for row in _SAMPLE_ROWS:
+        writer.writerow(row)
+    writer.writerow([])
+    writer.writerow(['# INSTRUCTIONS'])
+    writer.writerow(['# Required: sku (or slug), name, category_slug, price'])
+    writer.writerow([f'# category_slug must match one of: {slugs_str}'])
+    writer.writerow(['# active/personalization_enabled: true/false or 1/0'])
+    writer.writerow(['# Rows matching an existing sku OR slug will be UPDATED; others CREATED.'])
+    writer.writerow(['# Remove the sample rows and instruction lines before uploading.'])
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type='text/csv',
+        headers={'Content-Disposition': 'attachment; filename="wth-products-template.csv"'},
+    )
+
+
+def _parse_bool(v):
+    if isinstance(v, bool):
+        return v
+    if v is None:
+        return None
+    s = str(v).strip().lower()
+    if s in ('true', '1', 'yes', 'y'):
+        return True
+    if s in ('false', '0', 'no', 'n', ''):
+        return False
+    return None
+
+
+def _parse_int(v, default=None):
+    if v is None or v == '':
+        return default
+    try:
+        return int(float(str(v).replace(',', '').strip()))
+    except (ValueError, TypeError):
+        return default
+
+
+async def _read_upload_rows(file: UploadFile):
+    """Return list-of-dicts from CSV or XLSX. Raises HTTPException on parse errors."""
+    filename = (file.filename or '').lower()
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail='Empty file')
+
+    rows = []
+    if filename.endswith('.xlsx') or filename.endswith('.xls'):
+        try:
+            from openpyxl import load_workbook
+            wb = load_workbook(io.BytesIO(data), data_only=True)
+            ws = wb.active
+            it = ws.iter_rows(values_only=True)
+            header = [str(c).strip() if c is not None else '' for c in next(it, [])]
+            for r in it:
+                if not r or all(c is None or str(c).strip() == '' for c in r):
+                    continue
+                first = str(r[0]).strip() if r[0] is not None else ''
+                if first.startswith('#'):
+                    continue
+                rows.append({header[i]: r[i] for i in range(min(len(header), len(r)))})
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f'Could not parse Excel file: {e}')
+    else:  # csv (also handles Google Sheets exported as .csv)
+        try:
+            text = data.decode('utf-8-sig', errors='replace')
+            reader = csv.DictReader(io.StringIO(text))
+            for r in reader:
+                first_key = next(iter(r), '')
+                first_val = (r.get(first_key) or '').strip() if isinstance(r.get(first_key), str) else str(r.get(first_key) or '').strip()
+                if first_val.startswith('#'):
+                    continue
+                if all((v is None or str(v).strip() == '') for v in r.values()):
+                    continue
+                rows.append(r)
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f'Could not parse CSV file: {e}')
+    return rows
+
+
+@api.post('/admin/products/bulk')
+async def bulk_upload_products(file: UploadFile = File(...), user: dict = Depends(require_admin)):
+    rows = await _read_upload_rows(file)
+    if not rows:
+        raise HTTPException(status_code=400, detail='No data rows found')
+
+    # Preload categories for slug -> id map
+    cats = await db.categories.find({}, {'_id': 0, 'id': 1, 'slug': 1}).to_list(500)
+    cat_map = {c['slug']: c['id'] for c in cats}
+
+    created = 0
+    updated = 0
+    errors = []
+
+    for idx, row in enumerate(rows, start=2):  # start=2 accounts for header row
+        # Normalize keys (strip)
+        row = {(k or '').strip(): v for k, v in row.items()}
+        sku = (row.get('sku') or '').strip() or None
+        slug = (row.get('slug') or '').strip() or None
+        name = (row.get('name') or '').strip() or None
+        cat_slug = (row.get('category_slug') or '').strip() or None
+        price = _parse_int(row.get('price'))
+
+        if not (sku or slug):
+            errors.append({'row': idx, 'error': 'Missing sku and slug — at least one is required'})
+            continue
+        if not name:
+            errors.append({'row': idx, 'error': 'Missing name'})
+            continue
+        if not cat_slug or cat_slug not in cat_map:
+            errors.append({'row': idx, 'error': f'Unknown category_slug: {cat_slug or "(empty)"}'})
+            continue
+        if price is None or price <= 0:
+            errors.append({'row': idx, 'error': 'Invalid price'})
+            continue
+
+        # Find existing by sku OR slug
+        existing = None
+        if sku:
+            existing = await db.products.find_one({'sku': sku}, {'_id': 0})
+        if not existing and slug:
+            existing = await db.products.find_one({'slug': slug}, {'_id': 0})
+
+        auto_slug = slug or (sku.lower().replace('_', '-') if sku else name.lower().replace(' ', '-'))
+
+        payload = {
+            'name': name,
+            'slug': auto_slug,
+            'category': cat_map[cat_slug],
+            'price': price,
+            'original_price': _parse_int(row.get('original_price'), default=price),
+            'stock': _parse_int(row.get('stock'), default=0),
+            'description': (row.get('description') or '').strip(),
+            'image': (row.get('image') or '').strip() or 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800',
+            'tag': (row.get('tag') or '').strip(),
+            'product_type': (row.get('product_type') or 'physical').strip() or 'physical',
+            'active': _parse_bool(row.get('active')) if row.get('active') not in (None, '') else True,
+            'personalization_enabled': _parse_bool(row.get('personalization_enabled')) or False,
+        }
+        pl = (row.get('personalization_label') or '').strip()
+        if pl:
+            payload['personalization_label'] = pl
+        if sku:
+            payload['sku'] = sku
+
+        try:
+            if existing:
+                await db.products.update_one({'id': existing['id']}, {'$set': payload})
+                updated += 1
+            else:
+                doc = Product(**payload).model_dump()
+                await db.products.insert_one(doc)
+                created += 1
+        except Exception as e:
+            errors.append({'row': idx, 'error': f'DB error: {str(e)[:200]}'})
+
+    return {
+        'ok': True,
+        'total_rows': len(rows),
+        'created': created,
+        'updated': updated,
+        'errors': errors,
+    }
 
 
 # --- Mount ---

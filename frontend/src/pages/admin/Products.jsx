@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { adminListProducts, adminCreateProduct, adminUpdateProduct, adminDeleteProduct, adminListCategories } from '../../lib/api';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { adminListProducts, adminCreateProduct, adminUpdateProduct, adminDeleteProduct, adminListCategories, productTemplateUrl, adminBulkUploadProducts } from '../../lib/api';
 import { toast } from 'sonner';
-import { Plus, Edit3, Trash2, X, Search, Layers, Image as ImageIcon, Sparkles, Info, Tag as TagIcon } from 'lucide-react';
+import { Plus, Edit3, Trash2, X, Search, Layers, Image as ImageIcon, Sparkles, Info, Tag as TagIcon, Upload, Download, FileSpreadsheet } from 'lucide-react';
 
 const empty = {
   name: '', slug: '', category: '', collections: [], price: 0, original_price: 0,
@@ -22,9 +22,29 @@ const AdminProducts = () => {
   const [q, setQ] = useState('');
   const [editing, setEditing] = useState(null);
   const [tab, setTab] = useState('basic');
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkResult, setBulkResult] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
 
   const load = () => adminListProducts().then(setItems).catch(() => setItems([]));
   useEffect(() => { load(); adminListCategories().then(setCats); }, []);
+
+  const doBulk = async (file) => {
+    if (!file) return;
+    setUploading(true); setBulkResult(null);
+    try {
+      const res = await adminBulkUploadProducts(file);
+      setBulkResult(res);
+      toast.success(`Bulk upload: ${res.created} created · ${res.updated} updated · ${res.errors?.length || 0} errors`);
+      load();
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || 'Upload failed');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
 
   const filtered = useMemo(() => items.filter(p => !q || p.name.toLowerCase().includes(q.toLowerCase()) || (p.sku || '').toLowerCase().includes(q.toLowerCase())), [items, q]);
 
@@ -106,6 +126,13 @@ const AdminProducts = () => {
             <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
             <input value={q} onChange={e => setQ(e.target.value)} placeholder="Name or SKU" className="pl-10 pr-4 py-2.5 bg-white border border-[#EBD9CE] rounded-full text-sm outline-none focus:border-[#B4593F] w-64" />
           </div>
+          <button
+            onClick={() => { setBulkOpen(true); setBulkResult(null); }}
+            data-testid="bulk-upload-btn"
+            className="inline-flex items-center gap-2 bg-white border border-[#EBD9CE] hover:border-[#B4593F] text-[#1A1A1A] px-5 py-2.5 rounded-full text-xs uppercase tracking-widest transition-colors"
+          >
+            <FileSpreadsheet className="w-4 h-4" /> Bulk Upload
+          </button>
           <button onClick={() => startEdit(null)} className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest transition-colors"><Plus className="w-4 h-4" /> New</button>
         </div>
       </div>
@@ -308,6 +335,68 @@ const AdminProducts = () => {
               <button onClick={() => setEditing(null)} className="px-6 py-3 border border-[#EBD9CE] rounded-full text-xs uppercase tracking-widest">Cancel</button>
             </div>
           </aside>
+        </>
+      )}
+
+      {bulkOpen && (
+        <>
+          <div onClick={() => setBulkOpen(false)} className="fixed inset-0 bg-black/60 z-50" />
+          <div className="fixed inset-x-4 top-16 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[640px] z-50 bg-white rounded-2xl shadow-2xl overflow-hidden" data-testid="bulk-upload-modal">
+            <div className="px-6 py-5 border-b border-[#EBD9CE] flex items-center justify-between">
+              <div>
+                <h3 className="font-serif-display text-2xl">Bulk Product Upload</h3>
+                <p className="text-xs text-neutral-500 mt-0.5">Upload a CSV (from Google Sheets) or Excel (.xlsx) to bulk create / update products.</p>
+              </div>
+              <button onClick={() => setBulkOpen(false)}><X className="w-5 h-5" /></button>
+            </div>
+            <div className="px-6 py-6 space-y-5">
+              <div className="bg-[#FDF3EB] border border-[#EBD9CE] rounded-xl p-4 flex items-start gap-3">
+                <Info className="w-4 h-4 text-[#B4593F] mt-0.5 shrink-0" />
+                <div className="text-xs text-neutral-700 leading-relaxed">
+                  <strong>Step 1:</strong> Download the template below. It includes column headers with sample rows.<br />
+                  <strong>Step 2:</strong> Open in Excel or import into Google Sheets, then fill your product data. Remove the sample rows and any lines starting with <code>#</code>.<br />
+                  <strong>Step 3:</strong> Export as CSV (Google Sheets → File → Download → CSV) or save as .xlsx, then upload here.<br />
+                  Rows matching an existing <strong>SKU</strong> or <strong>slug</strong> will be updated; others will be created.
+                </div>
+              </div>
+
+              <a
+                href={productTemplateUrl()}
+                download
+                data-testid="download-template-btn"
+                className="inline-flex items-center gap-2 bg-white border border-[#EBD9CE] hover:border-[#B4593F] text-[#1A1A1A] px-5 py-3 rounded-full text-xs uppercase tracking-widest transition-colors"
+              >
+                <Download className="w-4 h-4" /> Download CSV Template
+              </a>
+
+              <div className="border-2 border-dashed border-[#EBD9CE] rounded-2xl p-8 text-center bg-[#FDF3EB]/40">
+                <FileSpreadsheet className="w-8 h-8 mx-auto text-[#B4593F] mb-3" />
+                <label className="inline-flex items-center gap-2 cursor-pointer bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest transition-colors">
+                  <Upload className="w-4 h-4" /> {uploading ? 'Uploading…' : 'Choose CSV / Excel file'}
+                  <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" data-testid="bulk-upload-input" disabled={uploading} onChange={e => doBulk(e.target.files?.[0])} className="hidden" />
+                </label>
+                <div className="text-[11px] text-neutral-500 mt-3">Accepts .csv, .xlsx, .xls · max ~2 MB recommended</div>
+              </div>
+
+              {bulkResult && (
+                <div className="rounded-xl border border-[#EBD9CE] overflow-hidden" data-testid="bulk-upload-result">
+                  <div className="px-4 py-3 bg-emerald-50 text-emerald-800 text-sm flex items-center justify-between">
+                    <div><strong>{bulkResult.created}</strong> created · <strong>{bulkResult.updated}</strong> updated · <strong>{bulkResult.errors?.length || 0}</strong> errors · Total rows: {bulkResult.total_rows}</div>
+                  </div>
+                  {bulkResult.errors?.length > 0 && (
+                    <div className="max-h-52 overflow-y-auto divide-y divide-[#EBD9CE] text-xs">
+                      {bulkResult.errors.map((e, i) => (
+                        <div key={i} className="px-4 py-2 flex gap-3 text-rose-700 bg-rose-50/40">
+                          <span className="font-mono text-[10px] w-12 shrink-0">row {e.row}</span>
+                          <span>{e.error}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </>
       )}
     </div>

@@ -475,3 +475,48 @@ class AbandonedCartTrack(BaseModel):
 class RefundRequest(BaseModel):
     reason: Optional[str] = None
     amount: Optional[int] = None  # None = full refund
+
+
+
+# ---------- Store Locations ----------
+class Location(BaseModel):
+    id: str = Field(default_factory=lambda: _uid('loc_'))
+    label: str  # e.g. "Design Center", "Registered Office"
+    name: Optional[str] = None  # optional care-of / brand line
+    address_lines: List[str] = []  # street lines
+    city: str
+    state: Optional[str] = None
+    pincode: Optional[str] = None
+    country: str = 'India'
+    phone: Optional[str] = None
+    whatsapp: Optional[str] = None
+    email: Optional[str] = None
+    hours: Optional[str] = None  # freeform e.g. "Mon–Sat, 10am–7pm IST"
+    map_url: Optional[str] = None  # google maps link/embed
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    is_primary: bool = False
+    active: bool = True
+    order: int = 0
+    created_at: datetime = Field(default_factory=_now)
+
+
+class LocationCreate(BaseModel):
+    label: str
+    name: Optional[str] = None
+    address_lines: List[str] = []
+    city: str
+    state: Optional[str] = None
+    pincode: Optional[str] = None
+    country: str = 'India'
+    phone: Optional[str] = None
+    whatsapp: Optional[str] = None
+    email: Optional[str] = None
+    hours: Optional[str] = None
+    map_url: Optional[str] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    is_primary: bool = False
+    active: bool = True
+    order: int = 0
+

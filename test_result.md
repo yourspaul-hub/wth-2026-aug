@@ -288,6 +288,30 @@ backend:
         agent: "main"
         comment: "queue_email writes to email_outbox with rendered HTML, status='mocked'. Emit points: order_placed on POST /api/orders, order_paid on /payments/verify, order_shipped on admin PATCH status=shipped, order_refunded on refund. Admin endpoints GET /api/admin/emails (optional ?template=) and GET /api/admin/emails/{id}."
 
+  - task: "Locations CRUD (public GET /api/locations, admin CRUD /api/admin/locations)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Public GET returns only active=true, sorted by order. Admin GET returns all. POST creates via Location model. PATCH/DELETE by id. Seeded 2 real WTH addresses (Mumbai Design Center primary, Kerala Registered Office)."
+
+  - task: "Bulk Product Upload (CSV/XLSX) + Template download"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "GET /api/admin/products/template.csv returns a StreamingResponse CSV with headers, 3 sample rows, and instructions (lines starting with # are skipped on upload). Uses live category slugs in instructions. POST /api/admin/products/bulk accepts multipart file (.csv/.xlsx/.xls). Rows matching an existing sku OR slug are UPDATED; others CREATED. Validates: name required, category_slug must exist, price > 0. Returns {ok, total_rows, created, updated, errors:[{row,error}]}. Handles UTF-8 BOM (Google Sheets exports) and boolean strings (true/false/1/0/yes/no)."
+
 frontend:
   - task: "Storefront + Admin panel wiring (React 19)"
     implemented: true
@@ -309,10 +333,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Phase C — Refund order (POST /api/admin/orders/{order_number}/refund)"
-    - "Phase C — Invoice HTML (GET /api/invoices/{order_number})"
-    - "Phase C — Abandoned Cart tracking + admin list + recovery email"
-    - "Phase C — Email Outbox (mocked). Emit on order_placed/paid/shipped/refunded"
+    - "Locations CRUD (public GET /api/locations, admin CRUD /api/admin/locations)"
+    - "Bulk Product Upload (CSV/XLSX) + Template download"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

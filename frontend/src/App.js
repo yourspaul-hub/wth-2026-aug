@@ -34,6 +34,7 @@ import AdminRedirects from './pages/admin/Redirects';
 import AdminNewsletter from './pages/admin/Newsletter';
 import AdminEmails from './pages/admin/Emails';
 import AdminAbandonedCarts from './pages/admin/AbandonedCarts';
+import AdminLocations from './pages/admin/Locations';
 import { Toaster } from './components/ui/sonner';
 
 // Storefront chrome (navbar, footer, cart, announcement) — hidden on /admin routes and /admin/callback
@@ -80,6 +81,7 @@ function AppRouter() {
           <Route path="newsletter" element={<AdminNewsletter />} />
           <Route path="emails" element={<AdminEmails />} />
           <Route path="abandoned-carts" element={<AdminAbandonedCarts />} />
+          <Route path="locations" element={<AdminLocations />} />
         </Route>
       </Routes>
       {!isAdmin && <Footer />}

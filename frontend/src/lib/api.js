@@ -90,3 +90,18 @@ export const adminGetEmail = (id) => api.get(`/admin/emails/${id}`).then(r => r.
 export const trackCart = (payload) => api.post('/cart/track', payload).then(r => r.data);
 export const adminListAbandonedCarts = () => api.get('/admin/abandoned-carts').then(r => r.data);
 export const adminSendRecovery = (id) => api.post(`/admin/abandoned-carts/${id}/send-recovery`).then(r => r.data);
+
+// Locations (Contact / Stores)
+export const listLocations = () => api.get('/locations').then(r => r.data);
+export const adminListLocations = () => api.get('/admin/locations').then(r => r.data);
+export const adminCreateLocation = (p) => api.post('/admin/locations', p).then(r => r.data);
+export const adminUpdateLocation = (id, p) => api.patch(`/admin/locations/${id}`, p).then(r => r.data);
+export const adminDeleteLocation = (id) => api.delete(`/admin/locations/${id}`).then(r => r.data);
+
+// Bulk product upload
+export const productTemplateUrl = () => `${API_BASE}/admin/products/template.csv`;
+export const adminBulkUploadProducts = (file) => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return api.post('/admin/products/bulk', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data);
+};

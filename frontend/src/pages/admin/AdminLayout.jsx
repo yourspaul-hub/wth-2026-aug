@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Tag, Star, Search, Send, ArrowUpRight, LogOut, ExternalLink, Layers, Truck, Percent, Mail, Clock } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Tag, Star, Search, Send, ArrowUpRight, LogOut, ExternalLink, Layers, Truck, Percent, Mail, Clock, MapPin } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Logo from '../../components/Logo';
 
@@ -18,6 +18,7 @@ const nav = [
   { to: '/admin/newsletter', label: 'Newsletter', icon: Send },
   { to: '/admin/emails', label: 'Emails', icon: Mail },
   { to: '/admin/abandoned-carts', label: 'Abandoned Carts', icon: Clock },
+  { to: '/admin/locations', label: 'Locations', icon: MapPin },
 ];
 
 const AdminLayout = () => {

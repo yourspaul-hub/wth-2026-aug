@@ -315,3 +315,32 @@ async def seed_all(db):
             })
         if cdocs:
             await db.collections.insert_many(cdocs)
+
+
+    # ---------- Seed store locations (real Wear The Hope addresses) ----------
+    if await db.locations.count_documents({}) == 0:
+        locs = [
+            {
+                'id': 'loc_01', 'label': 'Design Center', 'name': 'Wear The Hope',
+                'address_lines': ['Raheja Vihar', 'Chandivali Farm Road'],
+                'city': 'Mumbai', 'state': 'Maharashtra', 'pincode': '400072', 'country': 'India',
+                'phone': None, 'whatsapp': '+91 90043 73305', 'email': '2wearthehope@gmail.com',
+                'hours': 'Mon–Sat, 10 AM – 7 PM IST',
+                'map_url': 'https://maps.google.com/?q=Raheja+Vihar+Chandivali+Mumbai+400072',
+                'lat': 19.1136, 'lng': 72.8944,
+                'is_primary': True, 'active': True, 'order': 1,
+                'created_at': datetime.now(timezone.utc),
+            },
+            {
+                'id': 'loc_02', 'label': 'Registered Office', 'name': 'Wear The Hope · C/o yzarC Studio',
+                'address_lines': ['VII 705, RECCAA Valley Road', 'Kakkanad P.O'],
+                'city': 'Ernakulam', 'state': 'Kerala', 'pincode': '682030', 'country': 'India',
+                'phone': None, 'whatsapp': '+91 90043 73305', 'email': '2wearthehope@gmail.com',
+                'hours': 'Mon–Sat, 10 AM – 6 PM IST',
+                'map_url': 'https://maps.google.com/?q=Kakkanad+Ernakulam+Kerala+682030',
+                'lat': 10.0159, 'lng': 76.3419,
+                'is_primary': False, 'active': True, 'order': 2,
+                'created_at': datetime.now(timezone.utc),
+            },
+        ]
+        await db.locations.insert_many(locs)
