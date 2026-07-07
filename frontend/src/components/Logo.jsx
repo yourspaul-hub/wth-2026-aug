@@ -1,22 +1,18 @@
 import React from 'react';
-import logo from '../assets/wth-logo.svg';
+import logoWithTagline from '../assets/wth-logo.svg';
+import logoClean from '../assets/wth-logo-clean.png';
 
 /**
  * Brand logo component.
- * - variant="dark" renders on light backgrounds (default black artwork)
- * - variant="light" inverts artwork for dark backgrounds (footer, admin sidebar, dark hero)
- * - className: tailwind sizing e.g. "h-10" (defaults)
+ * - variant="dark"  → default black artwork (light backgrounds)
+ * - variant="light" → inverted for dark backgrounds (footer, admin sidebar)
+ * - withTagline=true → uses SVG with tagline; default false uses clean PNG
  */
-const Logo = ({ variant = 'dark', className = 'h-10', alt = 'Wear The Hope' }) => {
+const Logo = ({ variant = 'dark', withTagline = false, className = 'h-10', alt = 'Wear The Hope' }) => {
   const invert = variant === 'light' ? { filter: 'invert(1) brightness(2)' } : undefined;
+  const src = withTagline ? logoWithTagline : logoClean;
   return (
-    <img
-      src={logo}
-      alt={alt}
-      draggable={false}
-      style={invert}
-      className={`${className} w-auto select-none`}
-    />
+    <img src={src} alt={alt} draggable={false} style={invert} className={`${className} w-auto select-none`} />
   );
 };
 

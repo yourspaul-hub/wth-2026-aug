@@ -41,6 +41,7 @@ from models import (
     SeoMeta, SeoMetaCreate,
     Redirect, RedirectCreate,
     Newsletter, NewsletterCreate,
+    EmailOutbox, AbandonedCart, AbandonedCartTrack, RefundRequest,
 )
 from auth import exchange_session_id, get_session_from_request, ensure_aware
 
@@ -521,6 +522,15 @@ async def create_order(payload: OrderCreate):
 
     doc.pop('_id', None)
 
+    # Queue order_placed email
+    try: await emit_order_email(doc, 'order_placed')
+    except Exception as _e: logger.warning('order_placed email failed: %s', _e)
+
+    # Mark abandoned cart recovered if exists
+    try:
+        await db.abandoned_carts.update_one({'email': payload.shipping_address.email, 'recovered': False}, {'$set': {'recovered': True}})
+    except Exception: pass
+
     # Build provider-specific mocked payment payload
     payment = {'provider': provider, 'mocked': True, 'amount': total * 100, 'currency': 'INR', 'order_number': order_number}
     if provider == 'razorpay':
@@ -604,6 +614,8 @@ async def verify_payment(payload: PaymentVerify):
         )
 
     order = await db.orders.find_one({'order_number': payload.order_number}, {'_id': 0})
+    try: await emit_order_email(order, 'order_paid')
+    except Exception as _e: logger.warning('order_paid email failed: %s', _e)
     return {'ok': True, 'mocked': True, 'provider': provider, 'reference': reference, 'order': order}
 
 
@@ -742,7 +754,11 @@ async def admin_update_order(order_number: str, payload: OrderStatusUpdate, user
     updates['updated_at'] = datetime.now(timezone.utc)
     if updates:
         await db.orders.update_one({'order_number': order_number}, {'$set': updates})
-    return await db.orders.find_one({'order_number': order_number}, {'_id': 0})
+    updated = await db.orders.find_one({'order_number': order_number}, {'_id': 0})
+    if payload.status == 'shipped':
+        try: await emit_order_email(updated, 'order_shipped')
+        except Exception as _e: logger.warning('order_shipped email failed: %s', _e)
+    return updated
 
 
 # ================= SEO =================
@@ -853,6 +869,226 @@ Disallow: /order/
 Sitemap: {base}/api/sitemap.xml
 """
     return PlainTextResponse(body, media_type='text/plain')
+
+
+# ================= EMAIL OUTBOX (Phase C) =================
+# All emails are MOCKED — written to `email_outbox` collection with status='mocked'.
+# To go live, integrate Gmail SMTP/OAuth and change `queue_email` to dispatch instead.
+
+BRAND_COLOR = '#B4593F'
+BRAND_BG = '#FDF3EB'
+
+
+def _email_shell(subject: str, body_html: str) -> str:
+    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{subject}</title></head>
+<body style='margin:0;padding:0;background:{BRAND_BG};font-family:Georgia,serif;color:#1A1A1A;'>
+  <div style='max-width:600px;margin:0 auto;background:#fff;padding:40px;border:1px solid #EBD9CE;'>
+    <div style='text-align:center;letter-spacing:6px;font-size:14px;color:{BRAND_COLOR};margin-bottom:24px;'>WEAR THE HOPE</div>
+    {body_html}
+    <hr style='border:0;border-top:1px solid #EBD9CE;margin:30px 0'/>
+    <div style='font-size:11px;color:#8a8a8a;text-align:center;line-height:1.6'>
+      Wear The Hope · Mumbai, India<br>
+      Questions? Reply to this email or visit wearthehope.com/contact
+    </div>
+  </div>
+</body></html>"""
+
+
+async def queue_email(*, to: str, subject: str, template: str, body_html: str, context: dict = None, order_number: str = None):
+    doc = EmailOutbox(
+        to=to, subject=subject, template=template,
+        html=_email_shell(subject, body_html),
+        context=context or {}, order_number=order_number,
+        status='mocked', provider='mock',
+    ).model_dump()
+    await db.email_outbox.insert_one(doc)
+    return doc
+
+
+def _order_summary_html(o: dict) -> str:
+    rows = ''
+    for it in o.get('items', []):
+        vlabel = f" ({it['variant_label']})" if it.get('variant_label') else ''
+        rows += f"<tr><td style='padding:8px;border-bottom:1px solid #EBD9CE'>{it['name']}{vlabel}<br><span style='color:#8a8a8a;font-size:11px'>Qty {it['qty']}</span></td><td style='padding:8px;border-bottom:1px solid #EBD9CE;text-align:right'>&#8377;{it['price'] * it['qty']:,}</td></tr>"
+    return f"<table width='100%' cellpadding='0' cellspacing='0' style='font-size:14px'>{rows}<tr><td style='padding:12px 8px;border-top:2px solid #1A1A1A;font-weight:bold'>Total</td><td style='padding:12px 8px;border-top:2px solid #1A1A1A;text-align:right;font-weight:bold;color:{BRAND_COLOR}'>&#8377;{o['total']:,}</td></tr></table>"
+
+
+async def emit_order_email(order: dict, template: str):
+    name = order['shipping_address']['full_name']
+    to = order['shipping_address']['email']
+    on = order['order_number']
+    body_map = {
+        'order_placed': (f"Order confirmation · {on}", f"<h2 style='font-family:Georgia,serif;font-size:24px'>Thank you, {name}!</h2><p style='color:#555;line-height:1.6'>We've received your order <strong>{on}</strong>.</p>" + _order_summary_html(order)),
+        'order_paid': (f"Payment received · {on}", f"<h2 style='font-family:Georgia,serif;font-size:24px'>Payment confirmed</h2><p style='color:#555;line-height:1.6'>Payment received for order <strong>{on}</strong> via {order.get('payment_provider','').title()}.</p>" + _order_summary_html(order)),
+        'order_shipped': (f"Your order is on the way · {on}", f"<h2 style='font-family:Georgia,serif;font-size:24px'>{name}, your order is shipped!</h2><p style='color:#555;line-height:1.6'>AWB: <strong>{order.get('shiprocket_awb', '—')}</strong></p><p><a href='{order.get('tracking_url', '#')}' style='display:inline-block;padding:12px 24px;background:{BRAND_COLOR};color:#fff;text-decoration:none;border-radius:999px;font-size:12px;letter-spacing:2px'>TRACK PARCEL</a></p>"),
+        'order_refunded': (f"Refund processed · {on}", f"<h2 style='font-family:Georgia,serif;font-size:24px'>Refund initiated</h2><p style='color:#555;line-height:1.6'>We've processed a refund of <strong>&#8377;{order['total']:,}</strong> for order {on}. It should reflect in 5–7 business days.</p>"),
+    }
+    subject, body = body_map.get(template, (f"Order update · {on}", ""))
+    await queue_email(to=to, subject=subject, template=template, body_html=body, context={'order_number': on}, order_number=on)
+
+
+# ================= REFUND (Admin) =================
+@api.post('/admin/orders/{order_number}/refund')
+async def refund_order(order_number: str, payload: RefundRequest, user: dict = Depends(require_admin)):
+    o = await db.orders.find_one({'order_number': order_number}, {'_id': 0})
+    if not o:
+        raise HTTPException(status_code=404, detail='Order not found')
+    if o.get('payment_status') != 'paid':
+        raise HTTPException(status_code=400, detail='Only paid orders can be refunded')
+    reason = payload.reason or 'N/A'
+    updates = {
+        'status': 'refunded', 'payment_status': 'refunded',
+        'notes': (o.get('notes') or '') + f"\n[REFUND] reason: {reason}",
+        'updated_at': datetime.now(timezone.utc),
+    }
+    await db.orders.update_one({'order_number': order_number}, {'$set': updates})
+    # Restock items
+    for it in o.get('items', []):
+        if it.get('variant_id'):
+            await db.products.update_one({'id': it['product_id'], 'variants.id': it['variant_id']}, {'$inc': {'variants.$.stock': it['qty']}})
+        else:
+            await db.products.update_one({'id': it['product_id']}, {'$inc': {'stock': it['qty']}})
+    updated = await db.orders.find_one({'order_number': order_number}, {'_id': 0})
+    await emit_order_email(updated, 'order_refunded')
+    return {'ok': True, 'mocked': True, 'order': updated}
+
+
+# ================= INVOICE =================
+from fastapi.responses import HTMLResponse
+
+
+def _invoice_html(order: dict) -> str:
+    a = order['shipping_address']
+    rows = ''
+    for it in order['items']:
+        line = it['price'] * it['qty']
+        vlabel = f" ({it['variant_label']})" if it.get('variant_label') else ''
+        cust = f"<br><span style='color:#8a8a8a;font-size:11px'>engrave: {it['customization']}</span>" if it.get('customization') else ''
+        rows += f"<tr><td style='padding:10px;border-bottom:1px solid #EBD9CE'>{it['name']}{vlabel}{cust}<br><span style='color:#8a8a8a;font-size:11px'>SKU {it.get('sku') or '—'}</span></td><td style='padding:10px;border-bottom:1px solid #EBD9CE;text-align:center'>{it['qty']}</td><td style='padding:10px;border-bottom:1px solid #EBD9CE;text-align:right'>&#8377;{it['price']:,}</td><td style='padding:10px;border-bottom:1px solid #EBD9CE;text-align:right'>&#8377;{line:,}</td></tr>"
+    tax_rows = ''
+    for t in (order.get('tax_breakdown') or []):
+        tax_rows += f"<tr><td colspan='3' style='padding:4px 10px;color:#555;text-align:right'>{t['name']} ({t['percent']}%)</td><td style='padding:4px 10px;text-align:right'>&#8377;{t['amount']:,}</td></tr>"
+    created = order['created_at']
+    if isinstance(created, datetime):
+        created = created.strftime('%d %b %Y, %I:%M %p')
+    disc_row = ''
+    if order.get('discount'):
+        disc_row = f"<tr><td colspan='3' style='padding:4px 10px;color:{BRAND_COLOR};text-align:right'>Discount ({order.get('coupon_code') or ''})</td><td style='padding:4px 10px;text-align:right;color:{BRAND_COLOR}'>-&#8377;{order['discount']:,}</td></tr>"
+    ship_price = 'Free' if not order.get('shipping_fee') else f"&#8377;{order['shipping_fee']}"
+    ref = order.get('payment_reference') or order.get('razorpay_payment_id') or ''
+    ref_html = f"<br>Ref: {ref}" if ref else ''
+    return f"""<!doctype html><html><head><meta charset='utf-8'><title>Invoice {order['order_number']}</title>
+<style>
+  @media print {{ .no-print {{ display:none }} body {{ background:#fff }} }}
+  body {{ font-family: Georgia, serif; background:{BRAND_BG}; color:#1A1A1A; padding:40px; margin:0 }}
+  .paper {{ max-width:820px; margin:0 auto; background:#fff; padding:56px 48px; border:1px solid #EBD9CE }}
+  h1 {{ font-size:32px; margin:0 }}
+  table {{ width:100%; border-collapse:collapse; font-size:14px }}
+  th {{ text-align:left; padding:10px; background:{BRAND_BG}; color:#555; font-weight:normal; text-transform:uppercase; letter-spacing:2px; font-size:11px }}
+  .brand {{ letter-spacing:6px; font-size:14px; color:{BRAND_COLOR} }}
+  .btn {{ display:inline-block; padding:12px 24px; background:{BRAND_COLOR}; color:#fff; text-decoration:none; border-radius:999px; font-size:12px; letter-spacing:2px; cursor:pointer; border:none }}
+</style></head>
+<body>
+  <div class='paper'>
+    <div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px'>
+      <div>
+        <div class='brand'>WEAR THE HOPE</div>
+        <div style='color:#8a8a8a;font-size:12px;margin-top:4px'>Bandra West, Mumbai 400050 · India</div>
+        <div style='color:#8a8a8a;font-size:12px'>GSTIN 27XXXXXXXXXXXZ0</div>
+      </div>
+      <div style='text-align:right'>
+        <h1>Invoice</h1>
+        <div style='color:#555;margin-top:6px'>#{order['order_number']}</div>
+        <div style='color:#8a8a8a;font-size:12px'>{created}</div>
+      </div>
+    </div>
+    <div style='display:flex;justify-content:space-between;gap:24px;margin-bottom:32px'>
+      <div><div style='font-size:11px;text-transform:uppercase;letter-spacing:2px;color:{BRAND_COLOR};margin-bottom:6px'>Bill To</div>
+        <div>{a['full_name']}<br>{a['line1']}{', ' + a['line2'] if a.get('line2') else ''}<br>{a['city']}, {a['state']} {a['pincode']}<br>{a['country']}<br>{a['email']} · {a['phone']}</div>
+      </div>
+      <div><div style='font-size:11px;text-transform:uppercase;letter-spacing:2px;color:{BRAND_COLOR};margin-bottom:6px'>Payment</div>
+        <div>{order.get('payment_provider','').title()}<br>Status: <strong>{order.get('payment_status','').upper()}</strong>{ref_html}</div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Item</th><th style='text-align:center'>Qty</th><th style='text-align:right'>Price</th><th style='text-align:right'>Line Total</th></tr></thead>
+      <tbody>{rows}
+        <tr><td colspan='3' style='padding:10px;color:#555;text-align:right;border-top:2px solid #1A1A1A'>Subtotal</td><td style='padding:10px;text-align:right;border-top:2px solid #1A1A1A'>&#8377;{order['subtotal']:,}</td></tr>
+        {disc_row}
+        <tr><td colspan='3' style='padding:4px 10px;color:#555;text-align:right'>Shipping</td><td style='padding:4px 10px;text-align:right'>{ship_price}</td></tr>
+        {tax_rows}
+        <tr><td colspan='3' style='padding:14px 10px;font-weight:bold;text-align:right;border-top:2px solid #1A1A1A;font-size:16px'>Total</td><td style='padding:14px 10px;font-weight:bold;text-align:right;border-top:2px solid #1A1A1A;color:{BRAND_COLOR};font-size:16px'>&#8377;{order['total']:,}</td></tr>
+      </tbody>
+    </table>
+    <div style='margin-top:40px;color:#8a8a8a;font-size:12px;text-align:center;line-height:1.7'>
+      Thank you for shopping with Wear The Hope.<br>
+      For queries email hello@wearthehope.com or call +91 90043 73305.
+    </div>
+    <div class='no-print' style='text-align:center;margin-top:32px'>
+      <button onclick='window.print()' class='btn'>Print / Save as PDF</button>
+    </div>
+  </div>
+</body></html>"""
+
+
+@api.get('/invoices/{order_number}', response_class=HTMLResponse)
+async def get_invoice(order_number: str):
+    o = await db.orders.find_one({'order_number': order_number}, {'_id': 0})
+    if not o:
+        raise HTTPException(status_code=404, detail='Order not found')
+    return HTMLResponse(_invoice_html(o))
+
+
+# ================= ABANDONED CARTS =================
+@api.post('/cart/track')
+async def track_cart(payload: AbandonedCartTrack):
+    existing = await db.abandoned_carts.find_one({'email': payload.email, 'recovered': False}, {'_id': 0})
+    now = datetime.now(timezone.utc)
+    if existing:
+        await db.abandoned_carts.update_one({'id': existing['id']}, {'$set': {'items': payload.items, 'subtotal': payload.subtotal, 'name': payload.name, 'updated_at': now}})
+        return {'ok': True, 'id': existing['id']}
+    doc = AbandonedCart(email=payload.email, name=payload.name, items=payload.items, subtotal=payload.subtotal).model_dump()
+    await db.abandoned_carts.insert_one(doc)
+    return {'ok': True, 'id': doc['id']}
+
+
+@api.get('/admin/abandoned-carts')
+async def list_abandoned_carts(user: dict = Depends(require_admin)):
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=30)
+    stale = await db.abandoned_carts.find({'recovered': False, 'updated_at': {'$lt': cutoff}}, {'_id': 0}).sort('updated_at', -1).to_list(500)
+    all_carts = await db.abandoned_carts.find({}, {'_id': 0}).sort('updated_at', -1).to_list(500)
+    return {'stale': stale, 'all': all_carts}
+
+
+@api.post('/admin/abandoned-carts/{cid}/send-recovery')
+async def send_recovery(cid: str, user: dict = Depends(require_admin)):
+    c = await db.abandoned_carts.find_one({'id': cid}, {'_id': 0})
+    if not c:
+        raise HTTPException(status_code=404, detail='Cart not found')
+    items_html = ''.join(f"<tr><td style='padding:6px 8px'>{it.get('name', 'Item')}</td><td style='padding:6px 8px;text-align:right'>&#8377;{(it.get('price', 0) * it.get('qty', 1)):,}</td></tr>" for it in c.get('items', []))
+    body = f"<h2 style='font-family:Georgia,serif;font-size:24px'>Hey {c.get('name') or 'friend'}, you left something behind ✨</h2><p style='color:#555;line-height:1.6'>We saved your bag for you. Complete your order and let hope travel with you.</p><table width='100%' style='font-size:14px;margin:12px 0'>{items_html}</table><p><a href='#' style='display:inline-block;padding:12px 24px;background:{BRAND_COLOR};color:#fff;text-decoration:none;border-radius:999px;font-size:12px;letter-spacing:2px'>COMPLETE MY ORDER</a></p><p style='font-size:11px;color:#8a8a8a'>Or use code <strong>COMEBACK10</strong> for 10% off — valid 48 hours.</p>"
+    await queue_email(to=c['email'], subject='You left hope in your bag', template='abandoned_cart', body_html=body, context={'cart_id': cid})
+    await db.abandoned_carts.update_one({'id': cid}, {'$set': {'recovery_email_sent': True}})
+    return {'ok': True, 'mocked': True}
+
+
+# ================= EMAIL OUTBOX (Admin) =================
+@api.get('/admin/emails')
+async def list_emails(template: Optional[str] = None, user: dict = Depends(require_admin)):
+    filt = {}
+    if template:
+        filt['template'] = template
+    return await db.email_outbox.find(filt, {'_id': 0}).sort('created_at', -1).limit(300).to_list(300)
+
+
+@api.get('/admin/emails/{eid}')
+async def get_email(eid: str, user: dict = Depends(require_admin)):
+    e = await db.email_outbox.find_one({'id': eid}, {'_id': 0})
+    if not e:
+        raise HTTPException(status_code=404, detail='Email not found')
+    return e
+
+
 
 
 # ================= NEWSLETTER =================

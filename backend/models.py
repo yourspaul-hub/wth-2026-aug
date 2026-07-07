@@ -435,3 +435,43 @@ class Newsletter(BaseModel):
 
 class NewsletterCreate(BaseModel):
     email: EmailStr
+
+
+# ---------- Emails & Abandoned Carts (Phase C) ----------
+class EmailOutbox(BaseModel):
+    id: str = Field(default_factory=lambda: _uid('em_'))
+    to: str
+    subject: str
+    template: str  # order_placed | order_paid | order_shipped | order_refunded | abandoned_cart | welcome
+    html: str
+    context: dict = {}
+    status: str = 'mocked'  # queued | sent | failed | mocked
+    provider: str = 'mock'  # 'mock' | 'gmail' | 'smtp'
+    order_number: Optional[str] = None
+    error: Optional[str] = None
+    created_at: datetime = Field(default_factory=_now)
+    sent_at: Optional[datetime] = None
+
+
+class AbandonedCart(BaseModel):
+    id: str = Field(default_factory=lambda: _uid('ab_'))
+    email: str
+    name: Optional[str] = None
+    items: List[dict] = []
+    subtotal: int = 0
+    recovered: bool = False
+    recovery_email_sent: bool = False
+    updated_at: datetime = Field(default_factory=_now)
+    created_at: datetime = Field(default_factory=_now)
+
+
+class AbandonedCartTrack(BaseModel):
+    email: EmailStr
+    name: Optional[str] = None
+    items: List[dict] = []
+    subtotal: int = 0
+
+
+class RefundRequest(BaseModel):
+    reason: Optional[str] = None
+    amount: Optional[int] = None  # None = full refund

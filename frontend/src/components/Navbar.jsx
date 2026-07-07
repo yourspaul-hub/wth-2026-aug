@@ -63,7 +63,7 @@ const Navbar = () => {
 
           {/* Center: logo */}
           <Link to="/" className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center" aria-label="Wear The Hope home">
-            <Logo variant="dark" className="h-9 md:h-11" />
+            <Logo variant="dark" withTagline className="h-9 md:h-11" />
           </Link>
 
           {/* Right: icons */}

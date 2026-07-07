@@ -81,3 +81,12 @@ export const adminListTaxRates = () => api.get('/admin/tax-rates').then(r => r.d
 export const adminCreateTaxRate = (p) => api.post('/admin/tax-rates', p).then(r => r.data);
 export const adminUpdateTaxRate = (id, p) => api.patch(`/admin/tax-rates/${id}`, p).then(r => r.data);
 export const adminDeleteTaxRate = (id) => api.delete(`/admin/tax-rates/${id}`).then(r => r.data);
+
+// Phase C — refunds, invoices, emails, abandoned carts
+export const refundOrder = (orderNumber, reason) => api.post(`/admin/orders/${orderNumber}/refund`, { reason }).then(r => r.data);
+export const invoiceUrl = (orderNumber) => `${API_BASE}/invoices/${orderNumber}`;
+export const adminListEmails = (template) => api.get('/admin/emails', { params: template ? { template } : {} }).then(r => r.data);
+export const adminGetEmail = (id) => api.get(`/admin/emails/${id}`).then(r => r.data);
+export const trackCart = (payload) => api.post('/cart/track', payload).then(r => r.data);
+export const adminListAbandonedCarts = () => api.get('/admin/abandoned-carts').then(r => r.data);
+export const adminSendRecovery = (id) => api.post(`/admin/abandoned-carts/${id}/send-recovery`).then(r => r.data);
