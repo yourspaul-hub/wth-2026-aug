@@ -4,8 +4,11 @@ import { Helmet } from 'react-helmet-async';
 import { products as mockProducts } from '../mock/mock';
 import { fetchProduct } from '../lib/api';
 import { useCart } from '../context/CartContext';
+import { useCurrency } from '../context/CurrencyContext';
+import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import { Heart, ShoppingBag, Minus, Plus, Truck, Sparkles, RefreshCw, Star, Share2, ChevronRight, Play, Package, Download } from 'lucide-react';
-import ProductCard from '../components/ProductCard';
+import RelatedProducts from '../components/RelatedProducts';
+import RecentlyViewed from '../components/RecentlyViewed';
 import { toast } from 'sonner';
 
 const normalize = (p) => ({ ...p, originalPrice: p.original_price ?? p.originalPrice, hoverImage: p.hover_image ?? p.hoverImage });
@@ -23,6 +26,8 @@ const ProductDetail = () => {
   const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
   const { addToCart, toggleWishlist, inWishlist } = useCart();
+  const { format } = useCurrency();
+  const { track } = useRecentlyViewed();
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
   const [tab, setTab] = useState('details');
@@ -33,9 +38,11 @@ const ProductDetail = () => {
   useEffect(() => {
     setLoading(true);
     fetchProduct(id).then(({ product, related }) => {
-      setProduct(normalize(product));
+      const norm = normalize(product);
+      setProduct(norm);
       setRelated((related || []).map(normalize));
       setLoading(false);
+      track(norm);
       // Auto-select first variant options
       if (product?.variant_options?.length) {
         const init = {};
@@ -46,12 +53,13 @@ const ProductDetail = () => {
       }
     }).catch(() => {
       const fallback = mockProducts.find(p => p.id === id);
-      if (fallback) setProduct(fallback);
+      if (fallback) { setProduct(fallback); track(fallback); }
       setRelated([]);
       setLoading(false);
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setActiveImg(0); setQty(1); setCustomName('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // Compute active variant based on selected options
@@ -183,10 +191,10 @@ const ProductDetail = () => {
             </div>
 
             <div className="flex items-baseline gap-3 mt-6">
-              <div className="text-3xl font-serif-display text-[#B4593F]">₹{displayPrice.toLocaleString('en-IN')}</div>
+              <div className="text-3xl font-serif-display text-[#B4593F]" data-testid="product-price">{format(displayPrice)}</div>
               {displayOriginal > displayPrice && (
                 <>
-                  <div className="text-lg text-neutral-400 line-through">₹{displayOriginal.toLocaleString('en-IN')}</div>
+                  <div className="text-lg text-neutral-400 line-through">{format(displayOriginal)}</div>
                   <div className="text-xs uppercase tracking-widest text-[#B4593F]">Save {Math.round(((displayOriginal - displayPrice) / displayOriginal) * 100)}%</div>
                 </>
               )}
@@ -295,17 +303,13 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {related.length > 0 && (
-          <div className="mt-24">
-            <div className="flex items-end justify-between mb-8">
-              <h2 className="font-serif-display text-3xl md:text-4xl">You may also love</h2>
-              <Link to="/shop" className="text-xs uppercase tracking-[0.2em] link-underline">Shop All</Link>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-5 md:gap-7">
-              {related.map(p => <ProductCard key={p.id} product={p} />)}
-            </div>
-          </div>
+        {related.length === 0 ? (
+          <RelatedProducts productId={product.id} limit={8} />
+        ) : (
+          <RelatedProducts productId={product.id} limit={8} />
         )}
+
+        <RecentlyViewed excludeId={product.id} />
       </div>
 
       {/* Video modal */}

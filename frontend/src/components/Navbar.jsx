@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingBag, Heart, Search, Menu, X, Instagram } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useCart } from '../context/CartContext';
 import { categories } from '../mock/mock';
 import Logo from './Logo';
+import LangCurrencyMenu from './LangCurrencyMenu';
 
 const Navbar = () => {
   const { totals, setCartOpen, wishlist } = useCart();
+  const { t } = useTranslation();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
@@ -39,9 +42,9 @@ const Navbar = () => {
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
             <nav className="hidden lg:flex items-center gap-7 text-[13px] uppercase tracking-[0.15em] text-[#1A1A1A]">
-              <Link to="/" className="link-underline">Home</Link>
+              <Link to="/" className="link-underline">{t('nav.home')}</Link>
               <div className="relative" onMouseEnter={() => setShopOpen(true)} onMouseLeave={() => setShopOpen(false)}>
-                <button className="link-underline flex items-center gap-1 uppercase">SHOP</button>
+                <button className="link-underline flex items-center gap-1 uppercase">{t('nav.shop')}</button>
                 <div className={`absolute left-0 top-full pt-4 transition-all duration-300 ${shopOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}`}>
                   <div className="bg-white rounded-md shadow-2xl border border-[#EBD9CE] p-6 grid grid-cols-2 gap-1 w-[520px]">
                     {categories.map(c => (
@@ -56,7 +59,7 @@ const Navbar = () => {
                   </div>
                 </div>
               </div>
-              <Link to="/shop" className="link-underline">Collections</Link>
+              <Link to="/shop" className="link-underline">{t('nav.collections')}</Link>
             </nav>
           </div>
 
@@ -68,22 +71,23 @@ const Navbar = () => {
           {/* Right: nav (half) + icons */}
           <div className="flex items-center justify-end gap-6">
             <nav className="hidden lg:flex items-center gap-7 text-[13px] uppercase tracking-[0.15em] text-[#1A1A1A]">
-              <Link to="/about" className="link-underline">About</Link>
-              <Link to="/blog" className="link-underline">Journal</Link>
-              <Link to="/contact" className="link-underline">Contact</Link>
+              <Link to="/about" className="link-underline">{t('nav.about')}</Link>
+              <Link to="/blog" className="link-underline">{t('nav.journal')}</Link>
+              <Link to="/contact" className="link-underline">{t('nav.contact')}</Link>
             </nav>
             <div className="flex items-center gap-1 md:gap-2">
-              <button onClick={() => setSearchOpen(v => !v)} className="p-2.5 rounded-full hover:bg-[#F5D0CE]/60 transition-colors" aria-label="Search">
+              <LangCurrencyMenu />
+              <button onClick={() => setSearchOpen(v => !v)} className="p-2.5 rounded-full hover:bg-[#F5D0CE]/60 transition-colors" aria-label={t('nav.search')} data-testid="nav-search-btn">
                 <Search className="w-4 h-4" />
               </button>
               <a href="https://www.instagram.com/wearthehope" target="_blank" rel="noreferrer" className="hidden md:inline-flex p-2.5 rounded-full hover:bg-[#F5D0CE]/60 transition-colors">
                 <Instagram className="w-4 h-4" />
               </a>
-              <Link to="/shop?wishlist=1" className="relative p-2.5 rounded-full hover:bg-[#F5D0CE]/60 transition-colors">
+              <Link to="/wishlist" className="relative p-2.5 rounded-full hover:bg-[#F5D0CE]/60 transition-colors" aria-label={t('nav.wishlist')} data-testid="nav-wishlist-btn">
                 <Heart className="w-4 h-4" />
-                {wishlist.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-[#B4593F] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">{wishlist.length}</span>}
+                {wishlist.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-[#B4593F] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center" data-testid="nav-wishlist-count">{wishlist.length}</span>}
               </Link>
-              <button onClick={() => setCartOpen(true)} className="relative p-2.5 rounded-full hover:bg-[#F5D0CE]/60 transition-colors">
+              <button onClick={() => setCartOpen(true)} className="relative p-2.5 rounded-full hover:bg-[#F5D0CE]/60 transition-colors" aria-label={t('nav.bag')} data-testid="nav-cart-btn">
                 <ShoppingBag className="w-4 h-4" />
                 {totals.count > 0 && <span className="absolute -top-0.5 -right-0.5 bg-[#B4593F] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">{totals.count}</span>}
               </button>
@@ -95,8 +99,8 @@ const Navbar = () => {
         <div className={`overflow-hidden transition-all duration-300 ${searchOpen ? 'max-h-24 pb-4' : 'max-h-0'}`}>
           <form onSubmit={submitSearch} className="flex items-center gap-3 bg-white border border-[#EBD9CE] rounded-full px-5 py-3">
             <Search className="w-4 h-4 text-neutral-500" />
-            <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search for scripture wallets, tees, mugs..." className="flex-1 bg-transparent outline-none text-sm" />
-            <button type="submit" className="text-xs uppercase tracking-widest bg-[#B4593F] hover:bg-[#9E4B32] text-white px-4 py-1.5 rounded-full transition-colors">Search</button>
+            <input value={query} onChange={e => setQuery(e.target.value)} placeholder={t('nav.search_placeholder')} className="flex-1 bg-transparent outline-none text-sm" />
+            <button type="submit" className="text-xs uppercase tracking-widest bg-[#B4593F] hover:bg-[#9E4B32] text-white px-4 py-1.5 rounded-full transition-colors">{t('nav.search')}</button>
           </form>
         </div>
 

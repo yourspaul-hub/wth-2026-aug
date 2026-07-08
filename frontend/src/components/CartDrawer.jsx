@@ -1,10 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { X, Minus, Plus, ShoppingBag, ArrowRight, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useCart } from '../context/CartContext';
+import { useCurrency } from '../context/CurrencyContext';
 
 const CartDrawer = () => {
   const { isCartOpen, setCartOpen, items, updateQty, removeItem, totals, clearCart } = useCart();
+  const { format } = useCurrency();
+  const { t } = useTranslation();
 
   return (
     <>
@@ -17,7 +21,7 @@ const CartDrawer = () => {
           <div className="flex items-center justify-between px-6 py-5 border-b border-[#EBD9CE]">
             <div className="flex items-center gap-3">
               <ShoppingBag className="w-5 h-5 text-[#B4593F]" />
-              <h3 className="font-serif-display text-2xl">Your Bag <span className="text-neutral-500 text-base">({totals.count})</span></h3>
+              <h3 className="font-serif-display text-2xl">{t('cart.title')} <span className="text-neutral-500 text-base">({totals.count})</span></h3>
             </div>
             <button onClick={() => setCartOpen(false)} className="p-2 hover:bg-white rounded-full transition-colors" aria-label="Close"><X className="w-5 h-5" /></button>
           </div>
@@ -28,10 +32,10 @@ const CartDrawer = () => {
                 <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center mb-4">
                   <ShoppingBag className="w-8 h-8 text-[#B4593F]" />
                 </div>
-                <div className="font-serif-display text-2xl mb-2">Your bag is empty</div>
-                <p className="text-sm text-neutral-600 mb-6">Let's fill it with hope and grace.</p>
+                <div className="font-serif-display text-2xl mb-2">{t('cart.empty_title')}</div>
+                <p className="text-sm text-neutral-600 mb-6">{t('cart.empty_subtitle')}</p>
                 <Link to="/shop" onClick={() => setCartOpen(false)} className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-6 py-3 rounded-full text-xs uppercase tracking-[0.2em] transition-colors">
-                  Start Shopping <ArrowRight className="w-4 h-4" />
+                  {t('cart.start_shopping')} <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
             ) : (
@@ -57,12 +61,12 @@ const CartDrawer = () => {
                           <span className="w-8 text-center text-sm">{it.qty}</span>
                           <button onClick={() => updateQty(key, it.qty + 1)} className="w-7 h-7 flex items-center justify-center hover:bg-[#FDF3EB] rounded-full" aria-label="Increase"><Plus className="w-3 h-3" /></button>
                         </div>
-                        <div className="text-[#B4593F] font-semibold text-sm">₹{(it.price * it.qty).toLocaleString('en-IN')}</div>
+                        <div className="text-[#B4593F] font-semibold text-sm">{format(it.price * it.qty)}</div>
                       </div>
                     </div>
                   </div>
                 );})}
-                <button onClick={clearCart} className="text-xs text-neutral-500 hover:text-[#B4593F] uppercase tracking-widest">Clear bag</button>
+                <button onClick={clearCart} className="text-xs text-neutral-500 hover:text-[#B4593F] uppercase tracking-widest">{t('cart.clear_bag')}</button>
               </div>
             )}
           </div>
@@ -70,17 +74,17 @@ const CartDrawer = () => {
           {items.length > 0 && (
             <div className="px-6 py-5 border-t border-[#EBD9CE] bg-white">
               <div className="flex items-center justify-between mb-3 text-sm">
-                <span className="text-neutral-600">Subtotal</span>
-                <span className="font-semibold">₹{totals.subtotal.toLocaleString('en-IN')}</span>
+                <span className="text-neutral-600">{t('common.subtotal')}</span>
+                <span className="font-semibold" data-testid="cart-subtotal">{format(totals.subtotal)}</span>
               </div>
               <div className="flex items-center justify-between mb-5 text-xs text-neutral-500">
-                <span>Shipping</span>
-                <span>{totals.subtotal >= 999 ? 'Free' : 'Calculated at checkout'}</span>
+                <span>{t('common.shipping')}</span>
+                <span>{totals.subtotal >= 999 ? t('common.free') : 'Calculated at checkout'}</span>
               </div>
               <Link to="/checkout" onClick={() => setCartOpen(false)} className="w-full bg-[#1A1A1A] hover:bg-[#B4593F] transition-colors text-white py-4 rounded-full text-xs uppercase tracking-[0.2em] inline-flex items-center justify-center gap-2">
-                Proceed to Checkout <ArrowRight className="w-4 h-4" />
+                {t('common.proceed_to_checkout')} <ArrowRight className="w-4 h-4" />
               </Link>
-              <button onClick={() => setCartOpen(false)} className="w-full mt-3 text-xs uppercase tracking-[0.2em] text-neutral-600 hover:text-[#B4593F]">Continue Shopping</button>
+              <button onClick={() => setCartOpen(false)} className="w-full mt-3 text-xs uppercase tracking-[0.2em] text-neutral-600 hover:text-[#B4593F]">{t('common.continue_shopping')}</button>
             </div>
           )}
         </div>

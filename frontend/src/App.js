@@ -1,9 +1,11 @@
 import React from 'react';
 import './App.css';
+import './lib/i18n';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
+import { CurrencyProvider } from './context/CurrencyContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import CartDrawer from './components/CartDrawer';
@@ -46,6 +48,7 @@ import PublicReviewSubmit from './pages/PublicReviewSubmit';
 import AdminCategories from './pages/admin/Categories';
 import AdminUsers from './pages/admin/Users';
 import AdminIntegrations from './pages/admin/Integrations';
+import Wishlist from './pages/Wishlist';
 import { Toaster } from './components/ui/sonner';
 
 // Storefront chrome (navbar, footer, cart, announcement) — hidden on /admin routes and /admin/callback
@@ -79,6 +82,7 @@ function AppRouter() {
         <Route path="/review" element={<PublicReviewSubmit />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/order/:orderNumber" element={<OrderSuccess />} />
+        <Route path="/wishlist" element={<Wishlist />} />
 
         {/* Admin */}
         <Route path="/admin/login" element={<AdminLogin />} />
@@ -118,11 +122,13 @@ function App() {
     <div className="App">
       <HelmetProvider>
         <AuthProvider>
-          <CartProvider>
-            <BrowserRouter>
-              <AppRouter />
-            </BrowserRouter>
-          </CartProvider>
+          <CurrencyProvider>
+            <CartProvider>
+              <BrowserRouter>
+                <AppRouter />
+              </BrowserRouter>
+            </CartProvider>
+          </CurrencyProvider>
         </AuthProvider>
       </HelmetProvider>
     </div>

@@ -12,6 +12,8 @@ export const api = axios.create({
 export const fetchCategories = () => api.get('/categories').then(r => r.data);
 export const fetchProducts = (params = {}) => api.get('/products', { params }).then(r => r.data);
 export const fetchProduct = (id) => api.get(`/products/${id}`).then(r => r.data);
+export const fetchRecommendations = (id, limit = 8) => api.get(`/products/${id}/recommendations`, { params: { limit } }).then(r => r.data);
+export const fetchCurrencyRates = () => api.get('/currency/rates').then(r => r.data);
 export const fetchReviews = () => api.get('/reviews').then(r => r.data?.items || r.data || []);
 export const fetchReviewsFull = (params = {}) => api.get('/reviews', { params }).then(r => r.data);
 export const validateCoupon = (code, subtotal) => api.post('/coupons/validate', { code, subtotal }).then(r => r.data);

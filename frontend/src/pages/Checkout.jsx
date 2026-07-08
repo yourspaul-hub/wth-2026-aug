@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { createOrder, validateCoupon, verifyPayment, fetchShippingOptions } from '../lib/api';
 import { toast } from 'sonner';
 import { ArrowRight, Tag, Truck, Lock, CheckCircle2, X, Info, CreditCard, Store, Wallet } from 'lucide-react';
@@ -18,6 +19,7 @@ const PAYMENT_METHODS = [
 
 const Checkout = () => {
   const { items, totals, clearCart } = useCart();
+  const { format, current, code: currencyCode } = useCurrency();
   const [addr, setAddr] = useState(emptyAddr);
   const [couponCode, setCouponCode] = useState('');
   const [coupon, setCoupon] = useState(null);
@@ -182,7 +184,7 @@ const Checkout = () => {
                       {it.variant_label && <div className="text-[11px] text-neutral-500">{it.variant_label}</div>}
                       <div className="text-xs text-neutral-500">Qty: {it.qty}</div>
                     </div>
-                    <div className="text-sm font-semibold">₹{(it.price * it.qty).toLocaleString('en-IN')}</div>
+                    <div className="text-sm font-semibold">{format(it.price * it.qty)}</div>
                   </div>
                 ))}
               </div>
@@ -200,16 +202,19 @@ const Checkout = () => {
               )}
 
               <div className="mt-5 pt-5 border-t border-[#EBD9CE] space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-neutral-600">Subtotal</span><span>₹{totals.subtotal.toLocaleString('en-IN')}</span></div>
-                {discount > 0 && <div className="flex justify-between text-[#B4593F]"><span>Discount</span><span>-₹{discount.toLocaleString('en-IN')}</span></div>}
-                <div className="flex justify-between"><span className="text-neutral-600">Shipping</span><span>{shipping_fee === 0 ? 'Free' : `₹${shipping_fee}`}</span></div>
-                <div className="flex justify-between text-xs text-neutral-600"><span>GST 12% (est.)</span><span>₹{tax_preview.toLocaleString('en-IN')}</span></div>
-                <div className="flex justify-between text-lg font-serif-display pt-3 border-t border-[#EBD9CE]"><span>Total</span><span className="text-[#B4593F]">₹{total.toLocaleString('en-IN')}</span></div>
+                <div className="flex justify-between"><span className="text-neutral-600">Subtotal</span><span>{format(totals.subtotal)}</span></div>
+                {discount > 0 && <div className="flex justify-between text-[#B4593F]"><span>Discount</span><span>-{format(discount)}</span></div>}
+                <div className="flex justify-between"><span className="text-neutral-600">Shipping</span><span>{shipping_fee === 0 ? 'Free' : format(shipping_fee)}</span></div>
+                <div className="flex justify-between text-xs text-neutral-600"><span>GST 12% (est.)</span><span>{format(tax_preview)}</span></div>
+                <div className="flex justify-between text-lg font-serif-display pt-3 border-t border-[#EBD9CE]"><span>Total</span><span className="text-[#B4593F]" data-testid="checkout-total">{format(total)}</span></div>
+                {currencyCode !== 'INR' && (
+                  <div className="text-[10px] text-neutral-500">Payment is processed in INR. Amount converted from ₹{total.toLocaleString('en-IN')}.</div>
+                )}
                 <div className="text-[10px] text-neutral-500">Final tax computed on server</div>
               </div>
 
               <button disabled={processing || !canProceed} onClick={placeOrder} className="mt-6 w-full bg-[#1A1A1A] hover:bg-[#B4593F] disabled:bg-neutral-300 text-white py-4 rounded-full text-xs uppercase tracking-widest inline-flex items-center justify-center gap-2 transition-colors">
-                {processing ? 'Processing...' : (<>Pay via {PAYMENT_METHODS.find(p => p.id === paymentProvider)?.label} · ₹{total.toLocaleString('en-IN')} <ArrowRight className="w-4 h-4" /></>)}
+                {processing ? 'Processing...' : (<>Pay via {PAYMENT_METHODS.find(p => p.id === paymentProvider)?.label} · {format(total)} <ArrowRight className="w-4 h-4" /></>)}
               </button>
               <div className="mt-4 text-[10px] uppercase tracking-widest text-neutral-500 text-center inline-flex items-center gap-2 justify-center w-full"><Lock className="w-3 h-3" /> Secure checkout · SSL encrypted</div>
             </div>

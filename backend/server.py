@@ -259,6 +259,62 @@ async def get_product(pid: str):
     return {'product': p, 'related': related}
 
 
+@api.get('/products/{pid}/recommendations')
+async def product_recommendations(pid: str, limit: int = 8):
+    """You may also like — same category first, then popular / recent as fallback."""
+    p = await db.products.find_one({'$or': [{'id': pid}, {'slug': pid}], 'active': True}, {'_id': 0})
+    if not p:
+        raise HTTPException(status_code=404, detail='Product not found')
+
+    limit = max(1, min(limit, 24))
+    seen = {p['id']}
+    items: list = []
+
+    # 1) same category
+    cur = db.products.find(
+        {'category': p['category'], 'id': {'$ne': p['id']}, 'active': True},
+        {'_id': 0},
+    ).sort([('rating', -1), ('reviews', -1)]).limit(limit)
+    for it in await cur.to_list(limit):
+        if it['id'] not in seen:
+            seen.add(it['id'])
+            items.append(it)
+
+    # 2) shared collections
+    if len(items) < limit and p.get('collections'):
+        cur = db.products.find(
+            {'collections': {'$in': p['collections']}, 'id': {'$nin': list(seen)}, 'active': True},
+            {'_id': 0},
+        ).sort([('rating', -1)]).limit(limit - len(items))
+        for it in await cur.to_list(limit - len(items)):
+            if it['id'] not in seen:
+                seen.add(it['id'])
+                items.append(it)
+
+    # 3) fallback: top rated store-wide
+    if len(items) < limit:
+        cur = db.products.find(
+            {'id': {'$nin': list(seen)}, 'active': True},
+            {'_id': 0},
+        ).sort([('rating', -1), ('reviews', -1)]).limit(limit - len(items))
+        for it in await cur.to_list(limit - len(items)):
+            if it['id'] not in seen:
+                seen.add(it['id'])
+                items.append(it)
+
+    # attach category slug/name for FE cards
+    cat_ids = list({it['category'] for it in items if it.get('category')})
+    if cat_ids:
+        cat_docs = await db.categories.find({'id': {'$in': cat_ids}}, {'_id': 0, 'id': 1, 'slug': 1, 'name': 1}).to_list(200)
+        cat_by_id = {c['id']: c for c in cat_docs}
+        for it in items:
+            c = cat_by_id.get(it.get('category'))
+            it['category_slug'] = c['slug'] if c else None
+            it['category_name'] = c['name'] if c else None
+
+    return {'items': items, 'total': len(items)}
+
+
 @api.post('/admin/products')
 async def create_product(payload: ProductCreate, user: dict = Depends(require_store)):
     doc = Product(**payload.model_dump()).model_dump()
@@ -456,6 +512,42 @@ async def update_coupon(cid: str, payload: CouponUpdate, user: dict = Depends(re
 async def delete_coupon(cid: str, user: dict = Depends(require_admin)):
     await db.coupons.delete_one({'id': cid})
     return {'ok': True}
+
+
+# ================= CURRENCY / FX =================
+# Base currency is INR. Rates are "1 INR = X <currency>". Admin can override via Settings.
+DEFAULT_CURRENCIES = [
+    {'code': 'INR', 'symbol': '\u20b9', 'name': 'Indian Rupee', 'locale': 'en-IN', 'rate': 1.0, 'decimals': 0},
+    {'code': 'USD', 'symbol': '$',      'name': 'US Dollar',    'locale': 'en-US', 'rate': 0.012, 'decimals': 2},
+    {'code': 'EUR', 'symbol': '\u20ac', 'name': 'Euro',         'locale': 'de-DE', 'rate': 0.011, 'decimals': 2},
+    {'code': 'GBP', 'symbol': '\u00a3', 'name': 'British Pound','locale': 'en-GB', 'rate': 0.0095, 'decimals': 2},
+    {'code': 'AUD', 'symbol': 'A$',     'name': 'Australian Dollar', 'locale': 'en-AU', 'rate': 0.018, 'decimals': 2},
+    {'code': 'AED', 'symbol': 'AED',    'name': 'UAE Dirham',   'locale': 'ar-AE', 'rate': 0.044, 'decimals': 2},
+]
+
+
+@api.get('/currency/rates')
+async def currency_rates():
+    """Public FX rates + supported currencies. Admin overrides via settings key CURRENCY_RATES."""
+    override = await get_setting('CURRENCY_RATES', '') or ''
+    rates_override = {}
+    if override:
+        try:
+            import json
+            parsed = json.loads(override)
+            if isinstance(parsed, dict):
+                for k, v in parsed.items():
+                    try:
+                        rates_override[k.upper()] = float(v)
+                    except (TypeError, ValueError):
+                        pass
+        except Exception:
+            pass
+    items = []
+    for c in DEFAULT_CURRENCIES:
+        rate = rates_override.get(c['code'], c['rate'])
+        items.append({**c, 'rate': rate})
+    return {'base': 'INR', 'currencies': items, 'updated_at': datetime.now(timezone.utc).isoformat()}
 
 
 # ================= ORDERS =================

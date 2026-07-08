@@ -1,0 +1,86 @@
+{
+  "summary": "Phase J — Multi-currency FX (/api/currency/rates), product recommendations (/api/products/{id}/recommendations), wishlist page, LangCurrencyMenu (EN/HI + 6 currencies), RelatedProducts + RecentlyViewed, currency-aware cart drawer & checkout INR-conversion note. Backend: 14/14 pytest passed. Frontend: all e2e scenarios passed EXCEPT ONE — 'Move all to bag' on /wishlist adds items to cart but does not remove them from wishlist (inconsistent with single-item 'Move to bag').",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Wishlist.jsx moveAll()",
+        "issue": "'Move all to bag' button adds every wishlist product to the cart but does NOT call toggleWishlist(p) to remove them. After clicking Move-all: cart badge=2 (correct), wishlist still shows 2 items with hearts filled (wrong). Single-item moveOne() correctly does both (addToCart + toggleWishlist). Fix: change moveAll to `wishlist.forEach(p => { addToCart(p,1); toggleWishlist(p); });` OR call a new clearWishlist() after the loop. File: /app/frontend/src/pages/Wishlist.jsx L24-28.",
+        "selector": "[data-testid=wishlist-move-all]",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "phase_j_backend_verification": {
+    "GET /api/currency/rates 200 + base=INR + updated_at": "PASS",
+    "GET /api/currency/rates contains INR/USD/EUR/GBP/AUD/AED": "PASS",
+    "GET /api/currency/rates each currency has code/symbol/name/rate/decimals (rate>0)": "PASS",
+    "GET /api/currency/rates INR rate=1.0 decimals=0": "PASS",
+    "GET /api/products/{pid}/recommendations 200 with items[], total, up to 8 items each with id/name/price/image": "PASS (returned 8 items)",
+    "GET /api/products/{pid}/recommendations excludes source pid": "PASS",
+    "GET /api/products/{pid}/recommendations respects ?limit=3": "PASS",
+    "GET /api/products/{pid}/recommendations returns 'items' key contract": "PASS",
+    "GET /api/products/{invalid}/recommendations => 404": "PASS",
+    "GET /api/products/{pid}/recommendations no MongoDB _id leak": "PASS",
+    "Backcompat GET /api/products/{pid} still returns {product, related}": "PASS",
+    "Regression /api/products list 200 + envelope": "PASS",
+    "Regression /api/categories 200": "PASS",
+    "Regression /api/reviews list 200 (NOTE: /api/reviews/generic is NOT an endpoint; correct path is /api/reviews)": "PASS"
+  },
+  "phase_j_frontend_verification": {
+    "/wishlist empty state — wishlist-page + wishlist-empty + wishlist-browse-shop CTA visible": "PASS",
+    "Nav [data-testid=nav-wishlist-count] hidden when wishlist empty": "PASS",
+    "Shop /shop — ProductCard heart click adds to wishlist + nav badge shows count 1": "PASS",
+    "Nav heart -> /wishlist navigation + wishlist-grid renders added item": "PASS",
+    "Wishlist single-item 'Move to Bag' — item added to cart AND removed from wishlist": "PASS",
+    "Wishlist 'Move all to bag' — items added to cart (badge=2, subtotal ₹1,498 correct) BUT NOT removed from wishlist": "FAIL — see frontend_issues.ui_bugs",
+    "/product/{id} RelatedProducts section [data-testid=related-products] with 8 cards from /api/products/{id}/recommendations": "PASS",
+    "Recently viewed hidden on 1st product visit": "PASS",
+    "Recently viewed on 2nd product shows 1st product via [data-testid=recently-viewed-item-{pid}]": "PASS",
+    "Currency switcher INR -> USD: prices update to $ (₹999 -> $11.99)": "PASS",
+    "Currency switcher EUR: prices show € (10,99 €)": "PASS",
+    "Currency switcher GBP: prices show £ (£9.49)": "PASS",
+    "Language switcher EN -> HI: nav labels change (Home -> होम, Shop -> शॉप, Collections -> कलेक्शन)": "PASS",
+    "Language switcher HI -> EN: nav labels revert to English": "PASS",
+    "Persistence: currency selection survives page reload via localStorage wth_currency": "PASS",
+    "Cart drawer subtotal reflects selected currency ($5.99 when USD selected)": "PASS ([data-testid=cart-subtotal])",
+    "Checkout total shown in selected currency ($7.90) + INR conversion note 'Payment is processed in INR. Amount converted from ₹658.'": "PASS ([data-testid=checkout-total])"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase_j_currency_recommendations.py",
+    "/app/test_reports/pytest/phase_j_results.xml"
+  ],
+  "action_items": [
+    "Fix Wishlist.jsx moveAll() to also remove items from wishlist after moving them to cart (parity with moveOne). One-line fix at L24-28 of /app/frontend/src/pages/Wishlist.jsx."
+  ],
+  "critical_code_review_comments": [
+    "server.py L262-315 product_recommendations: 3-tier fallback (category -> shared collections -> top-rated store-wide) with dedup via `seen` set. Always excludes source pid. Attaches category_slug/category_name to items via a single batch cats query (good, no N+1). LGTM.",
+    "server.py L529-550 currency_rates: allows admin override via settings key CURRENCY_RATES (JSON dict of {CODE:rate}). Parsing is defensive (try/except for both JSON and float coercion). Default INR base rate hardcoded — safe.",
+    "CurrencyContext.jsx L27-31: fetches /api/currency/rates on mount, but if it fails (network) silently keeps FALLBACK. Good — no user-visible error. Consider adding a soft toast/telemetry for observability.",
+    "CurrencyContext.jsx L42-57 format(): uses Intl.NumberFormat with locale + currency style; falls back to `${symbol}${amount.toFixed(decimals)}` if locale unsupported. Handles null/NaN by returning '' (good — no 'NaN' leaking into UI).",
+    "LangCurrencyMenu.jsx L48-58: language buttons do NOT call setOpen(false) after selecting. Currency buttons DO. Inconsistent UX — after picking Hindi the menu stays open until user clicks outside. Minor UX nit, not functional.",
+    "Wishlist.jsx L24-28 moveAll(): BUG — does not remove items from wishlist after adding to cart. moveOne (L30-34) correctly does both. This is the only functional defect found in Phase J.",
+    "RelatedProducts.jsx L26 short-circuit `if (!loading && items.length === 0) return null;` — the section vanishes when API returns 0. Good graceful degradation.",
+    "useRecentlyViewed hook is localStorage-backed; RecentlyViewed.jsx L18 correctly filters excludeId before slicing to 8. Section hidden when empty.",
+    "i18n.js L147: uses `localStorage.getItem` at module init time without waiting for DOMContentLoaded — fine in CRA env because window is guarded, but SSR-unsafe (n/a for this app).",
+    "Console noise: 401s on /api/admin/integrations during public page loads — this is a public visitor probing an admin-gated endpoint (expected, not a bug). Consider guarding the fetch behind an isAuthenticated check to reduce console noise."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase_j_currency_recommendations.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (14/14 pytest passed)",
+    "frontend": "94% (16/17 UI scenarios passed; 1 failure: wishlist move-all doesn't clear wishlist)"
+  },
+  "test_credentials": "Not required — all Phase J endpoints and pages are public.",
+  "seed_data_creation": "None — used existing 15 products from live catalog. No data mutated. localStorage cleared before each test.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Phase J (currency + recommendations + wishlist + i18n) largely verified end-to-end. All 14 backend pytest cases and 16 of 17 UI scenarios pass. Single defect: Wishlist.jsx moveAll() does not remove items from wishlist. All other flows — heart-to-wishlist, nav badge, related products (8 cards), recently viewed cross-product, currency switch (INR/USD/EUR/GBP), language switch (EN/HI both directions), localStorage persistence, cart drawer currency, checkout total + INR conversion note — verified working. Note on /api/reviews path: the review_request said 'spot-check /api/reviews/generic' but that endpoint does not exist; the correct list endpoint is /api/reviews (verified 200).",
+  "rca_of_the_issue": "Wishlist move-all bug: In /app/frontend/src/pages/Wishlist.jsx moveAll() at L24-28 iterates wishlist and only calls addToCart(p,1) — it never calls toggleWishlist(p). By contrast moveOne() at L30-34 calls both. Fix: `wishlist.forEach(p => { addToCart(p,1); toggleWishlist(p); });` — order matters (add first, then toggle to remove from wishlist, matching moveOne). Reproduction: add 2 items to wishlist, click [data-testid=wishlist-move-all]; observe cart badge=2 (correct) but wishlist items still present (bug). Mitigation: trivial one-liner as above OR expose a dedicated clearWishlist() from CartContext and call it after the forEach."
+}

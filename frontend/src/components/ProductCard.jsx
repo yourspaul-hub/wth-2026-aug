@@ -1,25 +1,29 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, ShoppingBag, Star, Eye } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { imgProps } from '../lib/imgSrc';
 import { useCart } from '../context/CartContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { toast } from 'sonner';
 
 const ProductCard = ({ product }) => {
   const [hover, setHover] = useState(false);
   const { addToCart, toggleWishlist, inWishlist } = useCart();
+  const { format } = useCurrency();
+  const { t } = useTranslation();
   const wished = inWishlist(product.id);
   const discount = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
 
   const onAdd = (e) => {
     e.preventDefault();
     addToCart(product, 1);
-    toast.success(`${product.name} added to bag`);
+    toast.success(`${product.name} ${t('common.added_to_bag')}`);
   };
   const onWish = (e) => {
     e.preventDefault();
     toggleWishlist(product);
-    toast(wished ? 'Removed from wishlist' : 'Added to wishlist');
+    toast(wished ? t('common.removed_from_wishlist') : t('common.added_to_wishlist'));
   };
 
   return (
@@ -57,8 +61,9 @@ const ProductCard = ({ product }) => {
         <button
           onClick={onAdd}
           className="absolute bottom-3 left-3 right-3 bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-[11px] uppercase tracking-[0.2em] py-3 rounded-full flex items-center justify-center gap-2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500"
+          data-testid={`product-card-add-${product.id}`}
         >
-          <ShoppingBag className="w-3.5 h-3.5" /> Add to Bag
+          <ShoppingBag className="w-3.5 h-3.5" /> {t('common.add_to_bag')}
         </button>
       </div>
 
@@ -72,9 +77,9 @@ const ProductCard = ({ product }) => {
         </div>
         <p className="text-[11px] italic text-neutral-500 mt-1 line-clamp-1">{product.verse}</p>
         <div className="mt-2 flex items-center gap-2">
-          <span className="text-[#B4593F] font-semibold">₹{product.price}</span>
+          <span className="text-[#B4593F] font-semibold" data-testid={`product-card-price-${product.id}`}>{format(product.price)}</span>
           {product.originalPrice > product.price && (
-            <span className="text-[12px] text-neutral-400 line-through">₹{product.originalPrice}</span>
+            <span className="text-[12px] text-neutral-400 line-through">{format(product.originalPrice)}</span>
           )}
         </div>
         {product.colors?.length > 0 && (
