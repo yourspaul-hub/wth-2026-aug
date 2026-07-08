@@ -51,6 +51,7 @@ import AdminIntegrations from './pages/admin/Integrations';
 import AdminDesign from './pages/admin/Design';
 import Wishlist from './pages/Wishlist';
 import MusicWidget from './components/MusicWidget';
+import ScrollToTop from './components/ScrollToTop';
 import { ContentProvider } from './context/ContentContext';
 import { Toaster } from './components/ui/sonner';
 
@@ -68,6 +69,7 @@ function AppRouter() {
   return (
     <>
       <RedirectGate />
+      <ScrollToTop />
       <AnalyticsTracker />
       {!isAdmin && <AnnouncementBar />}
       {!isAdmin && <Navbar />}
