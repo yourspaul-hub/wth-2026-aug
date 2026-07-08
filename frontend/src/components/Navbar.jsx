@@ -76,14 +76,14 @@ const Navbar = () => {
               <Link to="/contact" className="link-underline">{t('nav.contact')}</Link>
             </nav>
             <div className="flex items-center gap-1 md:gap-2">
-              <LangCurrencyMenu />
-              <button onClick={() => setSearchOpen(v => !v)} className="p-2.5 rounded-full hover:bg-[#F5D0CE]/60 transition-colors" aria-label={t('nav.search')} data-testid="nav-search-btn">
+              <div className="hidden lg:block"><LangCurrencyMenu /></div>
+              <button onClick={() => setSearchOpen(v => !v)} className="hidden lg:inline-flex p-2.5 rounded-full hover:bg-[#F5D0CE]/60 transition-colors" aria-label={t('nav.search')} data-testid="nav-search-btn">
                 <Search className="w-4 h-4" />
               </button>
-              <a href="https://www.instagram.com/wearthehope" target="_blank" rel="noreferrer" className="hidden md:inline-flex p-2.5 rounded-full hover:bg-[#F5D0CE]/60 transition-colors">
+              <a href="https://www.instagram.com/wearthehope" target="_blank" rel="noreferrer" className="hidden lg:inline-flex p-2.5 rounded-full hover:bg-[#F5D0CE]/60 transition-colors">
                 <Instagram className="w-4 h-4" />
               </a>
-              <Link to="/wishlist" className="relative p-2.5 rounded-full hover:bg-[#F5D0CE]/60 transition-colors" aria-label={t('nav.wishlist')} data-testid="nav-wishlist-btn">
+              <Link to="/wishlist" className="hidden lg:inline-flex relative p-2.5 rounded-full hover:bg-[#F5D0CE]/60 transition-colors" aria-label={t('nav.wishlist')} data-testid="nav-wishlist-btn">
                 <Heart className="w-4 h-4" />
                 {wishlist.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-[#B4593F] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center" data-testid="nav-wishlist-count">{wishlist.length}</span>}
               </Link>
@@ -105,15 +105,27 @@ const Navbar = () => {
         </div>
 
         {/* Mobile menu */}
-        <div className={`lg:hidden overflow-hidden transition-all duration-500 ${mobileOpen ? 'max-h-[600px] pb-6' : 'max-h-0'}`}>
+        <div className={`lg:hidden overflow-hidden transition-all duration-500 ${mobileOpen ? 'max-h-[720px] pb-6' : 'max-h-0'}`}>
           <div className="pt-2 flex flex-col gap-1">
+            <form onSubmit={submitSearch} className="flex items-center gap-3 bg-white border border-[#EBD9CE] rounded-full px-4 py-2.5 mb-2" data-testid="mobile-search-form">
+              <Search className="w-4 h-4 text-neutral-500" />
+              <input value={query} onChange={e => setQuery(e.target.value)} placeholder={t('nav.search_placeholder')} className="flex-1 bg-transparent outline-none text-sm" />
+            </form>
             {['Home','SHOP','About','Journal','Contact'].map(l => (
               <Link key={l} to={l === 'Home' ? '/' : l === 'Journal' ? '/blog' : l === 'SHOP' ? '/shop' : `/${l.toLowerCase()}`} className="py-3 border-b border-[#EBD9CE] uppercase text-sm tracking-[0.15em]">{l}</Link>
             ))}
+            <Link to="/wishlist" data-testid="mobile-wishlist-link" className="py-3 border-b border-[#EBD9CE] uppercase text-sm tracking-[0.15em] flex items-center justify-between">
+              <span className="inline-flex items-center gap-2"><Heart className="w-4 h-4" /> {t('nav.wishlist')}</span>
+              {wishlist.length > 0 && <span className="bg-[#B4593F] text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center">{wishlist.length}</span>}
+            </Link>
             <div className="grid grid-cols-2 gap-2 pt-4">
               {categories.slice(0,8).map(c => (
                 <Link key={c.id} to={`/shop/${c.slug}`} className="text-xs py-2 px-3 rounded bg-white border border-[#EBD9CE]">{c.name}</Link>
               ))}
+            </div>
+            <div className="pt-4 flex items-center justify-between border-t border-[#EBD9CE] mt-2">
+              <span className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">Language & Currency</span>
+              <LangCurrencyMenu />
             </div>
           </div>
         </div>

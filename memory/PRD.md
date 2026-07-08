@@ -21,6 +21,13 @@ Full-featured, dynamic e-commerce clone of www.wearthehope.com with a comprehens
 - Phase H — Reviews list envelope + Storefront section ✅ 22/22
 - **Phase I — Image pipeline + Frontend perf ✅ 20/21** (2026-02-08)
 - **Phase J — Wishlist page + Recommendations + Multi-currency (INR/USD/EUR/GBP/AUD/AED) + i18n EN/HI ✅ 30/31** (2026-02-08)
+- **Phase K — CMS "Design" tab + Music widget + S3/CloudFront fallback + Mobile navbar polish ✅ 13/13 backend, ~92% frontend** (2026-02-08)
+
+### Phase K highlights
+- **Design tab** at `/admin/design`: section-grouped editor for every editable string on the storefront (announcement, hero, home strip/categories/about/instagram/testimonials, shop, about, blog, contact, product-detail labels, footer). Save is bulk `PUT /api/admin/content`; storefront hot-updates via `wth:content-saved` CustomEvent. Reset-to-default per key. `GET /api/content` public, cached.
+- **Music widget** (bottom-right, all storefront pages): auto-seeded MP3 URL (Wear The Hope Music.mp3). Starts paused (autoplay policy), remembers user choice via localStorage. Play/pause + volume + mute + hide. `GET /api/settings/public` exposes URL/label/volume/enabled.
+- **S3 + CloudFront CDN** hook for the image pipeline: `_try_upload_to_s3` runs when `AWS_S3_ENABLED=true` and creds present; otherwise transparent fallback to GridFS. Admin can toggle via Integrations → CDN section (AWS creds required — currently not provided by user).
+- **Mobile navbar**: hidden all icons except hamburger + logo + cart on <1024px. Search, wishlist, and language/currency moved into the hamburger drawer.
 
 **Total backend tests**: 218+ (all passing)
 

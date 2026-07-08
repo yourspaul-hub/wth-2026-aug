@@ -107,14 +107,17 @@ const MusicWidget = () => {
             {playing ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 pl-0.5" />}
           </span>
           <span className="text-[10px] uppercase tracking-[0.2em]">{playing ? 'Playing' : 'Music'}</span>
-          <button
+          <span
+            role="button"
+            tabIndex={0}
             onClick={(e) => { e.stopPropagation(); setCollapsed(false); }}
-            className="ml-1 opacity-70 hover:opacity-100"
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setCollapsed(false); } }}
+            className="ml-1 opacity-70 hover:opacity-100 cursor-pointer"
             aria-label="Expand music player"
             data-testid="music-widget-expand"
           >
             <Music className="w-3 h-3" />
-          </button>
+          </span>
         </button>
       )}
 
@@ -165,7 +168,7 @@ const MusicWidget = () => {
             className="mt-3 text-[10px] uppercase tracking-[0.2em] text-white/50 hover:text-white/80 w-full text-left"
             data-testid="music-widget-hide"
           >
-            Hide for this session
+            Hide music widget
           </button>
         </div>
       )}
