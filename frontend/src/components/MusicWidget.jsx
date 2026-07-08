@@ -70,30 +70,27 @@ const MusicWidget = () => {
     armUnmuteOnGesture();
   }, [settings, hidden]);
 
-  // Unmute + resume playback on the FIRST user signal — mousemove, click, tap,
-  // scroll, keydown. Handlers are attached to the DOCUMENT (not window) so they
-  // don't interfere with the widget button clicks. `once: true` removes them
-  // after firing once.
-  // Chrome's autoplay policy: only click/tap/keydown count as "activation
-  // gestures" that let JS unmute audio. Mousemove does NOT. So we listen for
-  // real gestures and do a pause→unmute→play cycle (exactly what pressing
-  // pause→play manually does — which the user confirmed works).
+  // Chrome / Safari / iOS require a real activation gesture (click, tap,
+  // keydown) to unmute audio — mousemove does NOT count. The handler must be
+  // SYNCHRONOUS: iOS invalidates the user-gesture context if we `await`
+  // anything before calling play(), which is why previously mobile didn't
+  // produce sound.
   const armUnmuteOnGesture = () => {
-    const events = ['click', 'touchend', 'keydown'];
-    const unmute = async () => {
+    const events = ['click', 'touchend', 'pointerup', 'keydown'];
+    const unmute = (e) => {
+      // Skip taps on the widget itself so its pause/play button keeps working.
+      if (e && widgetRef.current && widgetRef.current.contains(e.target)) return;
       const a = audioRef.current;
       if (a) {
-        try {
-          a.pause();
-          a.muted = false;
-          a.volume = 0.30;
-          await a.play();
-        } catch { /* recoverable — user can click widget */ }
+        a.muted = false;
+        a.volume = 0.30;
+        const p = a.play();
+        if (p && typeof p.catch === 'function') p.catch(() => {});
       }
       setMuted(false);
       events.forEach(ev => document.removeEventListener(ev, unmute));
     };
-    events.forEach(ev => document.addEventListener(ev, unmute, { once: true, passive: true }));
+    events.forEach(ev => document.addEventListener(ev, unmute, { passive: true }));
   };
 
   if (!settings || !settings.enabled || !settings.url || hidden) return null;
