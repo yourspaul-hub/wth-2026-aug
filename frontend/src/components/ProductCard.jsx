@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, ShoppingBag, Star, Eye } from 'lucide-react';
+import { imgProps } from '../lib/imgSrc';
 import { useCart } from '../context/CartContext';
 import { toast } from 'sonner';
 
@@ -29,8 +30,8 @@ const ProductCard = ({ product }) => {
       onMouseLeave={() => setHover(false)}
     >
       <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-white border border-[#EBD9CE]/70">
-        <img src={product.image} alt={product.name} className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${hover ? 'opacity-0' : 'opacity-100'}`} />
-        <img src={product.hoverImage} alt={product.name} className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${hover ? 'opacity-100' : 'opacity-0'}`} />
+        <img {...imgProps(product.image, { width: 600, height: 750, sizes: '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw' })} alt={product.name} className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${hover ? 'opacity-0' : 'opacity-100'}`} />
+        {product.hoverImage && <img {...imgProps(product.hoverImage, { width: 600, height: 750, sizes: '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw' })} alt={product.name} className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${hover ? 'opacity-100' : 'opacity-0'}`} />}
 
         {/* Ribbon */}
         {(product.ribbon || product.tag) && (

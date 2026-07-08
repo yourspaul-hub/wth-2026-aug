@@ -468,6 +468,18 @@ backend:
         agent: "main"
         comment: "Rendered on Home between USBanner and Testimonials. Shows summary KPI card (average / count / 5-bar breakdown), 4 filter chips (All / Google / Verified purchase / From our team), review cards with avatar + source badge + verified badge + read-more expander + photo thumbnails with lightbox. Verified via screenshot with 16 reviews (13×5★, 3×4★, avg 4.8)."
 
+  - task: "Image pipeline: Drive→direct URL, resize+WebP, GridFS storage, /api/images/{id} serving, bulk-upload image_1..image_4"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "New `_resolve_image_source` maps Drive share URLs (/file/d/ID/view or ?id=) → https://drive.google.com/uc?export=download&id=ID. `_fetch_bytes` downloads with 30s timeout, 15MB cap, rejects HTML (private Drive). `_process_image` resizes to 1600x1600 preserving aspect, converts to WebP q=82. Stored in GridFS bucket 'images' with metadata (source_url, resolved_url, w, h, size, uploaded_by, created_at). New endpoints: POST /api/admin/images/upload-from-url (require_store, returns {id, url:'/api/images/…', width, height, size, content_type}), GET /api/images/{img_id} (public, Content-Type from metadata, Cache-Control max-age=2592000 immutable). Bulk upload extended: CSV/XLSX now accepts image_1..image_4 columns; each processed through pipeline. Non-Drive URLs are kept as-is; Drive links are always re-hosted. Backward compat: legacy `image` column overrides `image_1`. At least one image (from image OR image_1) is required — rows without it get row-level error."
+
 frontend:
   - task: "Storefront + Admin panel wiring (React 19)"
     implemented: true
@@ -489,7 +501,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Enhanced /api/reviews list with source/rating filters + aggregate stats"
+    - "Image pipeline: Drive→direct URL, resize+WebP, GridFS storage, /api/images/{id} serving, bulk-upload image_1..image_4"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

@@ -1,0 +1,78 @@
+{
+  "summary": "Phase I — Image pipeline (POST /api/admin/images/upload-from-url, GET /api/images/{id}, GridFS storage, bulk upload image_1..image_4 processing, Drive URL parsing) end-to-end tested. 20/21 pytest cases PASSED. 1 real infrastructure issue: Cache-Control header set correctly by backend but stripped/overridden to 'no-store, no-cache, must-revalidate' by Cloudflare/ingress at the public URL edge. Backend behavior verified via localhost:8001 direct request — the app code is correct.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "GET /api/images/{id} (via public REACT_APP_BACKEND_URL)",
+        "issue": "Backend correctly sets 'Cache-Control: public, max-age=2592000, immutable' (verified via curl on localhost:8001). BUT Cloudflare/k8s-ingress at the public edge REWRITES this header to 'cache-control: no-store, no-cache, must-revalidate' (cf-cache-status: DYNAMIC). Result: served WebP images are not cacheable at the CDN/browser level → the 'CDN-style serving' benefit is lost. Cannot be fixed via Python code alone — needs ingress/CF annotation to (a) preserve origin Cache-Control OR (b) whitelist /api/images/* for public caching. Response is otherwise correct: Content-Type image/webp, Content-Length matches, body starts with RIFF..WEBP.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "POST /api/admin/products/bulk",
+        "issue": "In server.py L1464 the URL-classification expression relies on Python operator precedence to intended-mean `startswith('/api/images/') OR (startswith(http) AND 'drive.google' not in src)`, which is what Python actually does because `and` binds tighter than `or`. So it works, but is fragile — one accidental parenthesization would flip the behavior. Recommend parenthesizing explicitly for clarity: `if src.startswith('/api/images/') or (src.startswith(('http://','https://')) and 'drive.google' not in src.lower()):`"
+      },
+      {
+        "endpoint": "GET /api/blog",
+        "issue": "Not tested for exhaustive schema in this iteration; only tolerated as list-or-dict. Existing phase_e test covers it."
+      }
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "phase_i_verification": {
+    "POST /api/admin/images/upload-from-url unsplash 200": "PASS — returned {id,url:/api/images/<id>,width,height,size<500KB,content_type:image/webp}. Actual size ~20-30 KB after resize+WebP encode from a ~1200px unsplash source.",
+    "RBAC admin allowed": "PASS",
+    "RBAC store_manager allowed": "PASS (require_store = admin+store_manager)",
+    "RBAC blogger 403": "PASS — returns 403 'Requires one of: admin, store_manager'",
+    "RBAC no token 401": "PASS",
+    "empty url 400": "PASS",
+    "Drive /file/d/<fakeid>/view URL parsing → 400": "PASS — _resolve_image_source correctly transforms to uc?export=download&id=..., fetch fails, error detail includes 'HTML page (private Drive file?)' (Drive returns an HTML error page for invalid ids)",
+    "Drive ?id=<fakeid> URL parsing → 400": "PASS — same path, same error msg",
+    "GET /api/images/{id} content-type image/webp": "PASS",
+    "GET /api/images/{id} Content-Length matches stored size": "PASS (via public URL — CF preserves this)",
+    "GET /api/images/{id} Cache-Control has max-age=2592000 AND immutable": "FAIL at edge / PASS at origin — see backend_issues.critical",
+    "GET /api/images/{id} body starts with RIFF..WEBP": "PASS",
+    "GET /api/images/{id} unknown ObjectId → 404": "PASS",
+    "GET /api/images/{id} malformed id → 404": "PASS (ObjectId() throws → HTTPException 404)",
+    "bulk image_1=unsplash,image_2=empty → created:1,updated:0,errors:[]": "PASS. GET /api/products?limit=100 finds SKU. product.image starts with 'http' (external non-Drive URL kept as-is per fast-path in L1464). product.gallery == []",
+    "bulk legacy `image` column only (backward compat)": "PASS — created:1, image kept as external URL",
+    "bulk row with no image AND no image_1 → row-level error": "PASS — error text 'At least one image required (fill `image` or `image_1`).'",
+    "bulk mixed rows (fake Drive URL + valid unsplash) → ok=true, valid row created, bad row in errors[]": "PASS — bulk response {ok:true, created:1, errors:[{row:2, error:'Image \"...drive...\": URL returned an HTML page (private Drive file?)...'}]}",
+    "bulk without token → 401": "PASS",
+    "GET /api/admin/products/template.csv first line includes image_1..image_4": "PASS — all 4 present in header row",
+    "GET /api/admin/products/template.csv without token → 401": "PASS",
+    "Regression /api/reviews envelope shape {items,total,stats}": "PASS",
+    "Regression /api/blog": "PASS",
+    "Regression /api/products envelope": "PASS",
+    "Regression admin auth 401 without token": "PASS (both require_store and require_admin endpoints)"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase_i_image_pipeline.py",
+    "/app/test_reports/pytest/phase_i_results.xml"
+  ],
+  "action_items": [
+    "INFRA: Configure Cloudflare/k8s-ingress to STOP overriding Cache-Control for /api/images/* (or set an ingress annotation to preserve origin cache headers). Currently the backend sends 'public, max-age=2592000, immutable' but the edge rewrites to 'no-store, no-cache, must-revalidate'. Without this fix, the CDN-style serving story fails at the last mile (browsers won't cache WebPs, CF won't cache them, every product listing page will re-download).",
+    "CODE (nit): server.py L1464 — parenthesize the OR/AND URL-classification for clarity: `if src.startswith('/api/images/') or (src.startswith(('http://','https://')) and 'drive.google' not in src.lower())`."
+  ],
+  "critical_code_review_comments": [
+    "server.py L2438-2447 _fetch_bytes: correctly detects 'text/html' response type to reject private/error Drive pages. Good — this is what makes fake-id tests produce a helpful 400 error. NOTE: relies on Drive returning html error page (not a redirect) for invalid ids — confirmed still true in Jan 2026.",
+    "server.py L2450-2458 _process_image: uses Image.thumbnail (in-place, preserves aspect ratio) and quality=82 WebP encoding at method=6 (slowest/best). Achieves ~20-30 KB for a 1200x800 photo — well under the 500 KB target. LGTM.",
+    "server.py L2498-2513 get_image: correctly wraps ObjectId() ctor in try/except → 404 for any malformed id. Also wraps open_download_stream → 404 for unknown ids. Cache-Control header set correctly at origin.",
+    "server.py L1400-1514 bulk_upload_products: the loop over image_1..image_4 dedupes and truncates to 4 images. If ALL images in a row fail to process, the row is silently skipped (continue at L1474) — the row-level errors are appended but no explicit 'row skipped' marker. Consider adding a 'row X: no valid images could be processed' error at L1474 for clearer UX.",
+    "server.py L1461-1471 image processing loop: correctly identifies same-origin '/api/images/' URLs and public non-Drive http(s) URLs as fast-path (kept as-is). Drive links are always re-hosted. Fast path is important because it avoids re-uploading already-hosted WebPs on re-imports.",
+    "server.py L2425 _GDRIVE_ID_RE requires id length >= 20 chars. Real Drive IDs are ~33 chars. The test fake id 'FAKE_ID_XXX_YYY_ZZZ_QQQ' (23 chars) matches, and '1BAD_FAKE_ID_XXXXX' (18 chars) does NOT match the /file/d/ variant regex — need to double-check. Actually the test passed, meaning the regex captured '1BAD_FAKE_ID_XXXXX' which is 18 chars… let me note: it's actually the `?usp=sharing` suffix that keeps '1BAD_FAKE_ID_XXXXX' as the id (18 chars). Since {20,} requires >=20, this would NOT match. So the URL is passed through as-is (not resolved to uc?...), hits Google's html page, and still 400s correctly. Both paths work by coincidence. Recommend loosening regex to {10,} or documenting the expected id length.",
+    "Cache-Control override is a REAL production issue: origin sends the right header, but Cloudflare (cf-cache-status: DYNAMIC) rewrites it. This may be a preview-env-only issue OR may leak into prod. Verify with the platform team.",
+    "GridFS cleanup: bucket_name='images' → files stored in db.images.files + db.images.chunks (confirmed). Teardown fixture successfully cleaned all test-uploaded files."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase_i_image_pipeline.py (new)"
+  ],
+  "success_rate": {"backend": "95% (20/21 phase I tests passed; 1 fail is an ingress/CDN header-rewrite issue, backend code is correct)", "frontend": "N/A (skipped per request)"},
+  "test_credentials": "admin, store_manager, blogger tokens minted per-session via mongosh (see _mint_token helper). All cleaned up in cleanup_all teardown.",
+  "seed_data_creation": "Per test class: 2-3 SKUs prefixed 'PHI-<uuid8>' + 2-3 GridFS image uploads. All cleaned up in session teardown (products by SKU regex ^PHI-, images by _id-tracked list + metadata.uploaded_by regex phaseI_).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Phase I image pipeline verified end-to-end. All 21 tests are re-runnable — cleanup is idempotent. Only remaining concern is the Cache-Control edge rewrite (infrastructure issue). One test (TestImageServe::test_get_image_headers_and_body) currently strict-asserts on Cache-Control; if the ingress issue is not going to be fixed, that assertion should be relaxed to a warning OR the test should hit http://localhost:8001 directly to verify origin behavior. Both are valid choices — I left it strict so the issue is visible.",
+  "rca_of_the_issue": "Cache-Control header rewrite: Origin (uvicorn on :8001) returns 'cache-control: public, max-age=2592000, immutable'. Cloudflare in front of the k8s ingress returns 'cache-control: no-store, no-cache, must-revalidate' with cf-cache-status: DYNAMIC. This is likely from either (a) an ingress annotation like nginx.ingress.kubernetes.io/configuration-snippet setting no-cache for all responses, OR (b) Cloudflare Page Rules / Transform Rules. Mitigation: either strip the no-cache override for /api/images/* paths, or set a CF Cache Rule bypassing this for that path. Verified by comparing curl output between REACT_APP_BACKEND_URL and localhost:8001 — headers differ, body identical."
+}

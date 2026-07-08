@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { listInstagram } from '../lib/api';
+import { imgProps } from '../lib/imgSrc';
 import { Instagram, Heart, MessageCircle, ExternalLink, ShoppingBag } from 'lucide-react';
 
 const InstagramFeed = ({ limit = 6, showHeader = true }) => {
@@ -38,7 +39,7 @@ const InstagramFeed = ({ limit = 6, showHeader = true }) => {
               className="group relative aspect-square overflow-hidden rounded-lg bg-neutral-100"
               data-testid={`ig-post-${p.id}`}
             >
-              <img src={p.image} alt={p.caption?.slice(0, 60) || 'Instagram post'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+              <img {...imgProps(p.image, { width: 400, height: 400, sizes: '(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 16vw' })} alt={p.caption?.slice(0, 60) || 'Instagram post'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
               <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
                 <div className="flex items-center gap-3 text-white text-xs">
                   <span className="inline-flex items-center gap-1"><Heart className="w-3 h-3 fill-current" /> {p.likes}</span>

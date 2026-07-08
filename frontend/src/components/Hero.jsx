@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { heroSlides } from '../mock/mock';
+import { imgProps, preloadHref } from '../lib/imgSrc';
+import { Helmet } from 'react-helmet-async';
 
 const Hero = () => {
   const [idx, setIdx] = useState(0);
@@ -13,6 +15,9 @@ const Hero = () => {
 
   return (
     <section className="relative overflow-hidden gradient-cream">
+      <Helmet>
+        {heroSlides[0]?.image && <link rel="preload" as="image" href={preloadHref(heroSlides[0].image, 900)} />}
+      </Helmet>
       <div className="absolute inset-0 opacity-40 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 20% 30%, rgba(232,136,100,0.15), transparent 50%), radial-gradient(circle at 80% 70%, rgba(245,208,206,0.4), transparent 50%)" }} />
 
       <div className="relative max-w-[1400px] mx-auto px-6 lg:px-10 py-16 md:py-24 grid lg:grid-cols-2 gap-12 items-center">
@@ -56,7 +61,7 @@ const Hero = () => {
                 <div className="relative w-full h-full">
                   <div className="absolute -top-8 -right-6 w-56 h-56 rounded-full bg-[#F5D0CE] blur-2xl opacity-70" />
                   <div className="absolute -bottom-6 -left-6 w-64 h-64 rounded-full bg-[#E88864]/30 blur-2xl" />
-                  <img src={s.image} alt={s.accent} className="relative w-full h-full object-cover rounded-[24px] shadow-2xl border border-white/60" />
+                  <img {...imgProps(s.image, { width: 900, height: 900, sizes: '(max-width: 768px) 100vw, 50vw', eager: i === 0 })} alt={s.accent} className="relative w-full h-full object-cover rounded-[24px] shadow-2xl border border-white/60" />
                   <div className="absolute bottom-6 left-6 bg-white/90 backdrop-blur rounded-lg px-4 py-3 shadow-lg">
                     <div className="text-[10px] uppercase tracking-[0.2em] text-[#B4593F]">Featured</div>
                     <div className="font-serif-display text-xl text-[#1A1A1A] italic">{s.accent}</div>

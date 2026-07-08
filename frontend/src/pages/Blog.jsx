@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listBlogPosts } from '../lib/api';
+import { imgProps } from '../lib/imgSrc';
 import { Clock, ArrowRight } from 'lucide-react';
 
 const Blog = () => {
@@ -35,7 +36,7 @@ const Blog = () => {
               <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
                 <Link to={`/blog/${featured.slug}`} className="grid md:grid-cols-2 gap-10 group" data-testid="featured-post">
                   <div className="aspect-[5/4] overflow-hidden rounded-2xl">
-                    {featured.cover_image && <img src={featured.cover_image} alt={featured.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />}
+                    {featured.cover_image && <img {...imgProps(featured.cover_image, { width: 1000, height: 800, sizes: "(max-width: 768px) 100vw, 50vw", eager: true })} alt={featured.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />}
                   </div>
                   <div className="flex flex-col justify-center">
                     <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">Featured</div>
@@ -61,7 +62,7 @@ const Blog = () => {
                   {rest.map(p => (
                     <Link key={p.id} to={`/blog/${p.slug}`} className="group bg-white rounded-2xl overflow-hidden border border-[#EBD9CE] hover-lift" data-testid={`blog-card-${p.id}`}>
                       <div className="aspect-[16/10] overflow-hidden bg-neutral-100">
-                        {p.cover_image && <img src={p.cover_image} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />}
+                        {p.cover_image && <img {...imgProps(p.cover_image, { width: 500, height: 320, sizes: "(max-width: 768px) 100vw, 33vw" })} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />}
                       </div>
                       <div className="p-5">
                         {p.tags?.[0] && <div className="text-[10px] uppercase tracking-[0.3em] text-[#B4593F] mb-2">{p.tags[0]}</div>}

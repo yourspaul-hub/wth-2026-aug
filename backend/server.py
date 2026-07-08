@@ -26,6 +26,10 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ.get('DB_NAME', 'wearthehope')]
 
+# GridFS bucket for stored images (persistent across restarts, avoids ephemeral k8s disk)
+from motor.motor_asyncio import AsyncIOMotorGridFSBucket
+gridfs_bucket = AsyncIOMotorGridFSBucket(db, bucket_name='images')
+
 # --- App ---
 app = FastAPI(title='Wear The Hope API')
 api = APIRouter(prefix='/api')
@@ -1289,12 +1293,13 @@ PRODUCT_TEMPLATE_COLUMNS = [
     'sku', 'slug', 'name', 'category_slug', 'price', 'original_price',
     'stock', 'description', 'image', 'tag', 'product_type', 'active',
     'personalization_enabled', 'personalization_label',
+    'image_1', 'image_2', 'image_3', 'image_4',
 ]
 
 _SAMPLE_ROWS = [
-    ['WTH-CAP-001', 'faith-cap-blessed', 'Faith Cap — Blessed', 'head-gear', '899', '1199', '25', 'Embroidered faith cap in soft cotton twill.', 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=800', 'bestseller', 'physical', 'true', 'false', ''],
-    ['WTH-TEE-001', 'psalm-46-tee', 'Psalm 46 Tee', 'clothing', '699', '899', '40', '100% cotton, unisex fit.', 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800', 'trending', 'physical', 'true', 'false', ''],
-    ['WTH-MUG-001', 'grace-mug', 'Grace Ceramic Mug', 'drinkware', '449', '', '60', 'Microwave & dishwasher safe.', 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=800', 'new', 'physical', 'true', 'true', 'Engrave name (max 12 chars)'],
+    ['WTH-CAP-001', 'faith-cap-blessed', 'Faith Cap — Blessed', 'head-gear', '899', '1199', '25', 'Embroidered faith cap in soft cotton twill.', '', 'bestseller', 'physical', 'true', 'false', '', 'https://drive.google.com/file/d/EXAMPLE_ID_1/view?usp=sharing', 'https://drive.google.com/file/d/EXAMPLE_ID_2/view?usp=sharing', '', ''],
+    ['WTH-TEE-001', 'psalm-46-tee', 'Psalm 46 Tee', 'clothing', '699', '899', '40', '100% cotton, unisex fit.', 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800', 'trending', 'physical', 'true', 'false', '', '', '', '', ''],
+    ['WTH-MUG-001', 'grace-mug', 'Grace Ceramic Mug', 'drinkware', '449', '', '60', 'Microwave & dishwasher safe.', 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=800', 'new', 'physical', 'true', 'true', 'Engrave name (max 12 chars)', '', '', '', ''],
 ]
 
 
@@ -1308,10 +1313,15 @@ async def download_product_template(user: dict = Depends(require_store)):
     for row in _SAMPLE_ROWS:
         writer.writerow(row)
     writer.writerow(['# INSTRUCTIONS — remove this and any # lines before uploading'])
-    writer.writerow(['# Required: sku (or slug), name, category_slug, price'])
+    writer.writerow(['# Required: sku (or slug), name, category_slug, price, AND at least one image (image OR image_1)'])
     writer.writerow([f'# category_slug must be one of: {slugs_str}'])
     writer.writerow(['# active / personalization_enabled accept: true/false or 1/0'])
     writer.writerow(['# Existing SKU or slug -> UPDATED. Otherwise -> CREATED.'])
+    writer.writerow(['# IMAGES: image_1..image_4 accept public URLs OR Google Drive share links.'])
+    writer.writerow(['#         Drive links (e.g. https://drive.google.com/file/d/ID/view) are auto-fetched,'])
+    writer.writerow(['#         resized to 1600px, converted to WebP, and served from /api/images/<id>.'])
+    writer.writerow(['#         The DRIVE FILE MUST be shared as "Anyone with the link — Viewer".'])
+    writer.writerow(['#         image_1 is the cover; image_2..4 form the gallery. If image is set it overrides image_1.'])
     buf.seek(0)
     return StreamingResponse(
         iter([buf.getvalue()]),
@@ -1432,6 +1442,37 @@ async def bulk_upload_products(file: UploadFile = File(...), user: dict = Depend
 
         auto_slug = slug or (sku.lower().replace('_', '-') if sku else name.lower().replace(' ', '-'))
 
+        # ---- Image processing pipeline ----
+        # Priority: explicit `image` col > image_1..image_4 (in order, deduped).
+        img_inputs = []
+        legacy_image = (row.get('image') or '').strip()
+        if legacy_image:
+            img_inputs.append(legacy_image)
+        for k in ('image_1', 'image_2', 'image_3', 'image_4'):
+            v = (row.get(k) or '').strip()
+            if v and v not in img_inputs:
+                img_inputs.append(v)
+
+        if not img_inputs:
+            errors.append({'row': idx, 'error': 'At least one image required (fill `image` or `image_1`).'})
+            continue
+
+        processed_urls = []
+        for src in img_inputs[:4]:
+            try:
+                # If it's already a served URL from our own store, keep as-is
+                if src.startswith('/api/images/') or src.startswith(('http://', 'https://')) and 'drive.google' not in src.lower():
+                    # Public non-Drive URL: keep as-is (fast path). Drive links are always re-hosted.
+                    processed_urls.append(src)
+                else:
+                    meta = await _store_image_from_url(src, uploaded_by=user.get('email'))
+                    processed_urls.append(meta['url'])
+            except HTTPException as ie:
+                errors.append({'row': idx, 'error': f'Image "{src[:80]}": {ie.detail}'})
+        if not processed_urls:
+            # Every image failed
+            continue
+
         payload = {
             'name': name,
             'slug': auto_slug,
@@ -1440,7 +1481,8 @@ async def bulk_upload_products(file: UploadFile = File(...), user: dict = Depend
             'original_price': _parse_int(row.get('original_price'), default=price),
             'stock': _parse_int(row.get('stock'), default=0),
             'description': (row.get('description') or '').strip(),
-            'image': (row.get('image') or '').strip() or 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800',
+            'image': processed_urls[0],
+            'gallery': processed_urls[1:] if len(processed_urls) > 1 else [],
             'tag': (row.get('tag') or '').strip(),
             'product_type': (row.get('product_type') or 'physical').strip() or 'physical',
             'active': _parse_bool(row.get('active')) if row.get('active') not in (None, '') else True,
@@ -2374,6 +2416,101 @@ async def sync_all_google_locations(user: dict = Depends(require_admin)):
         except HTTPException as e:
             results.append({'id': loc['id'], 'label': loc['label'], 'ok': False, 'error': e.detail})
     return {'ok': True, 'count': len(results), 'results': results}
+
+
+# ================= IMAGE PIPELINE (Google Drive + resize + WebP + GridFS) =================
+from PIL import Image
+from bson import ObjectId
+
+_GDRIVE_ID_RE = re.compile(r'(?:/file/d/|[?&]id=)([A-Za-z0-9_-]{20,})')
+
+
+def _resolve_image_source(url: str) -> str:
+    """Turn Google Drive share links into direct-download URLs. Pass everything else through."""
+    if not url:
+        return url
+    m = _GDRIVE_ID_RE.search(url)
+    if m:
+        return f'https://drive.google.com/uc?export=download&id={m.group(1)}'
+    return url
+
+
+async def _fetch_bytes(url: str, max_bytes: int = 15 * 1024 * 1024) -> bytes:
+    async with httpx.AsyncClient(follow_redirects=True, timeout=30) as ch:
+        r = await ch.get(url)
+    if r.status_code != 200:
+        raise HTTPException(status_code=400, detail=f'Failed to download image ({r.status_code}): {url[:120]}')
+    if 'text/html' in r.headers.get('content-type', ''):
+        raise HTTPException(status_code=400, detail='URL returned an HTML page (private Drive file?). Set Google Drive sharing to "Anyone with the link".')
+    if len(r.content) > max_bytes:
+        raise HTTPException(status_code=413, detail=f'Image too large ({len(r.content)//1024} KB). Max 15 MB.')
+    return r.content
+
+
+def _process_image(raw: bytes, target_w: int = 1600, target_h: int = 1600, quality: int = 82) -> tuple[bytes, str, int, int]:
+    """Resize (preserving aspect ratio) and re-encode as WebP. Returns (bytes, ext, w, h)."""
+    im = Image.open(BytesIO(raw))
+    im = im.convert('RGB') if im.mode not in ('RGB', 'RGBA') else im
+    im.thumbnail((target_w, target_h), Image.LANCZOS)
+    out = BytesIO()
+    im.save(out, format='WEBP', quality=quality, method=6)
+    out.seek(0)
+    return out.getvalue(), 'webp', im.width, im.height
+
+
+async def _store_image_from_url(source_url: str, uploaded_by: Optional[str] = None) -> dict:
+    """Full pipeline: resolve source (Drive → direct), fetch, resize, WebP, save to GridFS, return metadata."""
+    resolved = _resolve_image_source(source_url)
+    raw = await _fetch_bytes(resolved)
+    body, ext, w, h = _process_image(raw)
+    fid = await gridfs_bucket.upload_from_stream(
+        f'wth_{uuid.uuid4().hex[:12]}.{ext}',
+        body,
+        metadata={
+            'content_type': 'image/webp',
+            'source_url': source_url[:500],
+            'resolved_url': resolved[:500],
+            'width': w, 'height': h, 'size': len(body),
+            'uploaded_by': uploaded_by,
+            'created_at': datetime.now(timezone.utc),
+        },
+    )
+    return {
+        'id': str(fid),
+        'url': f'/api/images/{fid}',
+        'width': w, 'height': h, 'size': len(body),
+        'content_type': 'image/webp',
+    }
+
+
+class ImageUploadRequest(BaseModel):
+    url: str
+
+
+@api.post('/admin/images/upload-from-url')
+async def admin_upload_image_from_url(payload: ImageUploadRequest, user: dict = Depends(require_store)):
+    if not (payload.url or '').strip():
+        raise HTTPException(status_code=400, detail='url is required')
+    meta = await _store_image_from_url(payload.url.strip(), uploaded_by=user.get('email'))
+    return meta
+
+
+@api.get('/images/{img_id}')
+async def get_image(img_id: str):
+    try:
+        oid = ObjectId(img_id)
+    except Exception:
+        raise HTTPException(status_code=404, detail='Not found')
+    try:
+        stream = await gridfs_bucket.open_download_stream(oid)
+    except Exception:
+        raise HTTPException(status_code=404, detail='Not found')
+    body = await stream.read()
+    ct = (stream.metadata or {}).get('content_type', 'image/webp')
+    return Response(content=body, media_type=ct, headers={
+        'Cache-Control': 'public, max-age=2592000, immutable',
+        'Content-Length': str(len(body)),
+    })
 
 
 # --- Mount ---

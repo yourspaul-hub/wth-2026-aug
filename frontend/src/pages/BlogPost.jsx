@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getBlogPost } from '../lib/api';
+import { imgProps, preloadHref } from '../lib/imgSrc';
 import { Clock, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 
 const BlogPost = () => {
   const { slug } = useParams();
@@ -28,6 +30,11 @@ const BlogPost = () => {
 
   return (
     <main className="pt-6" data-testid="blog-post-page">
+      {p.cover_image && (
+        <Helmet>
+          <link rel="preload" as="image" href={preloadHref(p.cover_image, 1400)} />
+        </Helmet>
+      )}
       <article>
         <section className="gradient-cream py-16">
           <div className="max-w-[820px] mx-auto px-6 lg:px-10">
@@ -46,7 +53,7 @@ const BlogPost = () => {
         {p.cover_image && (
           <div className="max-w-[1000px] mx-auto px-6 lg:px-10 -mt-6">
             <div className="aspect-[16/9] rounded-2xl overflow-hidden">
-              <img src={p.cover_image} alt={p.title} className="w-full h-full object-cover" />
+              <img {...imgProps(p.cover_image, { width: 1400, height: 787, sizes: "(max-width: 1000px) 100vw, 1000px", eager: true })} alt={p.title} className="w-full h-full object-cover" />
             </div>
           </div>
         )}
@@ -64,7 +71,7 @@ const BlogPost = () => {
               {data.related.map(r => (
                 <Link key={r.id} to={`/blog/${r.slug}`} className="group bg-white rounded-2xl overflow-hidden border border-[#EBD9CE] hover-lift">
                   <div className="aspect-[16/10] overflow-hidden bg-neutral-100">
-                    {r.cover_image && <img src={r.cover_image} alt={r.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />}
+                    {r.cover_image && <img {...imgProps(r.cover_image, { width: 500, height: 320, sizes: "(max-width: 768px) 100vw, 33vw" })} alt={r.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />}
                   </div>
                   <div className="p-5">
                     <h3 className="font-serif-display text-xl leading-tight group-hover:text-[#B4593F] transition-colors">{r.title}</h3>

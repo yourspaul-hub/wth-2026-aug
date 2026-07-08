@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { fetchReviewsFull } from '../lib/api';
+import { imgProps } from '../lib/imgSrc';
 import { Star, Globe, ShieldCheck, QrCode, X, ChevronDown, ChevronUp } from 'lucide-react';
 
 const FILTERS = [
@@ -107,7 +108,7 @@ const ReviewsSection = () => {
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3 min-w-0">
                     {r.avatar ? (
-                      <img src={r.avatar} alt={r.name} className="w-10 h-10 rounded-full object-cover" />
+                      <img {...imgProps(r.avatar, { width: 80, height: 80, sizes: "40px" })} alt={r.name} className="w-10 h-10 rounded-full object-cover" />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-[#FDF3EB] flex items-center justify-center text-[#B4593F] font-semibold">{r.name?.[0]?.toUpperCase() || '?'}</div>
                     )}
@@ -141,7 +142,7 @@ const ReviewsSection = () => {
                   <div className="mt-4 flex flex-wrap gap-2">
                     {r.photos.slice(0, 4).map((p, i) => (
                       <button key={i} onClick={() => setLightbox(p)} className="w-16 h-16 rounded-lg overflow-hidden bg-neutral-100">
-                        <img src={p} alt="" className="w-full h-full object-cover hover:scale-105 transition-transform" />
+                        <img {...imgProps(p, { width: 200, height: 200, sizes: "64px" })} alt="" className="w-full h-full object-cover hover:scale-105 transition-transform" />
                       </button>
                     ))}
                   </div>

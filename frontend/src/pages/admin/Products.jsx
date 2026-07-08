@@ -370,8 +370,9 @@ const AdminProducts = () => {
                 <Info className="w-4 h-4 text-[#B4593F] mt-0.5 shrink-0" />
                 <div className="text-xs text-neutral-700 leading-relaxed">
                   <strong>Step 1:</strong> Download the template below. It includes column headers with sample rows.<br />
-                  <strong>Step 2:</strong> Open in Excel or import into Google Sheets, then fill your product data. Remove the sample rows and any lines starting with <code>#</code>.<br />
-                  <strong>Step 3:</strong> Export as CSV (Google Sheets → File → Download → CSV) or save as .xlsx, then upload here.<br />
+                  <strong>Step 2:</strong> Fill your product data. Remove the sample rows and any lines starting with <code>#</code>.<br />
+                  <strong>Step 3:</strong> Export as CSV or .xlsx, then upload here.<br />
+                  <strong>Images:</strong> Use <code>image_1</code>–<code>image_4</code> columns. Each accepts a public URL or a <strong>Google Drive share link</strong>. Drive links are auto-fetched, resized to 1600px, converted to WebP, and served from our CDN. Set Drive sharing to <em>"Anyone with the link — Viewer"</em>. At least one image is required.<br />
                   Rows matching an existing <strong>SKU</strong> or <strong>slug</strong> will be updated; others will be created.
                 </div>
               </div>
