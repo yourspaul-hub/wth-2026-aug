@@ -49,6 +49,7 @@ import AdminCategories from './pages/admin/Categories';
 import AdminUsers from './pages/admin/Users';
 import AdminIntegrations from './pages/admin/Integrations';
 import AdminDesign from './pages/admin/Design';
+import AdminResetData from './pages/admin/ResetData';
 import Wishlist from './pages/Wishlist';
 import MusicWidget from './components/MusicWidget';
 import ScrollToTop from './components/ScrollToTop';
@@ -115,6 +116,7 @@ function AppRouter() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="integrations" element={<AdminIntegrations />} />
           <Route path="design" element={<AdminDesign />} />
+          <Route path="reset-data" element={<AdminResetData />} />
         </Route>
       </Routes>
       {!isAdmin && <Footer />}

@@ -1,0 +1,45 @@
+{
+  "summary": "Phase L — Admin order fulfilment + Reset store data + Past-orders CSV import + Homepage testimonials cleanup. Backend: 23/23 new pytest passed in /app/backend/tests/test_phase_l_fulfill_reset_import.py (couriers dropdown, courier/hand/door/store fulfilment paths, error paths for missing courier/AWB/invalid method/404/refunded, reset targets + granular reset + protected collections preserved, CSV template download + create/update-by-order_number + row-level error reporting, and auth gating on every new endpoint). Regression: phase C 17/18 pass — the 1 failure (test_b_verify_payment_shiprocket_and_email expects auto-AWB in verify_payment) is EXPECTED because this iteration intentionally removed the mock Shiprocket AWB block; the assertion is now obsolete. Frontend smoke: homepage no longer renders the redundant Testimonials block ('Loved by believers worldwide' / 'What Our Customers Say' both absent), 'What our community says' ReviewsSection still present. Admin Orders header shows Template + Import Past Orders buttons; Details drawer opens a right-side panel with a new Fulfilment section and a Fulfil order button; clicking it opens FulfillOrderDialog with 4 method radios and courier-specific fields (courier select + AWB + tracking URL) that correctly hide when Hand Delivery is selected. /admin/reset-data renders correctly with all 15 target checkboxes, the RESET confirm input, and the always-preserved notice for admin_users/settings/site_content.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/payments/verify (regression)", "issue": "Obsolete test test_phase_c_orders.py::TestOrderLifecycle::test_b_verify_payment_shiprocket_and_email still asserts that verify_payment auto-populates shiprocket_awb / tracking_url — that mock block was intentionally removed in Phase L in favour of the new manual fulfil flow. Fix by deleting those two assertions from the phase C test (order.shiprocket_awb.startswith('SR') and tracking_url.startswith('https://shiprocket.co/tracking/')). Everything else in Phase C still passes (17/18)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Homepage / ReviewsSection", "issues": ["'Load more reviews' button only renders when result count > PAGE_SIZE (9). If seeded review count is <=9 the button never appears, so from a fresh dataset the load-more affordance is invisible. Ensure enough reviews are seeded (or lower PAGE_SIZE for smaller stores) for the intended UX."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase_l_fulfill_reset_import.py",
+    "/app/test_reports/pytest/phase_l_results.xml"
+  ],
+  "action_items": [
+    "Optional: prune the two obsolete assertions in /app/backend/tests/test_phase_c_orders.py::test_b_verify_payment_shiprocket_and_email that expect verify_payment to auto-assign an SR-prefixed AWB and shiprocket.co/tracking URL. Those side-effects were intentionally removed this iteration.",
+    "Optional (UX/QA): seed >=10 reviews in the dev DB so /  homepage exercises the ReviewsSection load-more path in manual QA. Backend and component logic are correct; this is purely a data seeding question."
+  ],
+  "critical_code_review_comments": [
+    "server.py L989-991 GET /api/admin/couriers returns {items: [...]} envelope; frontend api.js unwraps via .items — contract matches. 28 couriers total (15 India + 13 International), grouped by 'group' key. Delhivery/Blue Dart/FedEx/DHL Express all present, satisfying the requirement of >=25 named couriers.",
+    "server.py L994-1049 admin_fulfill_order: correctly rejects invalid method (400), missing courier (400), missing AWB (400), non-existent order_number (404), and cancelled/refunded orders (400 'cannot fulfil'). For courier method sets status='shipped' + shiprocket_awb + tracking_url; for hand/door/store sets status='delivered'. Appropriate outbox email template ('order_shipped' or 'order_delivered') emitted after DB update. Notes are appended to existing notes with a [FULFIL method] marker — good audit trail.",
+    "server.py L1079-1113 admin_reset_data: confirm=='RESET' guard is a straight string equality — good. Unknown target list is echoed back in the 400 with valid keys, which is friendly. Protected collections (admin_users, admin_sessions, settings, site_content) are simply absent from the RESET_TARGETS map — that's the correct data-driven safety, but consider adding a defensive assert or unit test that catches accidental future additions to RESET_TARGETS that map to those protected names.",
+    "server.py L1140-1161 template download uses StreamingResponse with correct text/csv + attachment disposition. Comment/instruction rows are prefixed with '#' in the first column and admin_import_past_orders line 1231-1233 skips them — a nice symmetry so the template is directly re-uploadable after the user fills in their rows.",
+    "server.py L1189-1328 admin_import_past_orders: validates each row through the Order pydantic model before insert (line 1313), so schema drift is caught. Update-by-order_number keeps the original id; create generates 'o_import_' + short uuid — non-colliding with the 'o_' prefix used by the checkout flow.",
+    "models.py L382-384 Order now has fulfillment_method / fulfillment_courier / fulfilled_at Optional[str/datetime]. All None-defaults, so existing orders read back cleanly without a data migration. OrderFulfill model has a plain str method — validation is done inline in the handler rather than a Pydantic Literal, which is fine but a Literal would give a clean 422 auto-response.",
+    "frontend/src/pages/admin/FulfillOrderDialog.jsx: 4 method testids follow the pattern fulfill-method-{key}; verified courier fields hide/show correctly when switching from courier to hand_delivery. Submit button is aria-labelled 'Mark as shipped & email customer' / 'Mark as delivered & email customer' depending on method — nice UX cue.",
+    "frontend/src/pages/admin/ResetData.jsx: canReset requires selected.size>0 AND confirm==='RESET' AND !resetting — the Confirm button correctly stays disabled until all three are met. window.confirm secondary guard is nice but blocks automated Playwright tests unless a dialog handler is attached (same pattern as Design.jsx flagged in iteration_9). Consider swapping to an in-page confirm modal for testability.",
+    "Home.jsx: only ReviewsSection is rendered; Testimonials import + render both removed — verified from browser (no 'Loved by believers worldwide' or 'What Our Customers Say' strings in the DOM)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase_l_fulfill_reset_import.py (new)"
+  ],
+  "success_rate": {"backend": "100% (23/23 Phase L; Phase C regression 17/18 — 1 obsolete assertion)", "frontend": "100% smoke pass on homepage / /admin/orders / /admin/reset-data"},
+  "test_credentials": "Admin session cookies minted via mongosh inside the test itself (fixture _mint_admin_token). For the frontend smoke pass used session_token=sess_fe_l_1783544843169 (valid 7 days).",
+  "seed_data_creation": "None persisting. Each fulfil test creates one TEST_ product + a paid order in-flight and leaves them (they're pytest scoped so cleanup is left to the reset-data endpoint / natural churn). CSV import creates one order per uuid — cheap. Newsletter reset test seeds one newsletter subscriber before wiping it.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Phase L (fulfil + reset + import) fully covered by /app/backend/tests/test_phase_l_fulfill_reset_import.py — run with `pytest -n 0` (mongosh subprocess doesn't like pytest-xdist parallel workers). The Phase C test test_b_verify_payment_shiprocket_and_email is expected to fail until the two obsolete AWB assertions are removed — this is a known intentional behaviour change, not a regression. Frontend smoke used the admin session cookie via context.add_cookies against the preview URL — pattern documented in /app/auth_testing.md.",
+  "rca_of_the_issue": "N/A — no bugs found. The single Phase C 'failure' is a stale assertion in an old test file that expected a mock behaviour (auto Shiprocket AWB in verify_payment) which was intentionally removed this iteration in favour of the new manual fulfil endpoint. Fix is a 2-line delete in test_phase_c_orders.py L216-217."
+}

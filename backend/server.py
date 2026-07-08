@@ -41,7 +41,7 @@ from models import (
     Collection, CollectionCreate,
     Review, ReviewCreate, ReviewUpdate,
     Coupon, CouponCreate, CouponUpdate, CouponValidate,
-    Order, OrderCreate, OrderStatusUpdate, OrderItem, ShippingAddress,
+    Order, OrderCreate, OrderStatusUpdate, OrderFulfill, OrderItem, ShippingAddress,
     ShippingRule, ShippingRuleCreate, TaxRate, TaxRateCreate,
     SeoMeta, SeoMetaCreate,
     Redirect, RedirectCreate,
@@ -798,16 +798,6 @@ async def verify_payment(payload: PaymentVerify):
 
     await db.orders.update_one({'order_number': payload.order_number}, {'$set': updates})
 
-    # Mock Shiprocket for physical orders
-    if any(it.get('product_type') == 'physical' for it in order.get('items', [])):
-        awb = f'SR{random.randint(100000000, 999999999)}'
-        shipment_id = f'ship_mock_{uuid.uuid4().hex[:10]}'
-        tracking_url = f'https://shiprocket.co/tracking/{awb}'
-        await db.orders.update_one(
-            {'order_number': payload.order_number},
-            {'$set': {'shiprocket_awb': awb, 'shiprocket_shipment_id': shipment_id, 'tracking_url': tracking_url}}
-        )
-
     order = await db.orders.find_one({'order_number': payload.order_number}, {'_id': 0})
     try:
         await emit_order_email(order, 'order_paid')
@@ -959,6 +949,383 @@ async def admin_update_order(order_number: str, payload: OrderStatusUpdate, user
         except Exception as _e:
             logger.warning('order_shipped email failed: %s', _e)
     return updated
+
+
+# --- Couriers (dropdown source for fulfilment) ---
+COURIERS = [
+    # India — domestic
+    {'group': 'India', 'name': 'Delhivery'},
+    {'group': 'India', 'name': 'Blue Dart'},
+    {'group': 'India', 'name': 'DTDC'},
+    {'group': 'India', 'name': 'Xpressbees'},
+    {'group': 'India', 'name': 'Ecom Express'},
+    {'group': 'India', 'name': 'Ekart Logistics'},
+    {'group': 'India', 'name': 'India Post / Speed Post'},
+    {'group': 'India', 'name': 'Shadowfax'},
+    {'group': 'India', 'name': 'GATI'},
+    {'group': 'India', 'name': 'Professional Couriers'},
+    {'group': 'India', 'name': 'Trackon Couriers'},
+    {'group': 'India', 'name': 'Amazon Shipping (India)'},
+    {'group': 'India', 'name': 'FedEx India'},
+    {'group': 'India', 'name': 'Aramex India'},
+    {'group': 'India', 'name': 'Shiprocket'},
+    # International
+    {'group': 'International', 'name': 'FedEx'},
+    {'group': 'International', 'name': 'UPS'},
+    {'group': 'International', 'name': 'DHL Express'},
+    {'group': 'International', 'name': 'TNT'},
+    {'group': 'International', 'name': 'Aramex'},
+    {'group': 'International', 'name': 'USPS'},
+    {'group': 'International', 'name': 'Royal Mail (UK)'},
+    {'group': 'International', 'name': 'Canada Post'},
+    {'group': 'International', 'name': 'Australia Post'},
+    {'group': 'International', 'name': 'Japan Post'},
+    {'group': 'International', 'name': 'China Post / EMS'},
+    {'group': 'International', 'name': 'Singapore Post'},
+    {'group': 'International', 'name': 'Other (specify in AWB)'},
+]
+
+
+@api.get('/admin/couriers')
+async def admin_list_couriers(user: dict = Depends(require_admin)):
+    return {'items': COURIERS}
+
+
+@api.post('/admin/orders/{order_number}/fulfill')
+async def admin_fulfill_order(order_number: str, payload: OrderFulfill, user: dict = Depends(require_admin)):
+    """Mark an order fulfilled. Courier fulfilment sets status='shipped' and sends a
+    tracking email; hand/door/store fulfilment sets status='delivered' (order closed).
+    Sends the appropriate customer email via the outbox (real SMTP if Gmail is
+    configured, otherwise queued for review in Admin → Emails).
+    """
+    o = await db.orders.find_one({'order_number': order_number}, {'_id': 0})
+    if not o:
+        raise HTTPException(status_code=404, detail='Order not found')
+    if o.get('status') in ('cancelled', 'refunded'):
+        raise HTTPException(status_code=400, detail=f"Order is {o['status']} — cannot fulfil")
+
+    method = (payload.method or '').strip()
+    valid_methods = {'courier', 'hand_delivery', 'door_delivery', 'store_pickup'}
+    if method not in valid_methods:
+        raise HTTPException(status_code=400, detail=f"Invalid method — must be one of {sorted(valid_methods)}")
+
+    updates = {
+        'fulfillment_method': method,
+        'fulfilled_at': datetime.now(timezone.utc),
+        'updated_at': datetime.now(timezone.utc),
+    }
+
+    if method == 'courier':
+        courier = (payload.courier or '').strip()
+        awb = (payload.awb or '').strip()
+        if not courier:
+            raise HTTPException(status_code=400, detail='Courier is required for courier fulfilment')
+        if not awb:
+            raise HTTPException(status_code=400, detail='AWB / tracking number is required for courier fulfilment')
+        updates.update({
+            'status': 'shipped',
+            'fulfillment_courier': courier,
+            'shiprocket_awb': awb,
+            'tracking_url': (payload.tracking_url or '').strip() or None,
+        })
+        email_template = 'order_shipped'
+    else:
+        # hand_delivery / door_delivery / store_pickup — mark delivered, close order
+        updates['status'] = 'delivered'
+        if payload.courier:
+            updates['fulfillment_courier'] = payload.courier
+        email_template = 'order_delivered'
+
+    if payload.notes:
+        prev_notes = o.get('notes') or ''
+        updates['notes'] = (prev_notes + f"\n[FULFIL {method}] {payload.notes}").strip()
+
+    await db.orders.update_one({'order_number': order_number}, {'$set': updates})
+    updated = await db.orders.find_one({'order_number': order_number}, {'_id': 0})
+    try:
+        await emit_order_email(updated, email_template)
+    except Exception as _e:
+        logger.warning('%s email failed: %s', email_template, _e)
+    return updated
+
+
+# --- Reset store data (destructive; admin only) ---
+RESET_TARGETS = {
+    # key -> mongo collection (or list of collections)
+    'orders': ['orders', 'abandoned_carts'],
+    'products': ['products'],
+    'reviews': ['reviews', 'qr_tokens'],
+    'blog': ['blog_posts'],
+    'collections': ['collections'],
+    'categories': ['categories'],
+    'instagram': ['instagram_posts'],
+    'newsletter': ['newsletter'],
+    'emails': ['email_outbox'],
+    'analytics': ['analytics_events'],
+    'locations': ['locations', 'google_locations'],
+    'shipping_rules': ['shipping_rules', 'tax_rates'],
+    'coupons': ['coupons'],
+    'images': ['images.files', 'images.chunks'],
+    'seo': ['seo_meta', 'redirects'],
+}
+# Collections NEVER touched by reset: admin_users, admin_sessions, settings, site_content
+
+
+class ResetPayload(BaseModel):
+    targets: List[str]
+    confirm: str  # must equal 'RESET' to guard against accidents
+
+
+@api.post('/admin/dev/reset')
+async def admin_reset_data(payload: ResetPayload, user: dict = Depends(require_admin)):
+    """Destructive: wipes the selected collections. Admin users, sessions,
+    settings, and site content are always preserved. `confirm` must equal 'RESET'.
+    """
+    if payload.confirm != 'RESET':
+        raise HTTPException(status_code=400, detail="Type 'RESET' to confirm this destructive action")
+    invalid = [t for t in payload.targets if t not in RESET_TARGETS]
+    if invalid:
+        raise HTTPException(status_code=400, detail=f'Unknown target(s): {invalid}. Valid: {sorted(RESET_TARGETS.keys())}')
+    cleared = {}
+    for target in payload.targets:
+        for coll_name in RESET_TARGETS[target]:
+            try:
+                res = await db[coll_name].delete_many({})
+                cleared[coll_name] = res.deleted_count
+            except Exception as e:
+                logger.warning('reset failed for %s: %s', coll_name, e)
+                cleared[coll_name] = f'error: {e}'
+    return {'ok': True, 'cleared': cleared, 'targets': payload.targets}
+
+
+@api.get('/admin/dev/reset/targets')
+async def admin_reset_targets(user: dict = Depends(require_admin)):
+    """List the reset targets and how many documents each would wipe."""
+    out = []
+    for key, colls in RESET_TARGETS.items():
+        total = 0
+        for coll_name in colls:
+            try:
+                total += await db[coll_name].count_documents({})
+            except Exception:
+                pass
+        out.append({'key': key, 'collections': colls, 'count': total})
+    return {'items': out}
+
+
+# --- Bulk import of past orders (CSV / XLSX) ---
+PAST_ORDER_TEMPLATE_COLUMNS = [
+    'order_number', 'created_at',
+    'customer_name', 'customer_email', 'customer_phone',
+    'address_line1', 'address_line2', 'city', 'state', 'pincode', 'country',
+    'items_summary',  # free text, e.g. "Faith Cap x1; Psalm 46 Tee x2"
+    'subtotal', 'shipping_fee', 'discount', 'total',
+    'status', 'payment_status', 'payment_provider', 'payment_reference',
+    'fulfillment_method', 'fulfillment_courier', 'awb', 'tracking_url',
+    'notes',
+]
+
+_PAST_ORDER_SAMPLE = [
+    'WTH-20240115-0001', '2024-01-15',
+    'Rebecca George', 'rebecca@example.com', '+919812345678',
+    '12, Rose Villa', 'MG Road', 'Bengaluru', 'Karnataka', '560001', 'India',
+    'Faith Cap x1; Grace Mug x2',
+    '1798', '0', '0', '1798',
+    'delivered', 'paid', 'razorpay', 'pay_MOCK_ABCDE',
+    'courier', 'Delhivery', 'DL123456789', 'https://www.delhivery.com/track/DL123456789',
+    'Legacy order imported from old store.',
+]
+
+
+@api.get('/admin/orders/import-template.csv')
+async def download_past_orders_template(user: dict = Depends(require_admin)):
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(PAST_ORDER_TEMPLATE_COLUMNS)
+    writer.writerow(_PAST_ORDER_SAMPLE)
+    writer.writerow(['# INSTRUCTIONS — remove this and any # lines before uploading'])
+    writer.writerow(['# Required: customer_name, customer_email, total.'])
+    writer.writerow(['# order_number: if blank we auto-generate WTH-YYYYMMDD-XXXX. Existing order_number -> UPDATED, else -> CREATED.'])
+    writer.writerow(['# created_at: any ISO date (YYYY-MM-DD or full timestamp). Defaults to today if blank.'])
+    writer.writerow(['# items_summary: free text (semicolon-separated), or leave blank. This is stored as a single line item — the goal is record-keeping, not re-shipping.'])
+    writer.writerow(['# status accepts: pending / paid / shipped / delivered / cancelled / refunded'])
+    writer.writerow(['# payment_status accepts: unpaid / paid / refunded / failed'])
+    writer.writerow(['# payment_provider: razorpay / stripe / paypal / cod / cash / bank_transfer / other'])
+    writer.writerow(['# fulfillment_method (optional): courier / hand_delivery / door_delivery / store_pickup'])
+    writer.writerow(['# Country defaults to India if blank. Pincode is required for Indian addresses.'])
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type='text/csv',
+        headers={'Content-Disposition': 'attachment; filename="wth-past-orders-template.csv"'},
+    )
+
+
+def _parse_int(v, default=0):
+    if v is None or v == '' or (isinstance(v, str) and not v.strip()):
+        return default
+    try:
+        return int(float(str(v).replace(',', '').strip()))
+    except (TypeError, ValueError):
+        return default
+
+
+def _parse_date(v):
+    if not v or not str(v).strip():
+        return datetime.now(timezone.utc)
+    s = str(v).strip()
+    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%m/%d/%Y'):
+        try:
+            dt = datetime.strptime(s, fmt)
+            return dt.replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+    try:
+        return datetime.fromisoformat(s.replace('Z', '+00:00'))
+    except ValueError:
+        return datetime.now(timezone.utc)
+
+
+@api.post('/admin/orders/import')
+async def admin_import_past_orders(file: UploadFile = File(...), user: dict = Depends(require_admin)):
+    """Bulk-import legacy / offline orders from CSV or XLSX for record-keeping.
+    Rows with an existing order_number update in place; otherwise a new order is created.
+    Items are recorded as a single summary line item (not tied to your product catalogue).
+    """
+    filename = (file.filename or '').lower()
+    body = await file.read()
+    if len(body) > 15 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail='File too large — 15MB max')
+
+    rows = []
+    if filename.endswith('.xlsx') or filename.endswith('.xls'):
+        try:
+            from openpyxl import load_workbook
+            wb = load_workbook(io.BytesIO(body), read_only=True, data_only=True)
+            ws = wb.active
+            header = None
+            for r in ws.iter_rows(values_only=True):
+                if not header:
+                    header = [str(c or '').strip() for c in r]
+                    continue
+                if all(c is None or str(c).strip() == '' for c in r):
+                    continue
+                rows.append({header[i]: r[i] for i in range(min(len(header), len(r)))})
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f'XLSX parse failed: {e}')
+    else:
+        try:
+            text = body.decode('utf-8-sig')
+        except UnicodeDecodeError:
+            text = body.decode('latin-1', errors='ignore')
+        reader = csv.DictReader(io.StringIO(text))
+        rows = [r for r in reader]
+
+    created = 0
+    updated = 0
+    errors = []
+
+    for idx, raw in enumerate(rows, start=2):  # header is row 1
+        row = {(k or '').strip(): (v if v is not None else '') for k, v in raw.items()}
+        # Skip comment/instruction rows
+        first_val = str(row.get(PAST_ORDER_TEMPLATE_COLUMNS[0], '') or '').strip()
+        if first_val.startswith('#'):
+            continue
+
+        name = str(row.get('customer_name', '') or '').strip()
+        email = str(row.get('customer_email', '') or '').strip()
+        total = _parse_int(row.get('total'))
+        if not name or not email or not total:
+            errors.append({'row': idx, 'error': 'Missing required field: customer_name, customer_email, or total'})
+            continue
+
+        order_number = str(row.get('order_number', '') or '').strip()
+        created_at = _parse_date(row.get('created_at'))
+        if not order_number:
+            order_number = f"WTH-{created_at.strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
+
+        subtotal = _parse_int(row.get('subtotal'), default=total)
+        shipping_fee = _parse_int(row.get('shipping_fee'))
+        discount = _parse_int(row.get('discount'))
+
+        items_summary = str(row.get('items_summary', '') or '').strip() or 'Imported order (details in notes)'
+        items = [{
+            'product_id': 'imported',
+            'name': items_summary[:200],
+            'price': subtotal,
+            'qty': 1,
+            'image': '',
+            'variant_label': None,
+            'customization': None,
+            'product_type': 'physical',
+        }]
+
+        shipping_address = {
+            'full_name': name,
+            'email': email,
+            'phone': str(row.get('customer_phone', '') or '').strip(),
+            'line1': str(row.get('address_line1', '') or '').strip() or '—',
+            'line2': str(row.get('address_line2', '') or '').strip() or None,
+            'city': str(row.get('city', '') or '').strip() or '—',
+            'state': str(row.get('state', '') or '').strip() or '—',
+            'pincode': str(row.get('pincode', '') or '').strip() or '000000',
+            'country': str(row.get('country', '') or '').strip() or 'India',
+        }
+
+        status = (str(row.get('status', '') or 'delivered').strip().lower())
+        if status not in {'pending', 'paid', 'shipped', 'delivered', 'cancelled', 'refunded'}:
+            status = 'delivered'
+        payment_status = (str(row.get('payment_status', '') or 'paid').strip().lower())
+        if payment_status not in {'unpaid', 'paid', 'refunded', 'failed'}:
+            payment_status = 'paid'
+
+        fulfillment_method = str(row.get('fulfillment_method', '') or '').strip().lower() or None
+        if fulfillment_method not in (None, 'courier', 'hand_delivery', 'door_delivery', 'store_pickup'):
+            fulfillment_method = None
+
+        doc = {
+            'order_number': order_number,
+            'items': items,
+            'shipping_address': shipping_address,
+            'subtotal': subtotal,
+            'discount': discount,
+            'coupon_code': None,
+            'shipping_fee': shipping_fee,
+            'shipping_option_id': None,
+            'shipping_option_name': None,
+            'tax': 0,
+            'tax_breakdown': [],
+            'total': total,
+            'status': status,
+            'payment_status': payment_status,
+            'payment_provider': str(row.get('payment_provider', '') or 'other').strip().lower() or 'other',
+            'payment_reference': str(row.get('payment_reference', '') or '').strip() or None,
+            'shiprocket_awb': str(row.get('awb', '') or '').strip() or None,
+            'tracking_url': str(row.get('tracking_url', '') or '').strip() or None,
+            'fulfillment_method': fulfillment_method,
+            'fulfillment_courier': str(row.get('fulfillment_courier', '') or '').strip() or None,
+            'fulfilled_at': created_at if status in ('delivered', 'shipped') else None,
+            'notes': (str(row.get('notes', '') or '').strip() + '\n[IMPORTED]').strip(),
+            'created_at': created_at,
+            'updated_at': datetime.now(timezone.utc),
+        }
+        # Ensure it validates through the Order model so schema stays consistent
+        try:
+            Order(**{**doc, 'id': f'o_import_{uuid.uuid4().hex[:10]}'})
+        except Exception as e:
+            errors.append({'row': idx, 'error': f'validation: {e}'})
+            continue
+
+        existing = await db.orders.find_one({'order_number': order_number}, {'_id': 0, 'id': 1})
+        if existing:
+            await db.orders.update_one({'order_number': order_number}, {'$set': doc})
+            updated += 1
+        else:
+            doc['id'] = f'o_import_{uuid.uuid4().hex[:10]}'
+            await db.orders.insert_one(doc)
+            created += 1
+
+    return {'ok': True, 'created': created, 'updated': updated, 'errors': errors, 'total_rows': len(rows)}
 
 
 # ================= SEO =================
@@ -1120,7 +1487,8 @@ async def emit_order_email(order: dict, template: str):
     body_map = {
         'order_placed': (f"Order confirmation · {on}", f"<h2 style='font-family:Georgia,serif;font-size:24px'>Thank you, {name}!</h2><p style='color:#555;line-height:1.6'>We've received your order <strong>{on}</strong>.</p>" + _order_summary_html(order)),
         'order_paid': (f"Payment received · {on}", f"<h2 style='font-family:Georgia,serif;font-size:24px'>Payment confirmed</h2><p style='color:#555;line-height:1.6'>Payment received for order <strong>{on}</strong> via {order.get('payment_provider','').title()}.</p>" + _order_summary_html(order)),
-        'order_shipped': (f"Your order is on the way · {on}", f"<h2 style='font-family:Georgia,serif;font-size:24px'>{name}, your order is shipped!</h2><p style='color:#555;line-height:1.6'>AWB: <strong>{order.get('shiprocket_awb', '—')}</strong></p><p><a href='{order.get('tracking_url', '#')}' style='display:inline-block;padding:12px 24px;background:{BRAND_COLOR};color:#fff;text-decoration:none;border-radius:999px;font-size:12px;letter-spacing:2px'>TRACK PARCEL</a></p>"),
+        'order_shipped': (f"Your order is on the way · {on}", f"<h2 style='font-family:Georgia,serif;font-size:24px'>{name}, your order is shipped!</h2><p style='color:#555;line-height:1.6'>Courier: <strong>{order.get('fulfillment_courier') or '—'}</strong><br>AWB: <strong>{order.get('shiprocket_awb', '—')}</strong></p><p><a href='{order.get('tracking_url', '#')}' style='display:inline-block;padding:12px 24px;background:{BRAND_COLOR};color:#fff;text-decoration:none;border-radius:999px;font-size:12px;letter-spacing:2px'>TRACK PARCEL</a></p>" + _order_summary_html(order)),
+        'order_delivered': (f"Order delivered · {on}", f"<h2 style='font-family:Georgia,serif;font-size:24px'>{name}, your order has arrived!</h2><p style='color:#555;line-height:1.6'>Order <strong>{on}</strong> was delivered via <strong>{(order.get('fulfillment_method') or '').replace('_',' ').title() or 'direct delivery'}</strong>. We hope you love it!</p>" + _order_summary_html(order) + "<p style='color:#555;line-height:1.6;margin-top:20px'>If anything is not quite right, just reply to this email and we'll make it right.</p>"),
         'order_refunded': (f"Refund processed · {on}", f"<h2 style='font-family:Georgia,serif;font-size:24px'>Refund initiated</h2><p style='color:#555;line-height:1.6'>We've processed a refund of <strong>&#8377;{order['total']:,}</strong> for order {on}. It should reflect in 5–7 business days.</p>"),
     }
     subject, body = body_map.get(template, (f"Order update · {on}", ""))

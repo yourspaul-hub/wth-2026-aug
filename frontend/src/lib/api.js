@@ -58,6 +58,16 @@ export const authLogout = () => api.post('/auth/logout').then(r => r.data);
 export const adminStats = () => api.get('/admin/stats').then(r => r.data);
 export const adminListOrders = (status) => api.get('/admin/orders', { params: status ? { status } : {} }).then(r => r.data);
 export const adminUpdateOrder = (orderNumber, patch) => api.patch(`/admin/orders/${orderNumber}`, patch).then(r => r.data);
+export const adminFulfillOrder = (orderNumber, payload) => api.post(`/admin/orders/${orderNumber}/fulfill`, payload).then(r => r.data);
+export const adminListCouriers = () => api.get('/admin/couriers').then(r => r.data?.items || []);
+export const adminImportPastOrders = (file) => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return api.post('/admin/orders/import', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data);
+};
+export const pastOrdersTemplateUrl = () => `${API_BASE}/admin/orders/import-template.csv`;
+export const adminListResetTargets = () => api.get('/admin/dev/reset/targets').then(r => r.data?.items || []);
+export const adminResetData = (targets, confirm) => api.post('/admin/dev/reset', { targets, confirm }).then(r => r.data);
 
 export const adminListProducts = () => api.get('/products', { params: { limit: 500 } }).then(r => r.data.items);
 export const adminCreateProduct = (payload) => api.post('/admin/products', payload).then(r => r.data);

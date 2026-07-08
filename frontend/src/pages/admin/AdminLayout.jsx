@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Tag, Star, Search, Send, ArrowUpRight, LogOut, ExternalLink, Layers, Truck, Percent, Mail, Clock, MapPin, FileText, Instagram, BarChart3, Users as UsersIcon, Puzzle, FolderOpen, Palette } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Tag, Star, Search, Send, ArrowUpRight, LogOut, ExternalLink, Layers, Truck, Percent, Mail, Clock, MapPin, FileText, Instagram, BarChart3, Users as UsersIcon, Puzzle, FolderOpen, Palette, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Logo from '../../components/Logo';
 
@@ -26,6 +26,7 @@ const NAV = [
   { to: '/admin/users', label: 'Team & Access', icon: UsersIcon, roles: ['admin'] },
   { to: '/admin/integrations', label: 'Integrations', icon: Puzzle, roles: ['admin'] },
   { to: '/admin/design', label: 'Design', icon: Palette, roles: ['admin'] },
+  { to: '/admin/reset-data', label: 'Reset Data', icon: Trash2, roles: ['admin'] },
 ];
 
 const AdminLayout = () => {

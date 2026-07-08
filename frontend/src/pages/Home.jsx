@@ -4,7 +4,6 @@ import Categories from '../components/Categories';
 import FeaturedProducts from '../components/FeaturedProducts';
 import USBanner from '../components/USBanner';
 import InstagramFeed from '../components/InstagramFeed';
-import Testimonials from '../components/Testimonials';
 import ReviewsSection from '../components/ReviewsSection';
 import AboutStory from '../components/AboutStory';
 import { Truck, Sparkles, ShieldCheck, RefreshCw } from 'lucide-react';
@@ -51,7 +50,6 @@ const Home = () => {
       <InstagramFeed />
       <USBanner />
       <ReviewsSection />
-      <Testimonials />
       <FeaturedProducts title="New Arrivals" subtitle="Fresh in this month" filter={(p) => p.tag === 'New' || p.tag === 'Trending' || p.tag === 'Signature'} limit={4} viewAllHref="/shop" />
     </main>
   );

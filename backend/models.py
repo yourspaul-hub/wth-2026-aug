@@ -379,6 +379,9 @@ class Order(BaseModel):
     shiprocket_awb: Optional[str] = None
     shiprocket_shipment_id: Optional[str] = None
     tracking_url: Optional[str] = None
+    fulfillment_method: Optional[str] = None  # 'courier' | 'hand_delivery' | 'door_delivery' | 'store_pickup'
+    fulfillment_courier: Optional[str] = None
+    fulfilled_at: Optional[datetime] = None
     notes: Optional[str] = None
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
@@ -398,6 +401,20 @@ class OrderStatusUpdate(BaseModel):
     payment_status: Optional[str] = None
     shiprocket_awb: Optional[str] = None
     shiprocket_shipment_id: Optional[str] = None
+    tracking_url: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class OrderFulfill(BaseModel):
+    """Admin marks an order fulfilled. Method decides the resulting status:
+      - 'courier'       → status='shipped'   (requires courier + awb; tracking_url optional)
+      - 'hand_delivery' → status='delivered' (closes the order)
+      - 'door_delivery' → status='delivered'
+      - 'store_pickup'  → status='delivered'
+    """
+    method: str  # 'courier' | 'hand_delivery' | 'door_delivery' | 'store_pickup'
+    courier: Optional[str] = None
+    awb: Optional[str] = None
     tracking_url: Optional[str] = None
     notes: Optional[str] = None
 

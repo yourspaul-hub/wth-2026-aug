@@ -22,16 +22,20 @@ const Stars = ({ n = 5, size = 3 }) => (
   </div>
 );
 
+const PAGE_SIZE = 9;
+
 const ReviewsSection = () => {
   const [data, setData] = useState({ items: [], total: 0, stats: { average: 0, breakdown: {}, total_all_published: 0 } });
   const [filter, setFilter] = useState('all');
+  const [visible, setVisible] = useState(PAGE_SIZE);
   const [expanded, setExpanded] = useState({});
   const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
-    const params = { limit: 60 };
+    const params = { limit: 200 };
     if (filter !== 'all') params.source = filter;
     fetchReviewsFull(params).then(setData).catch(() => {});
+    setVisible(PAGE_SIZE); // reset on filter change
   }, [filter]);
 
   const stats = data.stats || {};
@@ -97,7 +101,7 @@ const ReviewsSection = () => {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {data.items.length === 0 ? (
             <div className="md:col-span-3 text-center py-12 text-neutral-500 text-sm">No reviews match this filter yet.</div>
-          ) : data.items.slice(0, 12).map(r => {
+          ) : data.items.slice(0, visible).map(r => {
             const b = sourceBadge(r);
             const B = b.icon;
             const isLong = (r.text || '').length > 220;
@@ -152,8 +156,24 @@ const ReviewsSection = () => {
           })}
         </div>
 
-        {data.items.length > 12 && (
-          <div className="text-center mt-8 text-xs text-neutral-500">Showing 12 of {data.total} matching reviews</div>
+        {data.items.length > visible && (
+          <div className="flex flex-col items-center gap-3 mt-10" data-testid="reviews-load-more-wrap">
+            <button
+              onClick={() => setVisible(v => v + PAGE_SIZE)}
+              className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-6 py-3 rounded-full transition-colors"
+              data-testid="reviews-load-more-btn"
+            >
+              Load more reviews <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+            <div className="text-[11px] uppercase tracking-widest text-neutral-500">
+              Showing <strong>{Math.min(visible, data.items.length)}</strong> of <strong>{data.items.length}</strong>
+            </div>
+          </div>
+        )}
+        {data.items.length > 0 && data.items.length <= visible && visible > PAGE_SIZE && (
+          <div className="text-center mt-10 text-[11px] uppercase tracking-widest text-neutral-500" data-testid="reviews-all-shown">
+            You&apos;ve reached the end · {data.items.length} review{data.items.length === 1 ? '' : 's'}
+          </div>
         )}
       </div>
 

@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { adminListOrders, adminUpdateOrder, refundOrder, invoiceUrl } from '../../lib/api';
+import React, { useEffect, useRef, useState } from 'react';
+import { adminListOrders, adminUpdateOrder, refundOrder, invoiceUrl, adminImportPastOrders, pastOrdersTemplateUrl } from '../../lib/api';
 import { toast } from 'sonner';
-import { X, Truck, ExternalLink, FileText, RotateCcw } from 'lucide-react';
+import { X, Truck, ExternalLink, FileText, RotateCcw, PackageCheck, Upload, Download } from 'lucide-react';
+import FulfillOrderDialog from './FulfillOrderDialog';
 
 const STATUSES = ['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'refunded'];
 
@@ -9,6 +10,7 @@ const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState(null);
+  const [fulfilling, setFulfilling] = useState(null);
 
   const load = () => adminListOrders(filter || undefined).then(setOrders).catch(() => setOrders([]));
   useEffect(() => { load(); }, [filter]);
@@ -33,17 +35,55 @@ const AdminOrders = () => {
     } catch (e) { toast.error(e?.response?.data?.detail || 'Refund failed'); }
   };
 
+  const fileRef = useRef(null);
+  const [importing, setImporting] = useState(false);
+  const onImportFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setImporting(true);
+    try {
+      const res = await adminImportPastOrders(file);
+      const errCount = res.errors?.length || 0;
+      toast.success(`Imported: ${res.created} new, ${res.updated} updated${errCount ? ` — ${errCount} row error${errCount === 1 ? '' : 's'}` : ''}`);
+      if (errCount) console.warn('[import errors]', res.errors);
+      load();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || 'Import failed');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div>
-      <div className="flex items-end justify-between mb-8">
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
         <div>
           <h1 className="font-serif-display text-4xl">Orders</h1>
           <p className="text-sm text-neutral-600 mt-1">{orders.length} orders</p>
         </div>
-        <select value={filter} onChange={e => setFilter(e.target.value)} className="bg-white border border-[#EBD9CE] rounded-full px-5 py-2.5 text-xs uppercase tracking-widest">
-          <option value="">All statuses</option>
-          {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href={pastOrdersTemplateUrl()}
+            className="inline-flex items-center gap-2 text-xs uppercase tracking-widest bg-white border border-[#EBD9CE] hover:border-[#B4593F] text-[#1A1A1A] px-4 py-2.5 rounded-full transition-colors"
+            data-testid="orders-download-template-btn"
+          >
+            <Download className="w-3.5 h-3.5" /> Template
+          </a>
+          <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" onChange={onImportFile} className="hidden" data-testid="orders-import-input" />
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={importing}
+            className="inline-flex items-center gap-2 text-xs uppercase tracking-widest bg-white border border-[#EBD9CE] hover:border-[#B4593F] disabled:opacity-40 text-[#1A1A1A] px-4 py-2.5 rounded-full transition-colors"
+            data-testid="orders-import-btn"
+          >
+            <Upload className="w-3.5 h-3.5" /> {importing ? 'Importing…' : 'Import past orders'}
+          </button>
+          <select value={filter} onChange={e => setFilter(e.target.value)} className="bg-white border border-[#EBD9CE] rounded-full px-5 py-2.5 text-xs uppercase tracking-widest" data-testid="orders-status-filter">
+            <option value="">All statuses</option>
+            {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-[#EBD9CE] overflow-hidden">
@@ -120,10 +160,19 @@ const AdminOrders = () => {
                 <div className="flex justify-between font-semibold pt-2 border-t border-[#EBD9CE]"><span>Total</span><span>₹{selected.total.toLocaleString('en-IN')}</span></div>
               </div>
               <div>
-                <div className="text-[11px] uppercase tracking-widest text-[#B4593F] mb-2 flex items-center gap-2"><Truck className="w-3 h-3" /> Shipping (Shiprocket — MOCKED)</div>
-                <div className="text-sm space-y-1">
-                  <div>AWB: {selected.shiprocket_awb || 'Not assigned'}</div>
-                  {selected.tracking_url && <a href={selected.tracking_url} target="_blank" rel="noreferrer" className="text-[#B4593F] inline-flex items-center gap-1">Track <ExternalLink className="w-3 h-3" /></a>}
+                <div className="text-[11px] uppercase tracking-widest text-[#B4593F] mb-2 flex items-center gap-2"><Truck className="w-3 h-3" /> Fulfilment</div>
+                <div className="text-sm space-y-1" data-testid="order-fulfillment-details">
+                  {selected.fulfillment_method ? (
+                    <>
+                      <div>Method: <strong>{selected.fulfillment_method.replace(/_/g, ' ').replace(/\b\w/g, m => m.toUpperCase())}</strong></div>
+                      {selected.fulfillment_courier && <div>Courier: <strong>{selected.fulfillment_courier}</strong></div>}
+                      {selected.shiprocket_awb && <div>AWB: <strong>{selected.shiprocket_awb}</strong></div>}
+                      {selected.tracking_url && <a href={selected.tracking_url} target="_blank" rel="noreferrer" className="text-[#B4593F] inline-flex items-center gap-1">Track parcel <ExternalLink className="w-3 h-3" /></a>}
+                      {selected.fulfilled_at && <div className="text-xs text-neutral-500">Fulfilled {new Date(selected.fulfilled_at).toLocaleString()}</div>}
+                    </>
+                  ) : (
+                    <div className="text-neutral-500 text-xs">Not fulfilled yet.</div>
+                  )}
                 </div>
               </div>
               <div className="pt-4 border-t border-[#EBD9CE] flex flex-wrap gap-2">
@@ -136,6 +185,15 @@ const AdminOrders = () => {
                 >
                   <FileText className="w-3.5 h-3.5" /> Invoice / Print
                 </a>
+                {!['delivered', 'cancelled', 'refunded'].includes(selected.status) && (
+                  <button
+                    onClick={() => setFulfilling(selected)}
+                    data-testid="order-fulfill-btn"
+                    className="inline-flex items-center gap-2 text-xs uppercase tracking-widest bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-4 py-2.5 rounded-full transition-colors"
+                  >
+                    <PackageCheck className="w-3.5 h-3.5" /> {selected.status === 'shipped' ? 'Update fulfilment' : 'Fulfil order'}
+                  </button>
+                )}
                 {selected.payment_status === 'paid' && selected.status !== 'refunded' && (
                   <button
                     onClick={() => doRefund(selected)}
@@ -154,6 +212,17 @@ const AdminOrders = () => {
             </div>
           </aside>
         </>
+      )}
+
+      {fulfilling && (
+        <FulfillOrderDialog
+          order={fulfilling}
+          onClose={() => setFulfilling(null)}
+          onFulfilled={(updated) => {
+            setOrders(prev => prev.map(o => o.order_number === updated.order_number ? updated : o));
+            if (selected?.order_number === updated.order_number) setSelected(updated);
+          }}
+        />
       )}
     </div>
   );
