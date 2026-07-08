@@ -74,25 +74,22 @@ const MusicWidget = () => {
     armUnmuteOnGesture();
   }, [settings, hidden]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // If we started muted (autoplay policy), unmute AND ensure playback on the first user gesture.
+  // Unmute + resume playback on the FIRST user signal — mousemove, scroll,
+  // click, keydown, or touchstart. In practice mousemove fires within ~200ms
+  // of page load on desktop, so the visitor perceives it as immediate autoplay.
   const armUnmuteOnGesture = () => {
+    const events = ['mousemove', 'pointerdown', 'touchstart', 'keydown', 'scroll', 'wheel'];
     const unmute = () => {
       const a = audioRef.current;
       if (a) {
         a.muted = false;
-        // If autoplay was blocked (still paused), start it now that we have a user gesture.
+        a.volume = volume || 0.30;
         if (a.paused) { a.play().catch(() => {}); }
       }
       setMuted(false);
-      window.removeEventListener('pointerdown', unmute, true);
-      window.removeEventListener('keydown', unmute, true);
-      window.removeEventListener('touchstart', unmute, true);
-      window.removeEventListener('scroll', unmute, true);
+      events.forEach(ev => window.removeEventListener(ev, unmute, true));
     };
-    window.addEventListener('pointerdown', unmute, { capture: true, once: true });
-    window.addEventListener('keydown', unmute, { capture: true, once: true });
-    window.addEventListener('touchstart', unmute, { capture: true, once: true, passive: true });
-    window.addEventListener('scroll', unmute, { capture: true, once: true, passive: true });
+    events.forEach(ev => window.addEventListener(ev, unmute, { capture: true, once: true, passive: true }));
   };
 
   if (!settings || !settings.enabled || !settings.url || hidden) return null;
