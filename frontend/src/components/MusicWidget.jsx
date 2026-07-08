@@ -67,17 +67,22 @@ const MusicWidget = () => {
     if (returningPaused) { a.pause(); return; }
 
     // Kick off playback (native autoPlay muted should already have started).
-    // Then arm a "first user gesture" listener that unmutes so audio becomes audible.
+    // Regardless of the outcome, arm a "first user gesture" listener so any interaction
+    // guarantees the track plays (and unmutes) — this is the browser-compliant path.
     a.muted = muted;
-    a.play().catch(() => { /* headless / power-save may block even muted; harmless */ });
-    if (muted) armUnmuteOnGesture();
+    a.play().catch(() => { /* headless / policy blocked; gesture handler will recover */ });
+    armUnmuteOnGesture();
   }, [settings, hidden]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // If we started muted (autoplay policy), unmute on the first user gesture.
+  // If we started muted (autoplay policy), unmute AND ensure playback on the first user gesture.
   const armUnmuteOnGesture = () => {
     const unmute = () => {
       const a = audioRef.current;
-      if (a) { a.muted = false; }
+      if (a) {
+        a.muted = false;
+        // If autoplay was blocked (still paused), start it now that we have a user gesture.
+        if (a.paused) { a.play().catch(() => {}); }
+      }
       setMuted(false);
       window.removeEventListener('pointerdown', unmute, true);
       window.removeEventListener('keydown', unmute, true);
