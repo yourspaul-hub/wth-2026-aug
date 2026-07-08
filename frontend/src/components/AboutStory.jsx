@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Download, ArrowRight, Heart } from 'lucide-react';
 import { useContentText } from '../context/ContentContext';
+import { API_BASE, fetchPublicSettings } from '../lib/api';
 
 const AboutStory = () => {
   const eyebrow = useContentText('home.about.eyebrow');
@@ -12,6 +13,14 @@ const AboutStory = () => {
   const badge1 = useContentText('home.about.badge_year', 'Since 2018');
   const badge2 = useContentText('home.about.badge_sub', 'A hobby project turned mission');
   const catalogueCta = useContentText('home.about.catalogue_cta', 'Download Catalogue');
+  const [catalogueUrl, setCatalogueUrl] = useState('');
+  useEffect(() => {
+    fetchPublicSettings().then(r => {
+      const url = r?.catalogue?.url;
+      if (!url) return;
+      setCatalogueUrl(url.startsWith('http') ? url : `${API_BASE.replace(/\/api$/, '')}${url}`);
+    }).catch(() => {});
+  }, []);
 
   return (
     <section className="py-24 bg-[#FDF3EB] relative overflow-hidden" data-testid="home-about">
@@ -38,7 +47,15 @@ const AboutStory = () => {
               <p>{body}</p>
             </div>
             <div className="mt-8 flex flex-wrap items-center gap-4">
-              <a href="#" onClick={(e) => e.preventDefault()} className="inline-flex items-center gap-2 bg-[#B4593F] hover:bg-[#9E4B32] text-white px-6 py-3.5 rounded-full text-xs uppercase tracking-[0.2em] transition-colors">
+              <a
+                href={catalogueUrl || '#'}
+                target={catalogueUrl ? '_blank' : undefined}
+                rel={catalogueUrl ? 'noreferrer' : undefined}
+                onClick={(e) => { if (!catalogueUrl) e.preventDefault(); }}
+                className={`inline-flex items-center gap-2 px-6 py-3.5 rounded-full text-xs uppercase tracking-[0.2em] transition-colors ${catalogueUrl ? 'bg-[#B4593F] hover:bg-[#9E4B32] text-white' : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'}`}
+                data-testid="home-download-catalogue"
+                title={catalogueUrl ? '' : 'No catalogue uploaded yet — admin can add one from Design tab'}
+              >
                 <Download className="w-4 h-4" /> {catalogueCta}
               </a>
               <Link to="/about" className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] link-underline">

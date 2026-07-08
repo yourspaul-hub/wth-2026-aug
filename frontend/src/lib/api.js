@@ -17,6 +17,16 @@ export const fetchCurrencyRates = () => api.get('/currency/rates').then(r => r.d
 export const fetchSiteContent = () => api.get('/content').then(r => r.data);
 export const adminSaveSiteContent = (updates) => api.put('/admin/content', { updates }).then(r => r.data);
 export const adminResetSiteContentKey = (key) => api.delete(`/admin/content/${encodeURIComponent(key)}`).then(r => r.data);
+export const fetchPublicSettings = () => api.get('/settings/public').then(r => r.data);
+export const adminUploadCatalogue = (file, onProgress) => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return api.post('/admin/catalogue', fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: (e) => { if (e.total && onProgress) onProgress(Math.round((e.loaded / e.total) * 100)); },
+  }).then(r => r.data);
+};
+export const adminDeleteCatalogue = () => api.delete('/admin/catalogue').then(r => r.data);
 export const fetchReviews = () => api.get('/reviews').then(r => r.data?.items || r.data || []);
 export const fetchReviewsFull = (params = {}) => api.get('/reviews', { params }).then(r => r.data);
 export const validateCoupon = (code, subtotal) => api.post('/coupons/validate', { code, subtotal }).then(r => r.data);

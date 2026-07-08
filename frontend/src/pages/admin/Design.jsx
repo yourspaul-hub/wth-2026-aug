@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Palette, Save, ExternalLink, RotateCcw, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { CONTENT_SECTIONS, CONTENT_DEFAULTS, PAGES } from '../../lib/contentRegistry';
 import { fetchSiteContent, adminSaveSiteContent, adminResetSiteContentKey } from '../../lib/api';
+import CatalogueUploader from './CatalogueUploader';
 
 /**
  * Admin — Design tab. Edit every editable text string on the storefront,
@@ -136,6 +137,7 @@ const AdminDesign = () => {
 
       {/* Sections */}
       <div className="space-y-3">
+        {(pageFilter === 'all' || pageFilter === 'home') && <CatalogueUploader />}
         {filtered.map(section => {
           const open = openSection === section.id || q.trim().length > 0 || pageFilter !== 'all';
           const dirtyInSection = section.items.filter(it => it.key in dirty).length;

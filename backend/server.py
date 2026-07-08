@@ -2737,7 +2737,7 @@ async def admin_delete_site_content_key(key: str, user: dict = Depends(require_a
 # ================= PUBLIC SITE SETTINGS (music + branding) =================
 @api.get('/settings/public')
 async def get_public_settings():
-    """Non-secret settings safe for the storefront (music widget, etc.)."""
+    """Non-secret settings safe for the storefront (music widget, catalogue, etc.)."""
     music_enabled = ((await get_setting('MUSIC_ENABLED', '')) or '').strip().lower() in ('true', '1', 'yes', 'on')
     music_url = (await get_setting('MUSIC_URL', '')) or ''
     music_label = (await get_setting('MUSIC_LABEL', 'Ambient Music')) or 'Ambient Music'
@@ -2746,6 +2746,8 @@ async def get_public_settings():
     except (TypeError, ValueError):
         volume = 0.35
     volume = max(0.0, min(1.0, volume))
+    catalogue_id = (await get_setting('CATALOGUE_FILE_ID', '')) or ''
+    catalogue_name = (await get_setting('CATALOGUE_FILENAME', '')) or ''
     return {
         'music': {
             'enabled': bool(music_enabled and music_url),
@@ -2753,7 +2755,83 @@ async def get_public_settings():
             'label': music_label,
             'volume': volume,
         },
+        'catalogue': {
+            'url': '/api/catalogue' if catalogue_id else '',
+            'filename': catalogue_name,
+        },
     }
+
+
+# ================= CATALOGUE (PDF) =================
+@api.post('/admin/catalogue')
+async def admin_upload_catalogue(file: UploadFile = File(...), user: dict = Depends(require_admin)):
+    """Upload the downloadable product catalogue (PDF). Stored in GridFS, replaces any previous file."""
+    if not file.filename:
+        raise HTTPException(status_code=400, detail='No file provided')
+    body = await file.read()
+    if len(body) > 50 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail='File too large — 50MB max')
+    content_type = file.content_type or 'application/pdf'
+    # Delete previous file if present
+    prev_id = (await get_setting('CATALOGUE_FILE_ID', '')) or ''
+    if prev_id:
+        try:
+            await gridfs_bucket.delete(ObjectId(prev_id))
+        except Exception:
+            pass
+    fid = await gridfs_bucket.upload_from_stream(
+        file.filename,
+        body,
+        metadata={
+            'content_type': content_type,
+            'kind': 'catalogue',
+            'uploaded_by': user.get('email'),
+            'uploaded_at': datetime.now(timezone.utc),
+            'size': len(body),
+        },
+    )
+    now = datetime.now(timezone.utc)
+    await db.settings.update_one({'key': 'CATALOGUE_FILE_ID'}, {'$set': {'key': 'CATALOGUE_FILE_ID', 'value': str(fid), 'category': 'media', 'updated_at': now}}, upsert=True)
+    await db.settings.update_one({'key': 'CATALOGUE_FILENAME'}, {'$set': {'key': 'CATALOGUE_FILENAME', 'value': file.filename, 'category': 'media', 'updated_at': now}}, upsert=True)
+    await db.settings.update_one({'key': 'CATALOGUE_CONTENT_TYPE'}, {'$set': {'key': 'CATALOGUE_CONTENT_TYPE', 'value': content_type, 'category': 'media', 'updated_at': now}}, upsert=True)
+    return {'ok': True, 'filename': file.filename, 'size': len(body), 'url': '/api/catalogue'}
+
+
+@api.delete('/admin/catalogue')
+async def admin_delete_catalogue(user: dict = Depends(require_admin)):
+    prev_id = (await get_setting('CATALOGUE_FILE_ID', '')) or ''
+    if prev_id:
+        try:
+            await gridfs_bucket.delete(ObjectId(prev_id))
+        except Exception:
+            pass
+    await db.settings.delete_many({'key': {'$in': ['CATALOGUE_FILE_ID', 'CATALOGUE_FILENAME', 'CATALOGUE_CONTENT_TYPE']}})
+    return {'ok': True}
+
+
+@api.get('/catalogue')
+async def public_download_catalogue():
+    fid = (await get_setting('CATALOGUE_FILE_ID', '')) or ''
+    if not fid:
+        raise HTTPException(status_code=404, detail='No catalogue uploaded')
+    filename = (await get_setting('CATALOGUE_FILENAME', 'catalogue.pdf')) or 'catalogue.pdf'
+    content_type = (await get_setting('CATALOGUE_CONTENT_TYPE', 'application/pdf')) or 'application/pdf'
+    try:
+        stream = await gridfs_bucket.open_download_stream(ObjectId(fid))
+    except Exception:
+        raise HTTPException(status_code=404, detail='Catalogue file missing')
+
+    async def _iter():
+        while True:
+            chunk = await stream.read(65536)
+            if not chunk:
+                break
+            yield chunk
+    headers = {
+        'Content-Disposition': f'attachment; filename="{filename}"',
+        'Cache-Control': 'public, max-age=3600',
+    }
+    return StreamingResponse(_iter(), media_type=content_type, headers=headers)
 
 
 # --- Mount ---
