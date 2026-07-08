@@ -1,16 +1,21 @@
 import React from 'react';
 import { Truck, Sparkles, Gift } from 'lucide-react';
+import { useContentText } from '../context/ContentContext';
 
-const items = [
-  { icon: Truck, text: 'Free shipping over ₹999 across India' },
-  { icon: Sparkles, text: 'Personalize any product — laser engraving available' },
-  { icon: Gift, text: 'New Faith Cap Collection is live — shop now' },
-  { icon: Truck, text: 'International shipping worldwide' },
-];
+const icons = [Truck, Sparkles, Gift, Truck];
 
 const AnnouncementBar = () => {
+  const items = [
+    useContentText('announcement.item.1'),
+    useContentText('announcement.item.2'),
+    useContentText('announcement.item.3'),
+    useContentText('announcement.item.4'),
+  ].map((text, i) => ({ icon: icons[i], text })).filter(it => it.text);
+
+  if (items.length === 0) return null;
+
   return (
-    <div className="w-full bg-[#1A1A1A] text-[#FDF3EB] overflow-hidden text-xs tracking-wider py-2.5 border-b border-black/20">
+    <div className="w-full bg-[#1A1A1A] text-[#FDF3EB] overflow-hidden text-xs tracking-wider py-2.5 border-b border-black/20" data-testid="announcement-bar">
       <div className="flex whitespace-nowrap animate-marquee">
         {[...items, ...items, ...items].map((it, idx) => {
           const Icon = it.icon;

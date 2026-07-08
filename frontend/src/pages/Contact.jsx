@@ -3,10 +3,21 @@ import { Mail, Phone, MapPin, Instagram, Send, Clock, ExternalLink, Star } from 
 import { toast } from 'sonner';
 import { brandInfo } from '../mock/mock';
 import { listLocations } from '../lib/api';
+import { useContentText } from '../context/ContentContext';
 
 const Contact = () => {
   const [form, setForm] = useState({ name: '', email: '', subject: 'General inquiry', message: '' });
   const [locations, setLocations] = useState([]);
+  const title = useContentText('contact.title');
+  const subtitle = useContentText('contact.subtitle');
+  const locTitle = useContentText('contact.locations.title');
+  const fName = useContentText('contact.form.name');
+  const fEmail = useContentText('contact.form.email');
+  const fMsg = useContentText('contact.form.message');
+  const fSubmit = useContentText('contact.form.submit');
+  const titleParts = title.split(' ');
+  const titleMain = titleParts.length > 1 ? titleParts.slice(0, -1).join(' ') + ' ' : title;
+  const titleAccent = titleParts.length > 1 ? titleParts.slice(-1)[0] : '';
 
   useEffect(() => {
     listLocations().then(setLocations).catch(() => setLocations([]));
@@ -22,9 +33,9 @@ const Contact = () => {
     <main className="pt-6" data-testid="contact-page">
       <section className="gradient-cream py-20">
         <div className="max-w-[1200px] mx-auto px-6 lg:px-10 text-center">
-          <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">We’d love to hear from you</div>
-          <h1 className="font-serif-display text-5xl md:text-6xl">Get in <span className="italic">touch</span></h1>
-          <p className="mt-4 text-neutral-700 max-w-xl mx-auto">Custom order, bulk enquiry, partnership or just to say hi — our inbox is always open.</p>
+          <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">We&apos;d love to hear from you</div>
+          <h1 className="font-serif-display text-5xl md:text-6xl">{titleMain}<span className="italic">{titleAccent}</span></h1>
+          <p className="mt-4 text-neutral-700 max-w-xl mx-auto">{subtitle}</p>
         </div>
       </section>
 
@@ -33,7 +44,7 @@ const Contact = () => {
           <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
             <div className="text-center mb-12">
               <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">Find us</div>
-              <h2 className="font-serif-display text-4xl md:text-5xl">Our <span className="italic">locations</span></h2>
+              <h2 className="font-serif-display text-4xl md:text-5xl">{locTitle}</h2>
               <p className="mt-3 text-sm text-neutral-600 max-w-md mx-auto">Visit our design studio, drop by our registered office, or simply write to us — we ship worldwide.</p>
             </div>
 
@@ -132,11 +143,11 @@ const Contact = () => {
             <form onSubmit={submit} className="bg-white rounded-2xl p-8 md:p-10 border border-[#EBD9CE] shadow-[0_20px_60px_-30px_rgba(180,89,63,0.3)]">
               <div className="grid md:grid-cols-2 gap-5">
                 <label className="block">
-                  <span className="text-[11px] uppercase tracking-[0.2em] text-neutral-600">Your name</span>
+                  <span className="text-[11px] uppercase tracking-[0.2em] text-neutral-600">{fName}</span>
                   <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} data-testid="contact-name-input" className="mt-2 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-5 py-3 text-sm outline-none focus:border-[#B4593F] transition-colors" />
                 </label>
                 <label className="block">
-                  <span className="text-[11px] uppercase tracking-[0.2em] text-neutral-600">Email</span>
+                  <span className="text-[11px] uppercase tracking-[0.2em] text-neutral-600">{fEmail}</span>
                   <input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} data-testid="contact-email-input" className="mt-2 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-5 py-3 text-sm outline-none focus:border-[#B4593F] transition-colors" />
                 </label>
               </div>
@@ -151,11 +162,11 @@ const Contact = () => {
                 </select>
               </label>
               <label className="block mt-5">
-                <span className="text-[11px] uppercase tracking-[0.2em] text-neutral-600">Message</span>
+                <span className="text-[11px] uppercase tracking-[0.2em] text-neutral-600">{fMsg}</span>
                 <textarea required rows="5" value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} data-testid="contact-message-input" className="mt-2 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-2xl px-5 py-4 text-sm outline-none focus:border-[#B4593F] transition-colors resize-none" />
               </label>
               <button type="submit" data-testid="contact-submit-btn" className="mt-6 inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] transition-colors text-white px-7 py-3.5 rounded-full text-xs uppercase tracking-[0.2em]">
-                <Send className="w-4 h-4" /> Send Message
+                <Send className="w-4 h-4" /> {fSubmit}
               </button>
             </form>
           </div>

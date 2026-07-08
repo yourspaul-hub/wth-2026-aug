@@ -1,10 +1,21 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Download, ArrowRight, Heart } from 'lucide-react';
+import { useContentText } from '../context/ContentContext';
 
 const AboutStory = () => {
+  const eyebrow = useContentText('home.about.eyebrow');
+  const title = useContentText('home.about.title');
+  const body = useContentText('home.about.body');
+  const cta = useContentText('home.about.cta');
+
+  // Split last word of title for accent, so admin edit still keeps the italic style working
+  const parts = title.split(' ');
+  const titleMain = parts.length > 1 ? parts.slice(0, -1).join(' ') + ' ' : title;
+  const titleAccent = parts.length > 1 ? parts.slice(-1)[0] : '';
+
   return (
-    <section className="py-24 bg-[#FDF3EB] relative overflow-hidden">
+    <section className="py-24 bg-[#FDF3EB] relative overflow-hidden" data-testid="home-about">
       <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
         <div className="grid md:grid-cols-2 gap-14 items-center">
           <div className="relative">
@@ -20,21 +31,19 @@ const AboutStory = () => {
           </div>
 
           <div>
-            <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">Our Story</div>
+            <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">{eyebrow}</div>
             <h2 className="font-serif-display text-4xl md:text-5xl text-[#1A1A1A] leading-tight">
-              Five loaves. Two fish. <span className="italic">One mission.</span>
+              {titleMain}<span className="italic">{titleAccent}</span>
             </h2>
-            <div className="mt-6 space-y-5 text-neutral-700 leading-relaxed">
-              <p>We started as a small hobby project in December 2018, holding on to a simple vision — to offer our “5 loaves and 2 fish” to God and impact the people of the nations.</p>
-              <p>Every wallet, tumbler, tote and tee that leaves our studio carries a whisper of scripture and a wave of hope. We create and customize for individuals, teams, organizations and churches worldwide.</p>
-              <p className="italic font-serif-display text-xl text-[#B4593F]">“We sincerely hope our products will impact your life and those around you.”</p>
+            <div className="mt-6 space-y-5 text-neutral-700 leading-relaxed whitespace-pre-line">
+              <p>{body}</p>
             </div>
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <a href="#" onClick={(e) => e.preventDefault()} className="inline-flex items-center gap-2 bg-[#B4593F] hover:bg-[#9E4B32] text-white px-6 py-3.5 rounded-full text-xs uppercase tracking-[0.2em] transition-colors">
                 <Download className="w-4 h-4" /> Download Catalogue
               </a>
               <Link to="/about" className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] link-underline">
-                Read Full Story <ArrowRight className="w-3.5 h-3.5" />
+                {cta} <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
           </div>

@@ -1,0 +1,61 @@
+{
+  "summary": "Phase K — CMS Design tab + floating Music widget + S3/CloudFront fallback + mobile/tablet polish. Backend: 13/13 pytest passed (CMS CRUD, admin gating, public music settings, MUSIC_ENABLED toggle, gridfs fallback for image upload, and regression on categories/products/currency/recommendations). Frontend: Admin Design page loads all 13 sections with proper testids; save propagates to storefront announcement bar via wth:content-saved CustomEvent; reset (with window.confirm accepted) deletes the DB override and reverts the storefront. Music widget mounts on all storefront pages, correctly hidden on /admin/*; MP3 URL seeded to the expected URL and returned by /api/settings/public. Mobile (390x844) and tablet (768x1024) layouts render cleanly — no overlap between the music widget and the hero CTA. One hydration warning (button-in-button in MusicWidget) surfaces on every page load and should be fixed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "MusicWidget.jsx (lines 99-119)",
+        "issue": "The 'music-widget-expand' <button> is rendered as a direct DOM child of the outer 'music-widget-toggle' <button>. Nesting a button inside another button is invalid HTML and produces a React hydration console error on every page load: 'In HTML, <button> cannot be a descendant of <button>. This will cause a hydration error.' It also makes the small expand icon's click behavior fragile because two overlapping click handlers race (outer toggle onClick calls a.play() which throws → catch → showPlayHint; inner onClick calls setCollapsed(false)). Recommended fix: change the inner expand element to a <span role=\"button\" tabIndex=0 onKeyDown/onClick=...> (or a <div>), or move the expand affordance out of the outer button entirely (e.g. render two sibling buttons — a play pill and a small chevron).",
+        "selector": "[data-testid=music-widget-expand]",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "MusicWidget.jsx L163-169 'Hide for this session' label",
+        "issue": "Copy says 'Hide for this session' but the hidden flag is persisted to localStorage via wth_music_state, so it survives across sessions (not cleared until the user clears storage). Either change the label to 'Hide' / 'Don't show again', or switch persistence to sessionStorage for parity with the copy.",
+        "selector": "[data-testid=music-widget-hide]",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Storefront pages (console)",
+        "issues": [
+          "React hydration warning on every load due to button-in-button in MusicWidget (see above).",
+          "Public storefront also probes /api/admin/integrations returning 401 — same noise flagged in iteration_8; still not gated behind isAuthenticated."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase_k_content_music.py",
+    "/app/test_reports/pytest/phase_k_results.xml"
+  ],
+  "action_items": [
+    "Fix button-in-button hydration warning in /app/frontend/src/components/MusicWidget.jsx by replacing the inner music-widget-expand <button> with a <span role='button' tabIndex=0> (keep stopPropagation on click).",
+    "Optional: rename 'Hide for this session' -> 'Hide' (localStorage persistence outlives the session) OR switch to sessionStorage for the 'hidden' flag.",
+    "Optional: guard the storefront's /api/admin/integrations fetch behind an authenticated check to silence 401 console noise on public pages."
+  ],
+  "critical_code_review_comments": [
+    "server.py L2703-2734 CMS CRUD is tight: 128-char key cap, 5000-char value cap with truncation, upsert on PUT, unique index on 'key'. GET returns {items: {key: value}} — clean contract; no _id leak.",
+    "server.py L2738-2756 /api/settings/public: MUSIC_ENABLED must be truthy AND MUSIC_URL non-empty for enabled=true; URL is blanked when disabled. Volume clamped to [0,1] with try/except. Good defensive parsing.",
+    "server.py L2795-2805 startup seeder for MUSIC_* uses $setOnInsert — idempotent, safe on hot reload. The exact MP3 URL from the requirement is baked in.",
+    "server.py L2613-2687 _try_upload_to_s3 returns None when AWS_S3_ENABLED false → image endpoint transparently falls back to GridFS. Verified end-to-end: POST /api/admin/images/upload-from-url still 200 and does not return backend='s3'.",
+    "Design.jsx L38-51 onResetKey uses window.confirm() — good safety net, but blocks headless test automation unless the test attaches a dialog handler. Consider swapping to an in-page confirm modal for testability.",
+    "Design.jsx L69-75 search filter: matches on key OR current value OR default text. That's why searching 'hero' also surfaces the 'about' section (its default copy mentions 'hero image'). Intended, but might surprise users — consider tagging matches or adding a 'key only' toggle.",
+    "MusicWidget.jsx L99 wraps a <button data-testid=music-widget-expand> INSIDE a <button data-testid=music-widget-toggle>. Invalid HTML, hydration warning, and event handling races. See ui_bugs above.",
+    "MusicWidget.jsx L46-51 useEffect syncs audio.volume/muted whenever those state values change — fine. However on first mount before the effect runs, the raw <audio> element defaults to volume=1 for a brief moment. In practice not audible because playback starts paused.",
+    "ContentContext.jsx (registry) + wth:content-saved CustomEvent is a nice hot-update pattern — verified: saving in /admin/design updates the storefront announcement bar in a second tab after a reload (no cross-tab sync, but same-tab hot update works via the event).",
+    "Regression: /api/products list, /api/categories, /api/currency/rates, /api/products/{id}/recommendations all still 200 with expected envelopes (12/13 backend tests exercised them)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase_k_content_music.py (new)"
+  ],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "~92% (all critical flows work; 1 hydration warning + 1 copy nit)"},
+  "test_credentials": "Admin session cookie session_token=sess_1783487836132 (still valid) — used successfully to hit PUT /api/admin/content, DELETE /api/admin/content/{key}, PUT /api/admin/integrations, POST /api/admin/images/upload-from-url.",
+  "seed_data_creation": "None. Created & cleaned up TEST_phaseK.* content keys within tests. MUSIC_ENABLED toggled off/on with restore in fixture.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Phase K CMS + music widget + gridfs fallback verified. If main agent fixes the button-in-button warning in MusicWidget, a quick playwright re-run of the expand → panel flow will confirm (currently music-widget-expand is inside the toggle button and Playwright force-clicks land on the outer toggle instead of firing the inner setCollapsed). Full end-to-end test file: /app/backend/tests/test_phase_k_content_music.py — safe to re-run any time (test data is TEST_-prefixed and cleaned up). Admin cookie sess_1783487836132 is set for 7 days.",
+  "rca_of_the_issue": "Button-in-button in MusicWidget: the collapsed pill (music-widget-toggle) contains a smaller icon-button (music-widget-expand) as a DOM descendant. HTML5 spec disallows interactive descendants of <button> — Chromium's parser + React hydration both flag this. Behaviorally, in Playwright `page.click('[data-testid=music-widget-expand]', force=True)` centers the click on the 12x12 inner button but the outer <button>'s click handler still fires (because in most user-agents the browser DOM parser closes the outer button early and hoists the inner one out — but React under Next-style hydration re-nests them, producing an inconsistent event graph). Result: expand icon does not reliably open the expanded panel via a scripted click. Fix: replace the inner <button> with a <span role='button' tabIndex=0 onKeyDown={handler} onClick={handler}> — keeps a11y, drops the invalid nesting, and lets stopPropagation continue to work."
+}

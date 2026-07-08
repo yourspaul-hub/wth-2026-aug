@@ -2,11 +2,17 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Star, Quote, ChevronLeft, ChevronRight } from 'lucide-react';
 import { testimonials as mockReviews } from '../mock/mock';
 import { fetchReviews } from '../lib/api';
+import { useContentText } from '../context/ContentContext';
 
 const Testimonials = () => {
   const [items, setItems] = useState(mockReviews);
   const [i, setI] = useState(0);
   const ref = useRef(null);
+  const eyebrow = useContentText('home.testimonials.eyebrow');
+  const title = useContentText('home.testimonials.title');
+  const parts = title.split(' ');
+  const titleMain = parts.length > 1 ? parts.slice(0, -1).join(' ') + ' ' : title;
+  const titleAccent = parts.length > 1 ? parts.slice(-1)[0] : '';
 
   useEffect(() => {
     fetchReviews().then(rs => { if (rs && rs.length) setItems(rs); }).catch(() => {});
@@ -36,8 +42,8 @@ const Testimonials = () => {
       <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 30% 20%, rgba(255,255,255,0.5), transparent 50%)' }} />
       <div className="max-w-[1200px] mx-auto px-6 lg:px-10 relative">
         <div className="text-center mb-14">
-          <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">What Our Customers Say</div>
-          <h2 className="font-serif-display text-4xl md:text-5xl text-[#1A1A1A]">Loved by <span className="italic">believers</span> worldwide</h2>
+          <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">{eyebrow}</div>
+          <h2 className="font-serif-display text-4xl md:text-5xl text-[#1A1A1A]">{titleMain}<span className="italic">{titleAccent}</span></h2>
           <div className="flex items-center justify-center gap-1 mt-4">
             {[...Array(5)].map((_, k) => <Star key={k} className="w-4 h-4 fill-[#E8B364] stroke-[#E8B364]" />)}
             <span className="ml-3 text-sm text-neutral-700">4.9 / 5 on Google Reviews</span>

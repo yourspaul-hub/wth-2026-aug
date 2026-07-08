@@ -4,6 +4,7 @@ Emergent Google OAuth for admin. Razorpay & Shiprocket MOCKED.
 """
 import os
 import logging
+import asyncio
 import uuid
 import random
 import string
@@ -2262,6 +2263,33 @@ INTEGRATIONS_SCHEMA = [
             {'key': 'PUBLIC_APP_URL', 'label': 'Public app URL', 'placeholder': 'https://wearthehope.com', 'secret': False},
         ],
     },
+    {
+        'category': 'media',
+        'label': 'Ambient Music (site-wide)',
+        'description': 'A small floating audio player will appear on the storefront. Provide a direct URL to an audio file (mp3/wav/m4a). Autoplay is blocked by browsers, so the widget starts paused and remembers the visitor\'s choice.',
+        'docs_url': None,
+        'fields': [
+            {'key': 'MUSIC_URL', 'label': 'Audio file URL', 'placeholder': 'https://.../track.mp3', 'secret': False},
+            {'key': 'MUSIC_LABEL', 'label': 'Track label', 'placeholder': 'Wear The Hope — Ambient', 'secret': False},
+            {'key': 'MUSIC_ENABLED', 'label': 'Enabled (true/false)', 'placeholder': 'true', 'secret': False},
+            {'key': 'MUSIC_VOLUME', 'label': 'Default volume (0.0 – 1.0)', 'placeholder': '0.35', 'secret': False},
+        ],
+    },
+    {
+        'category': 'cdn',
+        'label': 'AWS S3 + CloudFront (image CDN)',
+        'description': 'When enabled, processed WebP images uploaded via bulk upload / Google Drive links are stored on S3 and delivered via CloudFront. Falls back to internal GridFS storage automatically if S3 is not configured or if a single upload fails. Access keys must live in backend/.env — the UI accepts them here for convenience but recommends env vars.',
+        'docs_url': 'https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/DownloadDistS3AndCustomOrigins.html',
+        'fields': [
+            {'key': 'AWS_S3_ENABLED', 'label': 'Enabled (true/false)', 'placeholder': 'false', 'secret': False},
+            {'key': 'AWS_S3_BUCKET', 'label': 'S3 bucket name', 'placeholder': 'wearthehope-images', 'secret': False},
+            {'key': 'AWS_REGION', 'label': 'AWS region', 'placeholder': 'ap-south-1', 'secret': False},
+            {'key': 'AWS_ACCESS_KEY_ID', 'label': 'AWS access key ID', 'placeholder': 'AKIA...', 'secret': True},
+            {'key': 'AWS_SECRET_ACCESS_KEY', 'label': 'AWS secret access key', 'placeholder': '', 'secret': True},
+            {'key': 'CLOUDFRONT_DOMAIN', 'label': 'CloudFront domain', 'placeholder': 'https://cdn.wearthehope.com', 'secret': False},
+            {'key': 'S3_KEY_PREFIX', 'label': 'S3 key prefix', 'placeholder': 'images/', 'secret': False},
+        ],
+    },
 ]
 
 _SETTING_KEYS = {f['key'] for section in INTEGRATIONS_SCHEMA for f in section['fields']}
@@ -2550,10 +2578,16 @@ def _process_image(raw: bytes, target_w: int = 1600, target_h: int = 1600, quali
 
 
 async def _store_image_from_url(source_url: str, uploaded_by: Optional[str] = None) -> dict:
-    """Full pipeline: resolve source (Drive → direct), fetch, resize, WebP, save to GridFS, return metadata."""
+    """Full pipeline: resolve source (Drive → direct), fetch, resize, WebP, save (S3 or GridFS), return metadata."""
     resolved = _resolve_image_source(source_url)
     raw = await _fetch_bytes(resolved)
     body, ext, w, h = _process_image(raw)
+
+    # Prefer S3 + CloudFront when configured; fall back to GridFS on any failure.
+    s3_meta = await _try_upload_to_s3(body, ext, source_url, w, h)
+    if s3_meta is not None:
+        return {**s3_meta, 'uploaded_by': uploaded_by}
+
     fid = await gridfs_bucket.upload_from_stream(
         f'wth_{uuid.uuid4().hex[:12]}.{ext}',
         body,
@@ -2564,6 +2598,7 @@ async def _store_image_from_url(source_url: str, uploaded_by: Optional[str] = No
             'width': w, 'height': h, 'size': len(body),
             'uploaded_by': uploaded_by,
             'created_at': datetime.now(timezone.utc),
+            'backend': 'gridfs',
         },
     )
     return {
@@ -2571,6 +2606,53 @@ async def _store_image_from_url(source_url: str, uploaded_by: Optional[str] = No
         'url': f'/api/images/{fid}',
         'width': w, 'height': h, 'size': len(body),
         'content_type': 'image/webp',
+        'backend': 'gridfs',
+    }
+
+
+async def _try_upload_to_s3(body: bytes, ext: str, source_url: str, w: int, h: int) -> Optional[dict]:
+    """Attempt to upload to S3+CloudFront. Return None if not configured or on failure (caller will fall back)."""
+    enabled = ((await get_setting('AWS_S3_ENABLED', '')) or '').strip().lower() in ('true', '1', 'yes', 'on')
+    if not enabled:
+        return None
+    bucket = await get_setting('AWS_S3_BUCKET')
+    region = await get_setting('AWS_REGION')
+    ak = await get_setting('AWS_ACCESS_KEY_ID')
+    sk = await get_setting('AWS_SECRET_ACCESS_KEY')
+    if not (bucket and region and ak and sk):
+        return None
+    cdn = ((await get_setting('CLOUDFRONT_DOMAIN', '')) or '').rstrip('/')
+    prefix = ((await get_setting('S3_KEY_PREFIX', 'images/')) or 'images/').lstrip('/')
+    if prefix and not prefix.endswith('/'):
+        prefix = prefix + '/'
+    key = f"{prefix}{uuid.uuid4().hex[:12]}.{ext}"
+
+    try:
+        import boto3
+        from botocore.config import Config as BotoConfig
+
+        def _upload():
+            session = boto3.session.Session(
+                aws_access_key_id=ak, aws_secret_access_key=sk, region_name=region,
+            )
+            client = session.client('s3', config=BotoConfig(s3={'addressing_style': 'virtual'}))
+            client.put_object(
+                Bucket=bucket, Key=key, Body=body,
+                ContentType='image/webp',
+                CacheControl='public,max-age=2592000,immutable',
+            )
+        await asyncio.to_thread(_upload)
+    except Exception as e:  # pragma: no cover — surface via logs, fall back silently
+        logger.warning('S3 upload failed for %s: %s — falling back to GridFS', source_url[:80], e)
+        return None
+
+    url = f"{cdn}/{key}" if cdn else f"https://{bucket}.s3.{region}.amazonaws.com/{key}"
+    return {
+        'id': key,
+        'url': url,
+        'width': w, 'height': h, 'size': len(body),
+        'content_type': 'image/webp',
+        'backend': 's3',
     }
 
 
@@ -2602,6 +2684,76 @@ async def get_image(img_id: str):
         'Cache-Control': 'public, max-age=2592000, immutable',
         'Content-Length': str(len(body)),
     })
+
+
+# ================= CMS SITE CONTENT (Design tab) =================
+# Simple key -> value store powering the storefront's editable text.
+# Every editable string on the site has a stable slug (e.g. "home.hero.title").
+# GET /api/content returns { key: value } for all keys with a persisted value.
+# The FE keeps a static registry of default text; DB values override defaults.
+
+class ContentPatch(BaseModel):
+    updates: dict[str, str]  # {key: value}
+
+
+CONTENT_KEY_MAX = 128
+CONTENT_VALUE_MAX = 5000
+
+
+@api.get('/content')
+async def get_site_content():
+    docs = await db.site_content.find({}, {'_id': 0, 'key': 1, 'value': 1}).to_list(1000)
+    return {'items': {d['key']: d.get('value', '') for d in docs if d.get('value') is not None}}
+
+
+@api.put('/admin/content')
+async def admin_update_site_content(payload: ContentPatch, user: dict = Depends(require_admin)):
+    if not payload.updates:
+        return {'ok': True, 'updated': 0}
+    now = datetime.now(timezone.utc)
+    ops = 0
+    for k, v in payload.updates.items():
+        if not k or len(k) > CONTENT_KEY_MAX:
+            continue
+        if v is None:
+            v = ''
+        if len(v) > CONTENT_VALUE_MAX:
+            v = v[:CONTENT_VALUE_MAX]
+        await db.site_content.update_one(
+            {'key': k},
+            {'$set': {'key': k, 'value': v, 'updated_at': now, 'updated_by': user.get('email')}},
+            upsert=True,
+        )
+        ops += 1
+    return {'ok': True, 'updated': ops}
+
+
+@api.delete('/admin/content/{key}')
+async def admin_delete_site_content_key(key: str, user: dict = Depends(require_admin)):
+    await db.site_content.delete_one({'key': key})
+    return {'ok': True}
+
+
+# ================= PUBLIC SITE SETTINGS (music + branding) =================
+@api.get('/settings/public')
+async def get_public_settings():
+    """Non-secret settings safe for the storefront (music widget, etc.)."""
+    music_enabled = ((await get_setting('MUSIC_ENABLED', '')) or '').strip().lower() in ('true', '1', 'yes', 'on')
+    music_url = (await get_setting('MUSIC_URL', '')) or ''
+    music_label = (await get_setting('MUSIC_LABEL', 'Ambient Music')) or 'Ambient Music'
+    try:
+        volume = float(((await get_setting('MUSIC_VOLUME', '0.35')) or '0.35'))
+    except (TypeError, ValueError):
+        volume = 0.35
+    volume = max(0.0, min(1.0, volume))
+    return {
+        'music': {
+            'enabled': bool(music_enabled and music_url),
+            'url': music_url if music_enabled else '',
+            'label': music_label,
+            'volume': volume,
+        },
+    }
 
 
 # --- Mount ---
@@ -2639,6 +2791,18 @@ async def startup_event():
     await db.qr_tokens.create_index('token', unique=True)
     await db.categories.create_index('slug', unique=True)
     await db.settings.create_index('key', unique=True)
+    await db.site_content.create_index('key', unique=True)
+    # Seed default music settings on first boot (idempotent)
+    if not await db.settings.find_one({'key': 'MUSIC_URL'}):
+        default_music = 'https://customer-assets.emergentagent.com/job_wear-interactive/artifacts/rbsqc21r_Wear%20The%20Hope%20Music.mp3'
+        now = datetime.now(timezone.utc)
+        for k, v, cat in [
+            ('MUSIC_URL', default_music, 'media'),
+            ('MUSIC_LABEL', 'Wear The Hope — Ambient', 'media'),
+            ('MUSIC_ENABLED', 'true', 'media'),
+            ('MUSIC_VOLUME', '0.35', 'media'),
+        ]:
+            await db.settings.update_one({'key': k}, {'$setOnInsert': {'key': k, 'value': v, 'category': cat, 'updated_at': now}}, upsert=True)
     # TTL: auto-purge expired admin sessions
     try:
         await db.admin_sessions.create_index('expires_at', expireAfterSeconds=0)

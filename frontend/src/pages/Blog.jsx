@@ -3,10 +3,16 @@ import { Link } from 'react-router-dom';
 import { listBlogPosts } from '../lib/api';
 import { imgProps } from '../lib/imgSrc';
 import { Clock, ArrowRight } from 'lucide-react';
+import { useContentText } from '../context/ContentContext';
 
 const Blog = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const title = useContentText('blog.title');
+  const subtitle = useContentText('blog.subtitle');
+  const parts = title.split(' ');
+  const titleMain = parts.length > 1 ? parts.slice(0, -1).join(' ') + ' ' : title;
+  const titleAccent = parts.length > 1 ? parts.slice(-1)[0] : '';
 
   useEffect(() => {
     listBlogPosts({ limit: 30 }).then(d => { setItems(d.items || []); setLoading(false); }).catch(() => setLoading(false));
@@ -20,8 +26,8 @@ const Blog = () => {
       <section className="gradient-cream py-20">
         <div className="max-w-[1200px] mx-auto px-6 lg:px-10 text-center">
           <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">The journal</div>
-          <h1 className="font-serif-display text-5xl md:text-6xl">Stories of <span className="italic">hope</span></h1>
-          <p className="mt-4 text-neutral-700 max-w-xl mx-auto">Craft notes, gifting guides and stories behind the pieces we make.</p>
+          <h1 className="font-serif-display text-5xl md:text-6xl">{titleMain}<span className="italic">{titleAccent}</span></h1>
+          <p className="mt-4 text-neutral-700 max-w-xl mx-auto">{subtitle}</p>
         </div>
       </section>
 

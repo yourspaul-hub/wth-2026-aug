@@ -48,7 +48,10 @@ import PublicReviewSubmit from './pages/PublicReviewSubmit';
 import AdminCategories from './pages/admin/Categories';
 import AdminUsers from './pages/admin/Users';
 import AdminIntegrations from './pages/admin/Integrations';
+import AdminDesign from './pages/admin/Design';
 import Wishlist from './pages/Wishlist';
+import MusicWidget from './components/MusicWidget';
+import { ContentProvider } from './context/ContentContext';
 import { Toaster } from './components/ui/sonner';
 
 // Storefront chrome (navbar, footer, cart, announcement) — hidden on /admin routes and /admin/callback
@@ -108,10 +111,12 @@ function AppRouter() {
           <Route path="categories" element={<AdminCategories />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="integrations" element={<AdminIntegrations />} />
+          <Route path="design" element={<AdminDesign />} />
         </Route>
       </Routes>
       {!isAdmin && <Footer />}
       {!isAdmin && <CartDrawer />}
+      {!isAdmin && <MusicWidget />}
       <Toaster position="top-center" richColors />
     </>
   );
@@ -123,11 +128,13 @@ function App() {
       <HelmetProvider>
         <AuthProvider>
           <CurrencyProvider>
-            <CartProvider>
-              <BrowserRouter>
-                <AppRouter />
-              </BrowserRouter>
-            </CartProvider>
+            <ContentProvider>
+              <CartProvider>
+                <BrowserRouter>
+                  <AppRouter />
+                </BrowserRouter>
+              </CartProvider>
+            </ContentProvider>
           </CurrencyProvider>
         </AuthProvider>
       </HelmetProvider>

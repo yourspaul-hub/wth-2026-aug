@@ -2,9 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { listInstagram } from '../lib/api';
 import { imgProps } from '../lib/imgSrc';
 import { Instagram, Heart, MessageCircle, ExternalLink, ShoppingBag } from 'lucide-react';
+import { useContentText } from '../context/ContentContext';
 
 const InstagramFeed = ({ limit = 6, showHeader = true }) => {
   const [posts, setPosts] = useState([]);
+  const eyebrow = useContentText('home.instagram.eyebrow');
+  const title = useContentText('home.instagram.title');
 
   useEffect(() => {
     listInstagram(limit).then(setPosts).catch(() => setPosts([]));
@@ -18,11 +21,11 @@ const InstagramFeed = ({ limit = 6, showHeader = true }) => {
         {showHeader && (
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">
-              <Instagram className="w-3.5 h-3.5" /> Follow along
+              <Instagram className="w-3.5 h-3.5" /> {eyebrow}
             </div>
             <h2 className="font-serif-display text-4xl md:text-5xl">
               <a href="https://www.instagram.com/wearthehope" target="_blank" rel="noreferrer" className="hover:text-[#B4593F] transition-colors inline-flex items-center gap-3">
-                @<span className="italic">wearthehope</span> <ExternalLink className="w-5 h-5" />
+                {title || (<>@<span className="italic">wearthehope</span></>)} <ExternalLink className="w-5 h-5" />
               </a>
             </h2>
             <p className="mt-3 text-neutral-600 max-w-lg mx-auto text-sm">Tag us in your Wear The Hope moments and get featured — over 10K+ believers spreading love and hope.</p>

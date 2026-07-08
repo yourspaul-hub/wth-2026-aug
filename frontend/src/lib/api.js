@@ -14,6 +14,9 @@ export const fetchProducts = (params = {}) => api.get('/products', { params }).t
 export const fetchProduct = (id) => api.get(`/products/${id}`).then(r => r.data);
 export const fetchRecommendations = (id, limit = 8) => api.get(`/products/${id}/recommendations`, { params: { limit } }).then(r => r.data);
 export const fetchCurrencyRates = () => api.get('/currency/rates').then(r => r.data);
+export const fetchSiteContent = () => api.get('/content').then(r => r.data);
+export const adminSaveSiteContent = (updates) => api.put('/admin/content', { updates }).then(r => r.data);
+export const adminResetSiteContentKey = (key) => api.delete(`/admin/content/${encodeURIComponent(key)}`).then(r => r.data);
 export const fetchReviews = () => api.get('/reviews').then(r => r.data?.items || r.data || []);
 export const fetchReviewsFull = (params = {}) => api.get('/reviews', { params }).then(r => r.data);
 export const validateCoupon = (code, subtotal) => api.post('/coupons/validate', { code, subtotal }).then(r => r.data);

@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Users, Globe2, Sparkles, Award } from 'lucide-react';
 import { testimonials } from '../mock/mock';
+import { useContentText } from '../context/ContentContext';
 
 const stats = [
   { icon: Users, num: '10K+', label: 'Happy Customers' },
@@ -17,21 +18,30 @@ const values = [
 ];
 
 const About = () => {
+  const heroEyebrow = useContentText('about.hero.eyebrow');
+  const heroTitle = useContentText('about.hero.title');
+  const heroBody = useContentText('about.hero.body');
+  const missionTitle = useContentText('about.mission.title');
+  const missionBody = useContentText('about.mission.body');
+  const valuesTitle = useContentText('about.values.title');
+  const heroParts = heroTitle.split(' ');
+  const heroMain = heroParts.length > 2 ? heroParts.slice(0, -2).join(' ') + ' ' : heroTitle;
+  const heroAccent = heroParts.length > 2 ? heroParts.slice(-2).join(' ') : '';
   return (
-    <main className="pt-6">
+    <main className="pt-6" data-testid="about-page">
       {/* Hero */}
       <section className="gradient-cream py-24 relative overflow-hidden">
         <div className="max-w-[1200px] mx-auto px-6 lg:px-10 text-center relative">
           <div className="inline-flex items-center gap-2 bg-white/70 border border-[#EBD9CE] rounded-full px-4 py-1.5 mb-6">
             <Heart className="w-3.5 h-3.5 text-[#B4593F]" />
-            <span className="text-[11px] uppercase tracking-[0.2em]">Our Story</span>
+            <span className="text-[11px] uppercase tracking-[0.2em]">{heroEyebrow}</span>
           </div>
           <h1 className="font-serif-display text-5xl md:text-7xl leading-[1.05] text-[#1A1A1A]">
-            A small hobby that became<br />
-            <span className="italic text-[#B4593F]">a movement of hope</span>
+            {heroMain}<br />
+            <span className="italic text-[#B4593F]">{heroAccent}</span>
           </h1>
           <p className="mt-6 text-lg text-neutral-700 max-w-2xl mx-auto">
-            In December 2018, we offered our “5 loaves and 2 fish” to God with a simple prayer — to impact the people of nations through motivational, faith-inspired gifts.
+            {heroBody}
           </p>
         </div>
       </section>
@@ -60,8 +70,8 @@ const About = () => {
           </div>
           <div>
             <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">Our Mission</div>
-            <h2 className="font-serif-display text-4xl md:text-5xl leading-tight">To share the message of <span className="italic">love & hope</span> — one product at a time</h2>
-            <p className="mt-6 text-neutral-700 leading-relaxed">We create and customize products for individuals, teams, organizations and churches. From wallets to wall frames, mugs to caps — each item is thoughtfully designed to remind you of who you are in Christ.</p>
+            <h2 className="font-serif-display text-4xl md:text-5xl leading-tight">{missionTitle}</h2>
+            <p className="mt-6 text-neutral-700 leading-relaxed whitespace-pre-line">{missionBody}</p>
             <p className="mt-4 italic text-[#B4593F] font-serif-display text-2xl">“We sincerely hope our products will impact your life and those around you.”</p>
           </div>
         </div>
@@ -71,7 +81,7 @@ const About = () => {
       <section className="py-24 bg-white">
         <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
           <div className="text-center mb-14">
-            <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">What we stand for</div>
+            <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">{valuesTitle}</div>
             <h2 className="font-serif-display text-4xl md:text-5xl">Values that shape everything we do</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6">

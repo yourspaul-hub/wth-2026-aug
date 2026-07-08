@@ -4,14 +4,25 @@ import { ArrowRight, Sparkles } from 'lucide-react';
 import { heroSlides } from '../mock/mock';
 import { imgProps, preloadHref } from '../lib/imgSrc';
 import { Helmet } from 'react-helmet-async';
+import { useContent } from '../context/ContentContext';
 
 const Hero = () => {
   const [idx, setIdx] = useState(0);
+  const { get } = useContent();
   useEffect(() => {
     const t = setInterval(() => setIdx(i => (i + 1) % heroSlides.length), 6000);
     return () => clearInterval(t);
   }, []);
-  const slide = heroSlides[idx];
+  const raw = heroSlides[idx];
+  // For the primary (first) slide, allow the admin to override the text bits via Design tab.
+  // heading = main line before the italic accent | subheading = paragraph below | cta = primary CTA label
+  const slide = idx === 0 ? {
+    ...raw,
+    heading: get('home.hero.title', raw.heading),
+    subheading: get('home.hero.subtitle', raw.subheading),
+    cta: get('home.hero.cta.primary', raw.cta),
+  } : raw;
+  const secondaryCta = get('home.hero.cta.secondary', 'Our Story');
 
   return (
     <section className="relative overflow-hidden gradient-cream">
@@ -42,7 +53,7 @@ const Hero = () => {
               {slide.cta}
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </Link>
-            <Link to="/about" className="text-xs uppercase tracking-[0.2em] link-underline text-[#1A1A1A]">Our Story</Link>
+            <Link to="/about" className="text-xs uppercase tracking-[0.2em] link-underline text-[#1A1A1A]">{secondaryCta}</Link>
           </div>
 
           {/* Trust badges */}

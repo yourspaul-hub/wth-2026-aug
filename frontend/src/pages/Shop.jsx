@@ -5,6 +5,7 @@ import { products as mockProducts, categories as mockCategories } from '../mock/
 import { fetchProducts, fetchCategories } from '../lib/api';
 import { SlidersHorizontal, ChevronDown, X } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useContentText } from '../context/ContentContext';
 
 const normalize = (p) => ({ ...p, originalPrice: p.original_price ?? p.originalPrice, hoverImage: p.hover_image ?? p.hoverImage });
 
@@ -19,6 +20,11 @@ const Shop = () => {
   const [filterOpen, setFilterOpen] = useState(false);
   const [products, setProducts] = useState([]);
   const [cats, setCats] = useState(mockCategories);
+  const shopTitle = useContentText('shop.title');
+  const shopSubtitle = useContentText('shop.subtitle');
+  const filtersLabel = useContentText('shop.filters.title');
+  const emptyTitle = useContentText('shop.empty.title');
+  const emptyBody = useContentText('shop.empty.body');
 
   useEffect(() => {
     fetchCategories().then(cs => { if (cs?.length) setCats(cs.map(c => ({ ...c, comingSoon: c.coming_soon }))); }).catch(() => {});
@@ -43,8 +49,8 @@ const Shop = () => {
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [categorySlug]);
 
-  const title = wishlistView ? 'Your Wishlist' : currentCategory ? currentCategory.name : q ? `Search: "${q}"` : 'All Collections';
-  const subtitle = wishlistView ? 'Saved items just for you' : currentCategory?.tagline || 'Explore our full range';
+  const title = wishlistView ? 'Your Wishlist' : currentCategory ? currentCategory.name : q ? `Search: "${q}"` : shopTitle;
+  const subtitle = wishlistView ? 'Saved items just for you' : currentCategory?.tagline || shopSubtitle;
 
   return (
     <main className="pt-6 pb-24">
@@ -73,7 +79,7 @@ const Shop = () => {
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10 flex items-center justify-between border-y border-[#EBD9CE] py-4 mb-8">
         <div className="flex items-center gap-4">
           <button onClick={() => setFilterOpen(true)} className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em]">
-            <SlidersHorizontal className="w-4 h-4" /> Filters
+            <SlidersHorizontal className="w-4 h-4" /> {filtersLabel}
           </button>
           <span className="text-xs text-neutral-500">{list.length} products</span>
         </div>
@@ -114,8 +120,8 @@ const Shop = () => {
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
         {list.length === 0 ? (
           <div className="text-center py-20">
-            <div className="font-serif-display text-3xl mb-3">Nothing here yet</div>
-            <p className="text-neutral-600 mb-6">Try adjusting your filters or explore other collections.</p>
+            <div className="font-serif-display text-3xl mb-3">{emptyTitle}</div>
+            <p className="text-neutral-600 mb-6">{emptyBody}</p>
             <Link to="/shop" className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-6 py-3 rounded-full text-xs uppercase tracking-[0.2em] transition-colors">Browse All</Link>
           </div>
         ) : (

@@ -8,32 +8,37 @@ import Testimonials from '../components/Testimonials';
 import ReviewsSection from '../components/ReviewsSection';
 import AboutStory from '../components/AboutStory';
 import { Truck, Sparkles, ShieldCheck, RefreshCw } from 'lucide-react';
+import { useContent } from '../context/ContentContext';
 
-const FeatureStrip = () => (
-  <section className="bg-white border-y border-[#EBD9CE]">
-    <div className="max-w-[1400px] mx-auto px-6 lg:px-10 grid grid-cols-2 md:grid-cols-4 gap-6 py-10">
-      {[
-        { icon: Truck, title: 'Ships Worldwide', sub: 'Free over ₹999 in India' },
-        { icon: Sparkles, title: 'Fully Customizable', sub: 'Laser engraving on request' },
-        { icon: ShieldCheck, title: 'Handcrafted Quality', sub: 'Every item checked twice' },
-        { icon: RefreshCw, title: 'Easy Returns', sub: '7-day hassle-free returns' },
-      ].map((f, i) => {
-        const Icon = f.icon;
-        return (
-          <div key={i} className="flex items-center gap-4">
-            <div className="w-11 h-11 rounded-full bg-[#FDF3EB] flex items-center justify-center border border-[#EBD9CE]">
-              <Icon className="w-5 h-5 text-[#B4593F]" />
+const FeatureStrip = () => {
+  const { get } = useContent();
+  const strip = [
+    { icon: Truck, title: get('home.strip.1.title'), sub: get('home.strip.1.sub') },
+    { icon: Sparkles, title: get('home.strip.2.title'), sub: get('home.strip.2.sub') },
+    { icon: ShieldCheck, title: get('home.strip.3.title'), sub: get('home.strip.3.sub') },
+    { icon: RefreshCw, title: get('home.strip.4.title'), sub: get('home.strip.4.sub') },
+  ];
+  return (
+    <section className="bg-white border-y border-[#EBD9CE]">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-10 grid grid-cols-2 md:grid-cols-4 gap-6 py-10">
+        {strip.map((f, i) => {
+          const Icon = f.icon;
+          return (
+            <div key={i} className="flex items-center gap-4">
+              <div className="w-11 h-11 rounded-full bg-[#FDF3EB] flex items-center justify-center border border-[#EBD9CE] shrink-0">
+                <Icon className="w-5 h-5 text-[#B4593F]" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-[#1A1A1A]">{f.title}</div>
+                <div className="text-[11px] text-neutral-500 mt-0.5">{f.sub}</div>
+              </div>
             </div>
-            <div>
-              <div className="text-sm font-medium text-[#1A1A1A]">{f.title}</div>
-              <div className="text-[11px] text-neutral-500 mt-0.5">{f.sub}</div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  </section>
-);
+          );
+        })}
+      </div>
+    </section>
+  );
+};
 
 const Home = () => {
   return (
