@@ -1,7 +1,17 @@
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-export const API_BASE = `${BACKEND_URL}/api`;
+
+// Fail loudly in the browser console when the env var is missing on the deploy
+// target (a common cause of "flash then blank" in Vercel/Netlify builds).
+if (!BACKEND_URL && typeof window !== 'undefined') {
+  console.error(
+    '[api] REACT_APP_BACKEND_URL is not set. Configure it in your deployment ' +
+    'platform (Vercel → Settings → Environment Variables) and redeploy.'
+  );
+}
+
+export const API_BASE = `${BACKEND_URL || ''}/api`;
 
 export const api = axios.create({
   baseURL: API_BASE,

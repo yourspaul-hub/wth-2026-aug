@@ -3,5 +3,8 @@
   "installCommand": "yarn install --frozen-lockfile",
   "buildCommand": "CI=false yarn build",
   "outputDirectory": "build",
-  "framework": "create-react-app"
+  "framework": "create-react-app",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }

@@ -52,6 +52,7 @@ import AdminDesign from './pages/admin/Design';
 import Wishlist from './pages/Wishlist';
 import MusicWidget from './components/MusicWidget';
 import ScrollToTop from './components/ScrollToTop';
+import ErrorBoundary from './components/ErrorBoundary';
 import { ContentProvider } from './context/ContentContext';
 import { Toaster } from './components/ui/sonner';
 
@@ -127,19 +128,21 @@ function AppRouter() {
 function App() {
   return (
     <div className="App">
-      <HelmetProvider>
-        <AuthProvider>
-          <CurrencyProvider>
-            <ContentProvider>
-              <CartProvider>
-                <BrowserRouter>
-                  <AppRouter />
-                </BrowserRouter>
-              </CartProvider>
-            </ContentProvider>
-          </CurrencyProvider>
-        </AuthProvider>
-      </HelmetProvider>
+      <ErrorBoundary>
+        <HelmetProvider>
+          <AuthProvider>
+            <CurrencyProvider>
+              <ContentProvider>
+                <CartProvider>
+                  <BrowserRouter>
+                    <AppRouter />
+                  </BrowserRouter>
+                </CartProvider>
+              </ContentProvider>
+            </CurrencyProvider>
+          </AuthProvider>
+        </HelmetProvider>
+      </ErrorBoundary>
     </div>
   );
 }
