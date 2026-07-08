@@ -23,8 +23,9 @@ const Wishlist = () => {
 
   const moveAll = () => {
     if (!wishlist.length) return;
-    wishlist.forEach(p => addToCart(p, 1));
-    toast.success(`${wishlist.length} item(s) moved to bag`);
+    const count = wishlist.length;
+    wishlist.forEach(p => { addToCart(p, 1); toggleWishlist(p); });
+    toast.success(`${count} item(s) moved to bag`);
   };
 
   const moveOne = (p) => {

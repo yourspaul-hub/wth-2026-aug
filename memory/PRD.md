@@ -20,8 +20,16 @@ Full-featured, dynamic e-commerce clone of www.wearthehope.com with a comprehens
 - Bug-fix round — Nav overlap + Footer QR ✅ 6/6
 - Phase H — Reviews list envelope + Storefront section ✅ 22/22
 - **Phase I — Image pipeline + Frontend perf ✅ 20/21** (2026-02-08)
+- **Phase J — Wishlist page + Recommendations + Multi-currency (INR/USD/EUR/GBP/AUD/AED) + i18n EN/HI ✅ 30/31** (2026-02-08)
 
-**Total backend tests**: 204+ (203 pass; 1 non-code infra note about ingress rewriting Cache-Control)
+**Total backend tests**: 218+ (all passing)
+
+### Phase J highlights
+- **Wishlist**: dedicated `/wishlist` page with grid, move-to-bag / move-all / clear, nav heart with badge count.
+- **Recommendations**: `GET /api/products/{id}/recommendations` with 3-tier fallback (same category → shared collections → top-rated); `<RelatedProducts>` on PDP.
+- **Recently Viewed**: localStorage-backed (max 12), `<RecentlyViewed>` on PDP + wishlist page.
+- **Multi-currency**: `GET /api/currency/rates` public endpoint (INR base) + admin override via `CURRENCY_RATES` setting. `CurrencyContext` with `format()` using `Intl.NumberFormat`. Prices in ProductCard, PDP, cart drawer, checkout all currency-aware. INR conversion notice on checkout when non-INR selected.
+- **Multi-language**: `react-i18next` with EN + HI locales; `<LangCurrencyMenu>` in navbar; persisted via localStorage.
 
 ### Phase I highlights
 - **Image pipeline** (backend):

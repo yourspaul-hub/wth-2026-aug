@@ -47,7 +47,7 @@ const LangCurrencyMenu = () => {
             return (
               <button
                 key={l.code}
-                onClick={() => setLanguage(l.code)}
+                onClick={() => { setLanguage(l.code); setOpen(false); }}
                 className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${active ? 'bg-[#FDF3EB] text-[#B4593F]' : 'hover:bg-[#FDF3EB]'}`}
                 data-testid={`lang-option-${l.code}`}
               >
