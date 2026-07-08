@@ -2800,7 +2800,7 @@ async def startup_event():
             ('MUSIC_URL', default_music, 'media'),
             ('MUSIC_LABEL', 'Wear The Hope — Ambient', 'media'),
             ('MUSIC_ENABLED', 'true', 'media'),
-            ('MUSIC_VOLUME', '0.35', 'media'),
+            ('MUSIC_VOLUME', '0.30', 'media'),
         ]:
             await db.settings.update_one({'key': k}, {'$setOnInsert': {'key': k, 'value': v, 'category': cat, 'updated_at': now}}, upsert=True)
     # TTL: auto-purge expired admin sessions

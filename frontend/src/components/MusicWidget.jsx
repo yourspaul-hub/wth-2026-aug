@@ -12,23 +12,23 @@ const writeState = (s) => {
 };
 
 /**
- * Floating ambient music widget. Bottom-right on every page.
- * - Fetches URL/label/default volume from /api/settings/public
- * - Starts paused (browser autoplay policy). If the visitor previously enabled
- *   playback, we attempt resume; otherwise we show a subtle "Play" pulse.
- * - Persists play state, volume, and mute across visits (localStorage).
- * - Hides itself completely when the admin has disabled music.
+ * Ambient music: autoplay-on-arrival with a graceful fallback to comply with
+ * browser autoplay policies.
+ *   1. Fetch admin settings; if enabled, attempt unmuted autoplay at the admin volume (~30%).
+ *   2. If the browser blocks autoplay, fall back to MUTED autoplay (allowed by all major browsers).
+ *   3. On the very first user gesture (click/touch/keydown/scroll), unmute the audio.
+ *   4. Visitor can still Pause/Mute/Hide from the floating widget. Preferences persist via localStorage.
  */
 const MusicWidget = () => {
   const [settings, setSettings] = useState(null);
   const persisted = useMemo(readState, []);
   const [playing, setPlaying] = useState(false);
-  const [muted, setMuted] = useState(persisted.muted ?? false);
-  const [volume, setVolume] = useState(persisted.volume ?? 0.35);
+  const [muted, setMuted] = useState(persisted.muted ?? true); // start muted → HTML5 autoplay is allowed on all browsers
+  const [volume, setVolume] = useState(persisted.volume ?? 0.30);
   const [collapsed, setCollapsed] = useState(persisted.collapsed ?? true);
   const [hidden, setHidden] = useState(persisted.hidden ?? false);
-  const [showPlayHint, setShowPlayHint] = useState(false);
   const audioRef = useRef(null);
+  const autoplayTriedRef = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -36,13 +36,12 @@ const MusicWidget = () => {
       if (!alive) return;
       const s = r.data?.music || {};
       setSettings(s);
-      // Prefer persisted volume; fall back to admin default
       if (persisted.volume == null && typeof s.volume === 'number') setVolume(s.volume);
     }).catch(() => {});
     return () => { alive = false; };
   }, []);
 
-  // Sync <audio> element with state
+  // Keep the audio element in sync with widget state.
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
@@ -50,29 +49,46 @@ const MusicWidget = () => {
     a.muted = muted;
   }, [volume, muted]);
 
-  // Persist on any change
+  // Persist widget state (volume, muted, collapsed, hidden, playing) — used on the next visit.
   useEffect(() => {
     writeState({ volume, muted, collapsed, hidden, wantsPlay: playing });
   }, [volume, muted, collapsed, hidden, playing]);
 
-  // Attempt to resume audio if the visitor previously enabled it
+  // Autoplay attempt (on arrival). Runs once when settings arrive and playback isn't explicitly hidden.
   useEffect(() => {
-    if (!settings?.enabled || !settings.url) return;
-    if (!persisted.wantsPlay) return;
+    if (!settings?.enabled || !settings.url || hidden) return;
+    if (autoplayTriedRef.current) return;
+    autoplayTriedRef.current = true;
     const a = audioRef.current;
     if (!a) return;
-    const attempt = async () => {
-      try {
-        await a.play();
-        setPlaying(true);
-        setShowPlayHint(false);
-      } catch {
-        // Autoplay blocked — surface a gentle CTA the first time
-        setShowPlayHint(true);
-      }
+
+    // Returning visitor who explicitly PAUSED before → don't force-resume.
+    const returningPaused = persisted.wantsPlay === false;
+    if (returningPaused) { a.pause(); return; }
+
+    // Kick off playback (native autoPlay muted should already have started).
+    // Then arm a "first user gesture" listener that unmutes so audio becomes audible.
+    a.muted = muted;
+    a.play().catch(() => { /* headless / power-save may block even muted; harmless */ });
+    if (muted) armUnmuteOnGesture();
+  }, [settings, hidden]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // If we started muted (autoplay policy), unmute on the first user gesture.
+  const armUnmuteOnGesture = () => {
+    const unmute = () => {
+      const a = audioRef.current;
+      if (a) { a.muted = false; }
+      setMuted(false);
+      window.removeEventListener('pointerdown', unmute, true);
+      window.removeEventListener('keydown', unmute, true);
+      window.removeEventListener('touchstart', unmute, true);
+      window.removeEventListener('scroll', unmute, true);
     };
-    attempt();
-  }, [settings]);
+    window.addEventListener('pointerdown', unmute, { capture: true, once: true });
+    window.addEventListener('keydown', unmute, { capture: true, once: true });
+    window.addEventListener('touchstart', unmute, { capture: true, once: true, passive: true });
+    window.addEventListener('scroll', unmute, { capture: true, once: true, passive: true });
+  };
 
   if (!settings || !settings.enabled || !settings.url || hidden) return null;
 
@@ -81,10 +97,9 @@ const MusicWidget = () => {
     if (!a) return;
     try {
       if (playing) { a.pause(); setPlaying(false); }
-      else { await a.play(); setPlaying(true); }
-      setShowPlayHint(false);
+      else { a.muted = muted; await a.play(); setPlaying(true); }
       setCollapsed(false);
-    } catch { setShowPlayHint(true); }
+    } catch { /* ignore */ }
   };
 
   return (
@@ -92,21 +107,35 @@ const MusicWidget = () => {
       className="fixed z-40 bottom-20 right-4 md:bottom-6 md:right-6 select-none"
       data-testid="music-widget"
     >
-      <audio ref={audioRef} src={settings.url} loop preload="none" />
+      <audio
+        ref={audioRef}
+        src={settings.url}
+        loop
+        autoPlay
+        muted
+        preload="auto"
+        onPlay={() => setPlaying(true)}
+        onPause={() => { if (!hidden) setPlaying(false); }}
+      />
 
       {/* Collapsed pill */}
       {collapsed && (
         <button
           onClick={toggle}
           onDoubleClick={() => setCollapsed(false)}
-          className={`group flex items-center gap-2 pl-3 pr-4 py-2.5 bg-[#1A1A1A]/95 hover:bg-[#B4593F] text-white rounded-full shadow-2xl backdrop-blur transition-all ${showPlayHint ? 'ring-2 ring-[#E88864] animate-pulse' : ''}`}
+          className="group flex items-center gap-2 pl-3 pr-4 py-2.5 bg-[#1A1A1A]/95 hover:bg-[#B4593F] text-white rounded-full shadow-2xl backdrop-blur transition-all"
           aria-label={playing ? 'Pause ambient music' : 'Play ambient music'}
           data-testid="music-widget-toggle"
         >
           <span className="relative flex items-center justify-center w-6 h-6 rounded-full bg-[#B4593F] group-hover:bg-white/20 transition-colors">
             {playing ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 pl-0.5" />}
+            {playing && !muted && (
+              <span className="absolute inset-0 rounded-full ring-2 ring-[#E88864] animate-ping opacity-60" aria-hidden />
+            )}
           </span>
-          <span className="text-[10px] uppercase tracking-[0.2em]">{playing ? 'Playing' : 'Music'}</span>
+          <span className="text-[10px] uppercase tracking-[0.2em]">
+            {playing ? (muted ? 'Tap to unmute' : 'Playing') : 'Music'}
+          </span>
           <span
             role="button"
             tabIndex={0}
