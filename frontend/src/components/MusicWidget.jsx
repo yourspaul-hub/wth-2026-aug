@@ -28,6 +28,7 @@ const MusicWidget = () => {
   const [collapsed, setCollapsed] = useState(persisted.collapsed ?? true);
   const [hidden, setHidden] = useState(persisted.hidden ?? false);
   const audioRef = useRef(null);
+  const widgetRef = useRef(null);
   const autoplayTriedRef = useRef(false);
 
   useEffect(() => {
@@ -73,16 +74,21 @@ const MusicWidget = () => {
   // scroll, keydown. Handlers are attached to the DOCUMENT (not window) so they
   // don't interfere with the widget button clicks. `once: true` removes them
   // after firing once.
+  // Chrome's autoplay policy: only click/tap/keydown count as "activation
+  // gestures" that let JS unmute audio. Mousemove does NOT. So we listen for
+  // real gestures and do a pause→unmute→play cycle (exactly what pressing
+  // pause→play manually does — which the user confirmed works).
   const armUnmuteOnGesture = () => {
-    // Note: no 'click' — clicking the widget itself must not trigger unmute
-    // (the button's own onClick handles toggle).
-    const events = ['mousemove', 'touchstart', 'keydown', 'scroll', 'wheel'];
-    const unmute = () => {
+    const events = ['click', 'touchend', 'keydown'];
+    const unmute = async () => {
       const a = audioRef.current;
       if (a) {
-        a.muted = false;
-        a.volume = 0.30;
-        if (a.paused) { a.play().catch(() => {}); }
+        try {
+          a.pause();
+          a.muted = false;
+          a.volume = 0.30;
+          await a.play();
+        } catch { /* recoverable — user can click widget */ }
       }
       setMuted(false);
       events.forEach(ev => document.removeEventListener(ev, unmute));
@@ -104,6 +110,7 @@ const MusicWidget = () => {
 
   return (
     <div
+      ref={widgetRef}
       className="fixed z-40 bottom-20 right-4 md:bottom-6 md:right-6 select-none"
       data-testid="music-widget"
     >
