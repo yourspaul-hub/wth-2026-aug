@@ -49,28 +49,23 @@ const MusicWidget = () => {
     a.muted = muted;
   }, [volume, muted]);
 
-  // Persist widget state — used on the next visit.
+  // Persist widget state — only visual preferences carry across visits.
   useEffect(() => {
-    writeState({ volume, muted, collapsed, hidden, wantsPlay: playing });
-  }, [volume, muted, collapsed, hidden, playing]);
+    writeState({ volume, muted, collapsed, hidden });
+  }, [volume, muted, collapsed, hidden]);
 
-  // Autoplay on arrival: browsers block audio-with-sound before any interaction,
-  // so we start MUTED (allowed by all browsers) and unmute on the first user
-  // signal (mouse move, tap, scroll, keydown). In practice that unmute happens
-  // within milliseconds — the visitor perceives the track as "just playing".
+  // Autoplay on arrival. We ALWAYS attempt playback on load — the only way to
+  // silence music is to hide the widget ("Hide music widget" link). Any
+  // session-level pause the visitor did previously does not carry over.
   useEffect(() => {
     if (!settings?.enabled || !settings.url || hidden) return;
     if (autoplayTriedRef.current) return;
     autoplayTriedRef.current = true;
     const a = audioRef.current;
     if (!a) return;
-
-    // Returning visitor who explicitly PAUSED before → don't force-resume.
-    if (persisted.wantsPlay === false) { a.pause(); return; }
-
-    a.muted = muted;
+    a.muted = true;                    // start muted → browsers allow autoplay
     a.volume = volume || 0.30;
-    a.play().catch(() => { /* headless / power-save may block even muted; gesture handler recovers */ });
+    a.play().catch(() => { /* recover via gesture handler */ });
     armUnmuteOnGesture();
   }, [settings, hidden]);
 
