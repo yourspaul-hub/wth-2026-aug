@@ -212,9 +212,11 @@ class TestOrderLifecycle:
         o = d['order']
         assert o['payment_status'] == 'paid'
         assert o['status'] == 'paid'
-        # Shiprocket AWB assigned
-        assert o.get('shiprocket_awb', '').startswith('SR'), o.get('shiprocket_awb')
-        assert o.get('tracking_url', '').startswith('https://shiprocket.co/tracking/')
+        # Note: auto-AWB from verify_payment was intentionally removed in Phase L
+        # in favour of manual admin fulfilment (POST /admin/orders/{on}/fulfill).
+        # A freshly-paid order should therefore have NO tracking info yet.
+        assert not o.get('shiprocket_awb'), 'awb should not be auto-assigned on payment verify'
+        assert not o.get('tracking_url'), 'tracking url should not be auto-assigned on payment verify'
 
         # order_paid email queued
         emails = admin_client.get(f'{API}/admin/emails', params={'template': 'order_paid'}).json()

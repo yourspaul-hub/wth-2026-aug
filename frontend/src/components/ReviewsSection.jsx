@@ -40,61 +40,29 @@ const ReviewsSection = () => {
 
   const stats = data.stats || {};
   const totalPublished = stats.total_all_published || 0;
-  const percents = useMemo(() => {
-    const t = totalPublished || 1;
-    const b = stats.breakdown || {};
-    return [5, 4, 3, 2, 1].map(k => ({ k, c: b[String(k)] || 0, pct: Math.round(((b[String(k)] || 0) / t) * 100) }));
-  }, [stats, totalPublished]);
 
   if (totalPublished === 0) return null;
 
   return (
     <section className="py-20 bg-white" data-testid="reviews-section">
       <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
-        <div className="text-center mb-12">
+        <div className="text-center mb-10 max-w-2xl mx-auto">
           <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">Loved by 1000+ believers</div>
           <h2 className="font-serif-display text-4xl md:text-5xl">What our <span className="italic">community</span> says</h2>
+          <p className="text-neutral-700 leading-relaxed mt-5">Real words from customers around the world — pulled live from Google Business, verified purchase submissions, and reviews shared by our community.</p>
         </div>
 
-        <div className="grid md:grid-cols-[minmax(0,320px)_1fr] gap-10 mb-10 items-start">
-          {/* Summary */}
-          <div className="bg-[#FDF3EB] rounded-2xl border border-[#EBD9CE] p-6" data-testid="reviews-summary">
-            <div className="flex items-baseline gap-3 mb-2">
-              <div className="font-serif-display text-5xl">{(stats.average || 0).toFixed(1)}</div>
-              <div className="text-sm text-neutral-600">out of 5</div>
-            </div>
-            <Stars n={Math.round(stats.average || 0)} size={4} />
-            <div className="text-xs text-neutral-500 mt-2">Based on {totalPublished} review{totalPublished === 1 ? '' : 's'}</div>
-            <div className="mt-5 space-y-1.5">
-              {percents.map(({ k, c, pct }) => (
-                <div key={k} className="flex items-center gap-2 text-xs">
-                  <span className="w-3 text-neutral-600">{k}</span>
-                  <Star className="w-3 h-3 fill-[#F5B342] text-[#F5B342]" />
-                  <div className="flex-1 h-1.5 bg-white rounded-full overflow-hidden">
-                    <div className="h-full bg-[#B4593F]" style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className="w-8 text-right text-neutral-500">{c}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Filter chips + intro */}
-          <div>
-            <p className="text-neutral-700 leading-relaxed">Real words from customers around the world — pulled live from Google Business, verified purchase submissions, and reviews shared by our community.</p>
-            <div className="flex flex-wrap gap-2 mt-5" data-testid="reviews-filters">
-              {FILTERS.map(f => (
-                <button
-                  key={f.key}
-                  onClick={() => setFilter(f.key)}
-                  data-testid={`reviews-filter-${f.key}`}
-                  className={`text-xs uppercase tracking-widest px-4 py-2 rounded-full transition-colors ${filter === f.key ? 'bg-[#1A1A1A] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-          </div>
+        <div className="flex flex-wrap gap-2 justify-center mb-10" data-testid="reviews-filters">
+          {FILTERS.map(f => (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              data-testid={`reviews-filter-${f.key}`}
+              className={`text-xs uppercase tracking-widest px-4 py-2 rounded-full transition-colors ${filter === f.key ? 'bg-[#1A1A1A] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
 
         {/* Reviews grid */}

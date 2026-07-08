@@ -54,6 +54,15 @@ Full-featured, dynamic e-commerce clone of www.wearthehope.com with a comprehens
   - Applied to: Hero, ProductCard, InstagramFeed, ReviewsSection, Blog list, BlogPost, review avatars/photos
 
 ## Backlog / Roadmap
+### Phase L — Admin Order Fulfilment + Data Reset + Import + Reviews cleanup ✅ (2026-07-08)
+- **Fulfil Order flow** in admin Orders drawer: modal with 4 methods (Courier / Hand delivery / Door delivery / Store pickup). Courier collects courier from India + international dropdown (`GET /api/admin/couriers`, 27 couriers), AWB (required), tracking URL (optional). `POST /api/admin/orders/{on}/fulfill` sets status='shipped' for courier or 'delivered' for hand/door/store, sends `order_shipped` or `order_delivered` email automatically.
+- **New email template**: `order_delivered` (for hand/door/store closure).
+- **Removed** mock Shiprocket auto-AWB assignment from `verify_payment` — fresh orders now stay unfulfilled until admin acts.
+- **Reset store data** page at `/admin/reset-data`: 15 granular targets (orders, products, reviews, blog, collections, categories, instagram, newsletter, emails, analytics, locations, shipping_rules, coupons, images, seo) with checkboxes + doc counts. Requires typing `RESET` to confirm. Never wipes admin_users, admin_sessions, settings, site_content.
+- **Import past orders** button on admin Orders header: uploads CSV/XLSX → `POST /api/admin/orders/import`. Template downloadable from `GET /api/admin/orders/import-template.csv`. Creates new orders or updates by `order_number`. Row-level error reporting.
+- **Homepage cleanup**: removed redundant Testimonials block (`Loved by believers worldwide` / `What Our Customers Say`). ReviewsSection got load-more pagination (PAGE_SIZE=9) and lost its ratings summary card (5.0 out of 5 / breakdown bars) per user request — cleaner centered layout with just filters + review grid.
+- **Testing**: 23/23 new Phase L pytests pass. Frontend smoke pass on home/admin orders/admin reset-data.
+
 ### P0 — Deployment on Emergent ✅ (2026-07-08)
 User pivoted from Vercel → **Emergent-hosted deployment** with custom domain.
 - Emergent branding removed from frontend `index.html` (PostHog tracking script), `AdminLogin.jsx` (auth URL via `REACT_APP_AUTH_URL`), `App.js` comment, and `testIds/home.js` (unused `emergentLink`).
