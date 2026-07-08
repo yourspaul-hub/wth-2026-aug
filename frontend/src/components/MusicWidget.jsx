@@ -27,6 +27,9 @@ const MusicWidget = () => {
   const [volume, setVolume] = useState(persisted.volume ?? 0.30);
   const [collapsed, setCollapsed] = useState(persisted.collapsed ?? true);
   const [hidden, setHidden] = useState(persisted.hidden ?? false);
+  // Welcome prompt: shown on the very first visit until the user makes a choice.
+  const [askedPref, setAskedPref] = useState(persisted.askedPref ?? false);
+  const [showPrompt, setShowPrompt] = useState(false);
   const audioRef = useRef(null);
   const autoplayTriedRef = useRef(false);
 
@@ -49,10 +52,10 @@ const MusicWidget = () => {
     a.muted = muted;
   }, [volume, muted]);
 
-  // Persist widget state (volume, muted, collapsed, hidden, playing) — used on the next visit.
+  // Persist widget state (volume, muted, collapsed, hidden, playing, askedPref) — used on the next visit.
   useEffect(() => {
-    writeState({ volume, muted, collapsed, hidden, wantsPlay: playing });
-  }, [volume, muted, collapsed, hidden, playing]);
+    writeState({ volume, muted, collapsed, hidden, wantsPlay: playing, askedPref });
+  }, [volume, muted, collapsed, hidden, playing, askedPref]);
 
   // Autoplay attempt (on arrival). Runs once when settings arrive and playback isn't explicitly hidden.
   useEffect(() => {
@@ -62,17 +65,44 @@ const MusicWidget = () => {
     const a = audioRef.current;
     if (!a) return;
 
-    // Returning visitor who explicitly PAUSED before → don't force-resume.
-    const returningPaused = persisted.wantsPlay === false;
-    if (returningPaused) { a.pause(); return; }
+    // Returning visitor who declined the welcome prompt → don't play anything.
+    if (askedPref && persisted.wantsPlay === false) { a.pause(); return; }
 
-    // Kick off playback (native autoPlay muted should already have started).
-    // Regardless of the outcome, arm a "first user gesture" listener so any interaction
-    // guarantees the track plays (and unmutes) — this is the browser-compliant path.
-    a.muted = muted;
-    a.play().catch(() => { /* headless / policy blocked; gesture handler will recover */ });
-    armUnmuteOnGesture();
-  }, [settings, hidden]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Returning visitor who accepted → resume playback unmuted at their volume.
+    if (askedPref && persisted.wantsPlay !== false) {
+      a.muted = false;
+      a.volume = volume;
+      a.play().catch(() => {
+        // Rare edge — recover on next gesture.
+        a.muted = true; a.play().catch(() => {});
+        armUnmuteOnGesture();
+      });
+      return;
+    }
+
+    // First-time visitor → show the welcome prompt. Meanwhile HTML5 autoPlay muted is running in the background.
+    setShowPrompt(true);
+  }, [settings, hidden]);
+
+  // User's choice from the welcome prompt.
+  const acceptMusic = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    a.muted = false;
+    a.volume = 0.30;
+    a.play().catch(() => {});
+    setMuted(false);
+    setVolume(0.30);
+    setAskedPref(true);
+    setShowPrompt(false);
+  };
+  const declineMusic = () => {
+    const a = audioRef.current;
+    if (a) a.pause();
+    setPlaying(false);
+    setAskedPref(true);
+    setShowPrompt(false);
+  };
 
   // Unmute + resume playback on the FIRST user signal — mousemove, scroll,
   // click, keydown, or touchstart. In practice mousemove fires within ~200ms
@@ -119,6 +149,50 @@ const MusicWidget = () => {
         onPlay={() => setPlaying(true)}
         onPause={() => { if (!hidden) setPlaying(false); }}
       />
+
+      {/* First-visit welcome prompt — a click here counts as a user gesture,
+          so we can start audio unmuted immediately after "Yes, play". */}
+      {showPrompt && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300"
+          onClick={(e) => { if (e.target === e.currentTarget) declineMusic(); }}
+          data-testid="music-welcome-modal"
+        >
+          <div className="w-full sm:w-[440px] mx-4 mb-4 sm:mb-0 bg-[#FDF3EB] rounded-3xl shadow-2xl overflow-hidden border border-[#EBD9CE]">
+            <div className="relative bg-gradient-to-br from-[#F5D0CE] via-[#FDF3EB] to-[#EBD9CE] px-8 pt-8 pb-6 text-center">
+              <div className="w-16 h-16 mx-auto rounded-full bg-white shadow-lg flex items-center justify-center border border-[#EBD9CE]">
+                <Music className="w-7 h-7 text-[#B4593F]" />
+              </div>
+              <h3 className="mt-5 font-serif-display text-2xl md:text-3xl text-[#1A1A1A] leading-tight">
+                A little <span className="italic text-[#B4593F]">hope</span> in your ears?
+              </h3>
+              <p className="mt-3 text-sm text-neutral-700 leading-relaxed">
+                We&apos;ve set aside a gentle worship track to keep you company while you browse. Softly, at 30% volume.
+              </p>
+            </div>
+            <div className="px-6 pb-6 pt-2 flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={acceptMusic}
+                className="flex-1 inline-flex items-center justify-center gap-2 bg-[#B4593F] hover:bg-[#9E4B32] text-white px-5 py-3.5 rounded-full text-xs uppercase tracking-[0.2em] transition-colors"
+                data-testid="music-welcome-accept"
+                autoFocus
+              >
+                <Play className="w-3.5 h-3.5" /> Yes, play softly
+              </button>
+              <button
+                onClick={declineMusic}
+                className="flex-1 inline-flex items-center justify-center gap-2 bg-white hover:bg-[#F5D0CE]/60 text-[#1A1A1A] border border-[#EBD9CE] px-5 py-3.5 rounded-full text-xs uppercase tracking-[0.2em] transition-colors"
+                data-testid="music-welcome-decline"
+              >
+                No, thanks
+              </button>
+            </div>
+            <div className="px-6 pb-5 text-center text-[10px] text-neutral-500">
+              You can pause anytime from the player at the bottom-right.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Collapsed pill */}
       {collapsed && (
