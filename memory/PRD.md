@@ -58,7 +58,9 @@ Full-featured, dynamic e-commerce clone of www.wearthehope.com with a comprehens
 - Emergent branding removed from frontend `index.html` (PostHog tracking script), `AdminLogin.jsx` (auth URL via `REACT_APP_AUTH_URL`), `App.js` comment, and `testIds/home.js` (unused `emergentLink`).
 - Backend cleaned: `server.py` docstring, default music seed now sourced from `DEFAULT_MUSIC_URL` env (empty by default), CORS now respects `CORS_ORIGINS` env, `auth.py` broker URL configurable via `AUTH_SESSION_URL`.
 - `requirements.txt`: removed unused `emergentintegrations`, replaced `litellm` Emergent-hosted wheel URL with PyPI `litellm==1.80.0`.
-- Added `backend/Procfile` (uvicorn start command) and `backend/.env.example` documenting all env vars for Render/Railway/Fly deployments.
+- Added `backend/Procfile` (uvicorn start command) and `backend/.env.example` documenting all env vars.
+- **Deployment resilience** (2026-07-08 later): added `ErrorBoundary` at App root (prevents "flash then blank" from unhandled render errors), console warning in `lib/api.js` when `REACT_APP_BACKEND_URL` missing, SPA rewrites in `vercel.json`.
+- **Backend hosting guide**: `render.yaml` blueprint + `DEPLOYMENT.md` explaining why FastAPI + Motor + GridFS backend cannot run on Vercel serverless and how to deploy on Render + Atlas free tier instead.
 
 ### P1
 - Split `server.py` (~2900 lines) into modules per phase (deferred — dedicated round)
