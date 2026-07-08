@@ -1460,9 +1460,8 @@ async def bulk_upload_products(file: UploadFile = File(...), user: dict = Depend
         processed_urls = []
         for src in img_inputs[:4]:
             try:
-                # If it's already a served URL from our own store, keep as-is
-                if src.startswith('/api/images/') or src.startswith(('http://', 'https://')) and 'drive.google' not in src.lower():
-                    # Public non-Drive URL: keep as-is (fast path). Drive links are always re-hosted.
+                # Keep own-CDN paths and plain public URLs as-is; always re-host Drive links via the pipeline.
+                if src.startswith('/api/images/') or (src.startswith(('http://', 'https://')) and 'drive.google' not in src.lower()):
                     processed_urls.append(src)
                 else:
                     meta = await _store_image_from_url(src, uploaded_by=user.get('email'))
