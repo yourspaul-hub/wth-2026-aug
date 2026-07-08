@@ -20,13 +20,15 @@ const values = [
 const About = () => {
   const heroEyebrow = useContentText('about.hero.eyebrow');
   const heroTitle = useContentText('about.hero.title');
+  const heroAccent = useContentText('about.hero.title_accent');
   const heroBody = useContentText('about.hero.body');
+  const missionEyebrow = useContentText('about.mission.eyebrow', 'Our Mission');
   const missionTitle = useContentText('about.mission.title');
+  const missionAccent = useContentText('about.mission.title_accent');
   const missionBody = useContentText('about.mission.body');
+  const missionQuote = useContentText('about.mission.quote', '"We sincerely hope our products will impact your life and those around you."');
+  const valuesEyebrow = useContentText('about.values.eyebrow', 'What we stand for');
   const valuesTitle = useContentText('about.values.title');
-  const heroParts = heroTitle.split(' ');
-  const heroMain = heroParts.length > 2 ? heroParts.slice(0, -2).join(' ') + ' ' : heroTitle;
-  const heroAccent = heroParts.length > 2 ? heroParts.slice(-2).join(' ') : '';
   return (
     <main className="pt-6" data-testid="about-page">
       {/* Hero */}
@@ -37,8 +39,7 @@ const About = () => {
             <span className="text-[11px] uppercase tracking-[0.2em]">{heroEyebrow}</span>
           </div>
           <h1 className="font-serif-display text-5xl md:text-7xl leading-[1.05] text-[#1A1A1A]">
-            {heroMain}<br />
-            <span className="italic text-[#B4593F]">{heroAccent}</span>
+            {heroTitle}{heroAccent && <><br /><span className="italic text-[#B4593F]">{heroAccent}</span></>}
           </h1>
           <p className="mt-6 text-lg text-neutral-700 max-w-2xl mx-auto">
             {heroBody}
@@ -69,10 +70,10 @@ const About = () => {
             <img src="https://images.unsplash.com/photo-1497621122273-f5cfb6065c56?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHwxfHxiaWJsZXxlbnwwfHx8fDE3ODMzMjYxMTd8MA&ixlib=rb-4.1.0&q=85" alt="Mission" className="w-full h-full object-cover" />
           </div>
           <div>
-            <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">Our Mission</div>
-            <h2 className="font-serif-display text-4xl md:text-5xl leading-tight">{missionTitle}</h2>
+            <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">{missionEyebrow}</div>
+            <h2 className="font-serif-display text-4xl md:text-5xl leading-tight">{missionTitle}{missionAccent && <> <span className="italic">{missionAccent}</span></>}</h2>
             <p className="mt-6 text-neutral-700 leading-relaxed whitespace-pre-line">{missionBody}</p>
-            <p className="mt-4 italic text-[#B4593F] font-serif-display text-2xl">“We sincerely hope our products will impact your life and those around you.”</p>
+            <p className="mt-4 italic text-[#B4593F] font-serif-display text-2xl">{missionQuote}</p>
           </div>
         </div>
       </section>
@@ -81,8 +82,8 @@ const About = () => {
       <section className="py-24 bg-white">
         <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
           <div className="text-center mb-14">
-            <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">{valuesTitle}</div>
-            <h2 className="font-serif-display text-4xl md:text-5xl">Values that shape everything we do</h2>
+            <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">{valuesEyebrow}</div>
+            <h2 className="font-serif-display text-4xl md:text-5xl">{valuesTitle}</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {values.map((v, i) => (

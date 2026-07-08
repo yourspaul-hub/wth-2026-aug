@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Palette, Save, ExternalLink, RotateCcw, Search, ChevronDown, ChevronUp } from 'lucide-react';
-import { CONTENT_SECTIONS, CONTENT_DEFAULTS } from '../../lib/contentRegistry';
+import { CONTENT_SECTIONS, CONTENT_DEFAULTS, PAGES } from '../../lib/contentRegistry';
 import { fetchSiteContent, adminSaveSiteContent, adminResetSiteContentKey } from '../../lib/api';
 
 /**
@@ -15,6 +15,7 @@ const AdminDesign = () => {
   const [dirty, setDirty] = useState({});     // keys pending save
   const [saving, setSaving] = useState(false);
   const [q, setQ] = useState('');
+  const [pageFilter, setPageFilter] = useState('all');
   const [openSection, setOpenSection] = useState('announcement');
 
   useEffect(() => {
@@ -68,11 +69,13 @@ const AdminDesign = () => {
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    if (!term) return CONTENT_SECTIONS;
-    return CONTENT_SECTIONS
+    let list = CONTENT_SECTIONS;
+    if (pageFilter !== 'all') list = list.filter(s => s.page === pageFilter);
+    if (!term) return list;
+    return list
       .map(s => ({ ...s, items: s.items.filter(it => it.key.toLowerCase().includes(term) || (values[it.key] || '').toLowerCase().includes(term) || (it.default || '').toLowerCase().includes(term)) }))
       .filter(s => s.items.length > 0 || s.label.toLowerCase().includes(term));
-  }, [q, values]);
+  }, [q, pageFilter, values]);
 
   return (
     <div className="p-6 lg:p-10 max-w-[1100px] mx-auto" data-testid="admin-design-page">
@@ -106,22 +109,35 @@ const AdminDesign = () => {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative mb-6">
-        <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
-        <input
-          value={q}
-          onChange={e => setQ(e.target.value)}
-          placeholder="Search fields by key, current value, or default text..."
-          className="w-full bg-white border border-neutral-200 rounded-full pl-11 pr-5 py-3 text-sm outline-none focus:border-[#B4593F]"
-          data-testid="design-search"
-        />
+      {/* Page filter + Search */}
+      <div className="grid md:grid-cols-[240px_1fr] gap-3 mb-6">
+        <select
+          value={pageFilter}
+          onChange={e => setPageFilter(e.target.value)}
+          className="bg-white border border-neutral-200 rounded-full px-5 py-3 text-sm outline-none focus:border-[#B4593F]"
+          data-testid="design-page-filter"
+        >
+          <option value="all">All pages</option>
+          {PAGES.map(p => (
+            <option key={p.id} value={p.id}>{p.label}</option>
+          ))}
+        </select>
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
+          <input
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            placeholder="Search fields by key, current value, or default text..."
+            className="w-full bg-white border border-neutral-200 rounded-full pl-11 pr-5 py-3 text-sm outline-none focus:border-[#B4593F]"
+            data-testid="design-search"
+          />
+        </div>
       </div>
 
       {/* Sections */}
       <div className="space-y-3">
         {filtered.map(section => {
-          const open = openSection === section.id || q.trim().length > 0;
+          const open = openSection === section.id || q.trim().length > 0 || pageFilter !== 'all';
           const dirtyInSection = section.items.filter(it => it.key in dirty).length;
           return (
             <div key={section.id} className="bg-white rounded-2xl border border-neutral-200 overflow-hidden" data-testid={`design-section-${section.id}`}>
@@ -131,7 +147,10 @@ const AdminDesign = () => {
                 data-testid={`design-section-toggle-${section.id}`}
               >
                 <div>
-                  <div className="text-sm font-medium">{section.label}</div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium">{section.label}</span>
+                    <span className="text-[10px] uppercase tracking-[0.15em] bg-[#FDF3EB] text-[#B4593F] px-2 py-0.5 rounded-full">{(PAGES.find(p => p.id === section.page) || {}).label || section.page}</span>
+                  </div>
                   <div className="text-[11px] text-neutral-500 mt-0.5">{section.items.length} field{section.items.length === 1 ? '' : 's'} · <code className="text-neutral-400">{section.id}.*</code></div>
                 </div>
                 <div className="flex items-center gap-3">

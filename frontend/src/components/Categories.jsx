@@ -10,10 +10,8 @@ const Categories = () => {
   const [cats, setCats] = useState(mockCategories);
   const eyebrow = useContentText('home.categories.eyebrow');
   const title = useContentText('home.categories.title');
+  const titleAccent = useContentText('home.categories.title_accent');
   const subtitle = useContentText('home.categories.subtitle');
-  const parts = title.split(' ');
-  const titleMain = parts.length > 1 ? parts.slice(0, -1).join(' ') + ' ' : title;
-  const titleAccent = parts.length > 1 ? parts.slice(-1)[0] : '';
 
   useEffect(() => {
     fetchCategories().then(cs => {
@@ -37,7 +35,7 @@ const Categories = () => {
         <div className="flex flex-wrap items-end justify-between gap-6 mb-14">
           <div className="reveal">
             <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">{eyebrow}</div>
-            <h2 className="font-serif-display text-4xl md:text-5xl text-[#1A1A1A] leading-tight max-w-xl">{titleMain}<span className="italic">{titleAccent}</span></h2>
+            <h2 className="font-serif-display text-4xl md:text-5xl text-[#1A1A1A] leading-tight max-w-xl">{title}{titleAccent && <> <span className="italic">{titleAccent}</span></>}</h2>
             {subtitle && <p className="mt-4 text-neutral-600 max-w-lg text-sm">{subtitle}</p>}
           </div>
           <Link to="/shop" className="text-xs uppercase tracking-[0.2em] link-underline text-[#1A1A1A] reveal">View All Collections</Link>

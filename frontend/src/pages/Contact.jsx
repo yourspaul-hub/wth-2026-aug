@@ -9,15 +9,15 @@ const Contact = () => {
   const [form, setForm] = useState({ name: '', email: '', subject: 'General inquiry', message: '' });
   const [locations, setLocations] = useState([]);
   const title = useContentText('contact.title');
+  const titleAccent = useContentText('contact.title_accent');
   const subtitle = useContentText('contact.subtitle');
+  const eyebrow = useContentText('contact.eyebrow', "We'd love to hear from you");
   const locTitle = useContentText('contact.locations.title');
+  const locTitleAccent = useContentText('contact.locations.title_accent');
   const fName = useContentText('contact.form.name');
   const fEmail = useContentText('contact.form.email');
   const fMsg = useContentText('contact.form.message');
   const fSubmit = useContentText('contact.form.submit');
-  const titleParts = title.split(' ');
-  const titleMain = titleParts.length > 1 ? titleParts.slice(0, -1).join(' ') + ' ' : title;
-  const titleAccent = titleParts.length > 1 ? titleParts.slice(-1)[0] : '';
 
   useEffect(() => {
     listLocations().then(setLocations).catch(() => setLocations([]));
@@ -33,8 +33,8 @@ const Contact = () => {
     <main className="pt-6" data-testid="contact-page">
       <section className="gradient-cream py-20">
         <div className="max-w-[1200px] mx-auto px-6 lg:px-10 text-center">
-          <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">We&apos;d love to hear from you</div>
-          <h1 className="font-serif-display text-5xl md:text-6xl">{titleMain}<span className="italic">{titleAccent}</span></h1>
+          <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">{eyebrow}</div>
+          <h1 className="font-serif-display text-5xl md:text-6xl">{title}{titleAccent && <> <span className="italic">{titleAccent}</span></>}</h1>
           <p className="mt-4 text-neutral-700 max-w-xl mx-auto">{subtitle}</p>
         </div>
       </section>
@@ -44,7 +44,7 @@ const Contact = () => {
           <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
             <div className="text-center mb-12">
               <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">Find us</div>
-              <h2 className="font-serif-display text-4xl md:text-5xl">{locTitle}</h2>
+              <h2 className="font-serif-display text-4xl md:text-5xl">{locTitle}{locTitleAccent && <> <span className="italic">{locTitleAccent}</span></>}</h2>
               <p className="mt-3 text-sm text-neutral-600 max-w-md mx-auto">Visit our design studio, drop by our registered office, or simply write to us — we ship worldwide.</p>
             </div>
 

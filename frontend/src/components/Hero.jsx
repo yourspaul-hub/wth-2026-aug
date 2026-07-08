@@ -15,14 +15,21 @@ const Hero = () => {
   }, []);
   const raw = heroSlides[idx];
   // For the primary (first) slide, allow the admin to override the text bits via Design tab.
-  // heading = main line before the italic accent | subheading = paragraph below | cta = primary CTA label
   const slide = idx === 0 ? {
     ...raw,
     heading: get('home.hero.title', raw.heading),
+    accent: get('home.hero.accent', raw.accent),
     subheading: get('home.hero.subtitle', raw.subheading),
     cta: get('home.hero.cta.primary', raw.cta),
   } : raw;
   const secondaryCta = get('home.hero.cta.secondary', 'Our Story');
+  const eyebrow = get('home.hero.eyebrow', 'Since December 2018');
+  const stat1v = get('home.hero.stat1.value', '10K+');
+  const stat1l = get('home.hero.stat1.label', 'Happy Customers');
+  const stat2v = get('home.hero.stat2.value', '180+');
+  const stat2l = get('home.hero.stat2.label', 'Unique Designs');
+  const stat3v = get('home.hero.stat3.value', '4.9★');
+  const stat3l = get('home.hero.stat3.label', 'Google Rating');
 
   return (
     <section className="relative overflow-hidden gradient-cream">
@@ -36,7 +43,7 @@ const Hero = () => {
         <div className="relative z-10">
           <div className="inline-flex items-center gap-2 bg-white/70 backdrop-blur border border-[#EBD9CE] rounded-full px-4 py-1.5 mb-6 animate-fade-up">
             <Sparkles className="w-3.5 h-3.5 text-[#B4593F]" />
-            <span className="text-[11px] uppercase tracking-[0.2em] text-[#1A1A1A]">Since December 2018</span>
+            <span className="text-[11px] uppercase tracking-[0.2em] text-[#1A1A1A]">{eyebrow}</span>
           </div>
 
           <h1 key={slide.id} className="font-serif-display text-5xl md:text-6xl lg:text-7xl leading-[1.05] text-[#1A1A1A] animate-fade-up">
@@ -58,9 +65,9 @@ const Hero = () => {
 
           {/* Trust badges */}
           <div className="mt-12 flex flex-wrap gap-6 text-[11px] uppercase tracking-[0.15em] text-neutral-600">
-            <div><span className="text-[#B4593F] font-semibold text-lg block">10K+</span>Happy Customers</div>
-            <div><span className="text-[#B4593F] font-semibold text-lg block">180+</span>Unique Designs</div>
-            <div><span className="text-[#B4593F] font-semibold text-lg block">4.9★</span>Google Rating</div>
+            <div><span className="text-[#B4593F] font-semibold text-lg block">{stat1v}</span>{stat1l}</div>
+            <div><span className="text-[#B4593F] font-semibold text-lg block">{stat2v}</span>{stat2l}</div>
+            <div><span className="text-[#B4593F] font-semibold text-lg block">{stat3v}</span>{stat3l}</div>
           </div>
         </div>
 

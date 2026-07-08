@@ -7,7 +7,10 @@ import { useContentText } from '../context/ContentContext';
 const InstagramFeed = ({ limit = 6, showHeader = true }) => {
   const [posts, setPosts] = useState([]);
   const eyebrow = useContentText('home.instagram.eyebrow');
-  const title = useContentText('home.instagram.title');
+  const titleMain = useContentText('home.instagram.title_main', '@');
+  const titleAccent = useContentText('home.instagram.title_accent', 'wearthehope');
+  const body = useContentText('home.instagram.body', 'Tag us in your Wear The Hope moments and get featured — over 10K+ believers spreading love and hope.');
+  const igUrl = useContentText('home.instagram.url', 'https://www.instagram.com/wearthehope');
 
   useEffect(() => {
     listInstagram(limit).then(setPosts).catch(() => setPosts([]));
@@ -24,11 +27,11 @@ const InstagramFeed = ({ limit = 6, showHeader = true }) => {
               <Instagram className="w-3.5 h-3.5" /> {eyebrow}
             </div>
             <h2 className="font-serif-display text-4xl md:text-5xl">
-              <a href="https://www.instagram.com/wearthehope" target="_blank" rel="noreferrer" className="hover:text-[#B4593F] transition-colors inline-flex items-center gap-3">
-                {title || (<>@<span className="italic">wearthehope</span></>)} <ExternalLink className="w-5 h-5" />
+              <a href={igUrl} target="_blank" rel="noreferrer" className="hover:text-[#B4593F] transition-colors inline-flex items-center gap-3">
+                {titleMain}<span className="italic">{titleAccent}</span> <ExternalLink className="w-5 h-5" />
               </a>
             </h2>
-            <p className="mt-3 text-neutral-600 max-w-lg mx-auto text-sm">Tag us in your Wear The Hope moments and get featured — over 10K+ believers spreading love and hope.</p>
+            <p className="mt-3 text-neutral-600 max-w-lg mx-auto text-sm">{body}</p>
           </div>
         )}
 

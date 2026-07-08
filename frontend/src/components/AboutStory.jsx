@@ -6,13 +6,12 @@ import { useContentText } from '../context/ContentContext';
 const AboutStory = () => {
   const eyebrow = useContentText('home.about.eyebrow');
   const title = useContentText('home.about.title');
+  const titleAccent = useContentText('home.about.title_accent');
   const body = useContentText('home.about.body');
   const cta = useContentText('home.about.cta');
-
-  // Split last word of title for accent, so admin edit still keeps the italic style working
-  const parts = title.split(' ');
-  const titleMain = parts.length > 1 ? parts.slice(0, -1).join(' ') + ' ' : title;
-  const titleAccent = parts.length > 1 ? parts.slice(-1)[0] : '';
+  const badge1 = useContentText('home.about.badge_year', 'Since 2018');
+  const badge2 = useContentText('home.about.badge_sub', 'A hobby project turned mission');
+  const catalogueCta = useContentText('home.about.catalogue_cta', 'Download Catalogue');
 
   return (
     <section className="py-24 bg-[#FDF3EB] relative overflow-hidden" data-testid="home-about">
@@ -25,22 +24,22 @@ const AboutStory = () => {
             </div>
             <div className="absolute -bottom-6 -right-6 bg-white rounded-2xl p-6 shadow-xl border border-[#EBD9CE] max-w-[240px]">
               <Heart className="w-6 h-6 text-[#B4593F] mb-2" />
-              <div className="font-serif-display text-2xl text-[#1A1A1A] italic leading-tight">Since 2018</div>
-              <div className="text-xs text-neutral-600 mt-1">A hobby project turned mission</div>
+              <div className="font-serif-display text-2xl text-[#1A1A1A] italic leading-tight">{badge1}</div>
+              <div className="text-xs text-neutral-600 mt-1">{badge2}</div>
             </div>
           </div>
 
           <div>
             <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">{eyebrow}</div>
             <h2 className="font-serif-display text-4xl md:text-5xl text-[#1A1A1A] leading-tight">
-              {titleMain}<span className="italic">{titleAccent}</span>
+              {title}{titleAccent && <> <span className="italic">{titleAccent}</span></>}
             </h2>
             <div className="mt-6 space-y-5 text-neutral-700 leading-relaxed whitespace-pre-line">
               <p>{body}</p>
             </div>
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <a href="#" onClick={(e) => e.preventDefault()} className="inline-flex items-center gap-2 bg-[#B4593F] hover:bg-[#9E4B32] text-white px-6 py-3.5 rounded-full text-xs uppercase tracking-[0.2em] transition-colors">
-                <Download className="w-4 h-4" /> Download Catalogue
+                <Download className="w-4 h-4" /> {catalogueCta}
               </a>
               <Link to="/about" className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] link-underline">
                 {cta} <ArrowRight className="w-3.5 h-3.5" />

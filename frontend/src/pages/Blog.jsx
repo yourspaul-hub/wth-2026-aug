@@ -9,10 +9,9 @@ const Blog = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const title = useContentText('blog.title');
+  const titleAccent = useContentText('blog.title_accent');
+  const eyebrow = useContentText('blog.eyebrow', 'The journal');
   const subtitle = useContentText('blog.subtitle');
-  const parts = title.split(' ');
-  const titleMain = parts.length > 1 ? parts.slice(0, -1).join(' ') + ' ' : title;
-  const titleAccent = parts.length > 1 ? parts.slice(-1)[0] : '';
 
   useEffect(() => {
     listBlogPosts({ limit: 30 }).then(d => { setItems(d.items || []); setLoading(false); }).catch(() => setLoading(false));
@@ -25,8 +24,8 @@ const Blog = () => {
     <main className="pt-6" data-testid="blog-page">
       <section className="gradient-cream py-20">
         <div className="max-w-[1200px] mx-auto px-6 lg:px-10 text-center">
-          <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">The journal</div>
-          <h1 className="font-serif-display text-5xl md:text-6xl">{titleMain}<span className="italic">{titleAccent}</span></h1>
+          <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">{eyebrow}</div>
+          <h1 className="font-serif-display text-5xl md:text-6xl">{title}{titleAccent && <> <span className="italic">{titleAccent}</span></>}</h1>
           <p className="mt-4 text-neutral-700 max-w-xl mx-auto">{subtitle}</p>
         </div>
       </section>

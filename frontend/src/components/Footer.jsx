@@ -11,11 +11,13 @@ const Footer = () => {
   const [email, setEmail] = useState('');
   const T = {
     newsTitle: useContentText('footer.newsletter.title'),
+    newsTitleAccent: useContentText('footer.newsletter.title_accent'),
     newsSub: useContentText('footer.newsletter.subtitle'),
     newsPh: useContentText('footer.newsletter.placeholder'),
     newsCta: useContentText('footer.newsletter.cta'),
     revEyebrow: useContentText('footer.review.eyebrow'),
     revTitle: useContentText('footer.review.title'),
+    revTitleAccent: useContentText('footer.review.title_accent'),
     revBody: useContentText('footer.review.body'),
     revCta: useContentText('footer.review.cta'),
     revIg: useContentText('footer.review.instagram'),
@@ -30,6 +32,8 @@ const Footer = () => {
     privacy: useContentText('footer.links.privacy'),
     refund: useContentText('footer.links.refund'),
     location: useContentText('footer.contact.location'),
+    email: useContentText('footer.contact.email', brandInfo.email),
+    phone: useContentText('footer.contact.phone', brandInfo.phone),
     usPartner: useContentText('footer.us_partner.cta'),
     copyright: useContentText('footer.legal.copyright'),
     made: useContentText('footer.legal.made'),
@@ -46,17 +50,13 @@ const Footer = () => {
     }
   };
 
-  // Highlight last word of the newsletter title
-  const [newsMain, newsAccent] = (() => {
-    const parts = T.newsTitle.split(' ');
-    if (parts.length < 2) return [T.newsTitle, ''];
-    return [parts.slice(0, -1).join(' ') + ' ', parts.slice(-1)[0]];
-  })();
+  // Newsletter title with optional italic accent
+  const newsTitleAccent = T.newsTitleAccent;
+  const newsMain = T.newsTitle;
 
-  // Same for review title
-  const revParts = T.revTitle.split(/\?\s+/);
-  const revMain = revParts[0] + (revParts.length > 1 ? '? ' : '');
-  const revAccent = revParts.length > 1 ? revParts.slice(1).join(' ') : '';
+  // Review title with optional italic accent
+  const revTitleAccent = T.revTitleAccent;
+  const revMain = T.revTitle;
 
   return (
     <footer className="bg-[#1A1A1A] text-[#FDF3EB] pt-20 pb-10 mt-10" data-testid="site-footer">
@@ -64,7 +64,7 @@ const Footer = () => {
         {/* Newsletter */}
         <div className="grid md:grid-cols-2 gap-10 items-center pb-14 border-b border-white/10">
           <div>
-            <h3 className="font-serif-display text-3xl md:text-4xl leading-tight">{newsMain}<span className="italic text-[#E88864]">{newsAccent}</span></h3>
+            <h3 className="font-serif-display text-3xl md:text-4xl leading-tight">{newsMain}{newsTitleAccent && <> <span className="italic text-[#E88864]">{newsTitleAccent}</span></>}</h3>
             <p className="mt-3 text-white/70 max-w-md">{T.newsSub}</p>
           </div>
           <form onSubmit={subscribe} className="flex items-center bg-white/10 border border-white/20 rounded-full pl-6 pr-2 py-2 focus-within:border-[#E88864] transition-colors">
@@ -82,7 +82,7 @@ const Footer = () => {
           </div>
           <div>
             <div className="text-xs uppercase tracking-[0.3em] text-[#E88864] mb-2">{T.revEyebrow}</div>
-            <h3 className="font-serif-display text-2xl md:text-3xl leading-tight">{revMain}<span className="italic text-[#E88864]">{revAccent}</span></h3>
+            <h3 className="font-serif-display text-2xl md:text-3xl leading-tight">{revMain}{revTitleAccent && <> <span className="italic text-[#E88864]">{revTitleAccent}</span></>}</h3>
             <p className="mt-3 text-white/70 text-sm max-w-md leading-relaxed">{T.revBody}</p>
             <div className="mt-4 flex flex-wrap gap-3">
               <Link to="/review" data-testid="footer-review-link" className="inline-flex items-center gap-2 bg-[#B4593F] hover:bg-[#E88864] transition-colors text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-[0.2em]">
@@ -131,8 +131,8 @@ const Footer = () => {
           <div>
             <div className="text-xs uppercase tracking-[0.2em] text-[#E88864] mb-5">{T.colContact}</div>
             <ul className="space-y-4 text-sm text-white/80">
-              <li className="flex items-start gap-3"><Phone className="w-4 h-4 mt-0.5 text-[#E88864]" /> {brandInfo.phone}</li>
-              <li className="flex items-start gap-3"><Mail className="w-4 h-4 mt-0.5 text-[#E88864]" /> {brandInfo.email}</li>
+              <li className="flex items-start gap-3"><Phone className="w-4 h-4 mt-0.5 text-[#E88864]" /> {T.phone}</li>
+              <li className="flex items-start gap-3"><Mail className="w-4 h-4 mt-0.5 text-[#E88864]" /> {T.email}</li>
               <li className="flex items-start gap-3"><MapPin className="w-4 h-4 mt-0.5 text-[#E88864]" /> {T.location}</li>
             </ul>
             <a href={brandInfo.usPartner} target="_blank" rel="noreferrer" className="mt-6 inline-block bg-[#FFDD00] text-[#1A1A1A] px-5 py-2.5 rounded-full text-[11px] uppercase tracking-[0.2em] hover:bg-white transition-colors">{T.usPartner}</a>

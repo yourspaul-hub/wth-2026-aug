@@ -1,33 +1,124 @@
 /**
  * Content registry — every editable string on the storefront lives here.
- * The Design tab in Admin renders this registry as an editable form.
- * At runtime, the ContentProvider merges DB overrides on top of these defaults.
+ * The Admin Design tab renders this registry as an editable form.
+ *
+ * Structure:
+ *   - PAGES  → high-level buckets shown as the top-level page filter
+ *   - Each section has a `page` field mapping it to one of the pages above.
+ *   - Each item has a stable slug (`key`), a `default` value, and an optional hint.
+ *
+ * Convention for italic accent styling: fields ending in ".title_accent" render
+ * italic in the flamingo/brown accent color. The main title field is normal weight.
  */
 
+export const PAGES = [
+  { id: 'global', label: 'Global (Announcement, Footer)' },
+  { id: 'home', label: 'Home page' },
+  { id: 'shop', label: 'Shop / Collections' },
+  { id: 'product', label: 'Product detail' },
+  { id: 'about', label: 'About page' },
+  { id: 'blog', label: 'Journal / Blog' },
+  { id: 'contact', label: 'Contact page' },
+];
+
 export const CONTENT_SECTIONS = [
+  // ================= GLOBAL =================
   {
-    id: 'announcement',
+    id: 'announcement', page: 'global',
     label: 'Announcement bar (top scrolling strip)',
     items: [
-      { key: 'announcement.item.1', default: 'FREE SHIPPING OVER ₹999 ACROSS INDIA', hint: 'Rotating strip message 1' },
-      { key: 'announcement.item.2', default: 'PERSONALIZE ANY PRODUCT — LASER ENGRAVING AVAILABLE', hint: 'Rotating strip message 2' },
-      { key: 'announcement.item.3', default: 'NEW FAITH CAP COLLECTION IS LIVE — SHOP NOW', hint: 'Rotating strip message 3' },
-      { key: 'announcement.item.4', default: 'INTERNATIONAL SHIPPING WORLDWIDE', hint: 'Rotating strip message 4' },
+      { key: 'announcement.item.1', default: 'FREE SHIPPING OVER ₹999 ACROSS INDIA', hint: 'Rotating strip message 1 — leave blank to remove' },
+      { key: 'announcement.item.2', default: 'PERSONALIZE ANY PRODUCT — LASER ENGRAVING AVAILABLE' },
+      { key: 'announcement.item.3', default: 'NEW FAITH CAP COLLECTION IS LIVE — SHOP NOW' },
+      { key: 'announcement.item.4', default: 'INTERNATIONAL SHIPPING WORLDWIDE' },
     ],
   },
   {
-    id: 'home.hero',
-    label: 'Home — Hero (primary slide only)',
+    id: 'footer.newsletter', page: 'global',
+    label: 'Footer — Newsletter block',
     items: [
-      { key: 'home.hero.title', default: 'Share the Message of', hint: 'Main headline line (first slide only)' },
-      { key: 'home.hero.subtitle', default: 'Faith-driven products, crafted to impact lives', hint: 'Paragraph below the headline' },
-      { key: 'home.hero.cta.primary', default: 'Shop The Collection', hint: 'Primary CTA button label' },
-      { key: 'home.hero.cta.secondary', default: 'Our Story', hint: 'Secondary link label' },
+      { key: 'footer.newsletter.title', default: 'Join our journey of', hint: 'Main headline' },
+      { key: 'footer.newsletter.title_accent', default: 'hope', hint: 'Italic accent word (flamingo colour)' },
+      { key: 'footer.newsletter.subtitle', default: 'Subscribe for scripture drops, new collections and exclusive gifts — straight to your inbox.' },
+      { key: 'footer.newsletter.placeholder', default: 'Enter your email' },
+      { key: 'footer.newsletter.cta', default: 'Subscribe' },
     ],
   },
   {
-    id: 'home.strip',
-    label: 'Home — Feature strip (4 icons)',
+    id: 'footer.review', page: 'global',
+    label: 'Footer — "Share your story" QR block',
+    items: [
+      { key: 'footer.review.eyebrow', default: 'Share your story' },
+      { key: 'footer.review.title', default: 'Loved your Wear The Hope piece?' },
+      { key: 'footer.review.title_accent', default: 'Tell the world.', hint: 'Italic accent phrase' },
+      { key: 'footer.review.body', default: 'Scan the QR — or use the link below — to leave a review. Your words help other believers find us.' },
+      { key: 'footer.review.cta', default: 'Leave a review' },
+      { key: 'footer.review.instagram', default: 'Tag @wearthehope' },
+    ],
+  },
+  {
+    id: 'footer.brand', page: 'global',
+    label: 'Footer — Brand column',
+    items: [
+      { key: 'footer.tagline', default: 'A motivational gift brand — declaring love and hope through everyday products. Handcrafted with intention since 2018.' },
+    ],
+  },
+  {
+    id: 'footer.columns', page: 'global',
+    label: 'Footer — Column headings & links',
+    items: [
+      { key: 'footer.col.shop', default: 'Shop' },
+      { key: 'footer.col.company', default: 'Company' },
+      { key: 'footer.col.contact', default: 'Contact' },
+      { key: 'footer.links.story', default: 'Our Story' },
+      { key: 'footer.links.contact', default: 'Contact Us' },
+      { key: 'footer.links.size', default: 'Size Guide' },
+      { key: 'footer.links.terms', default: 'Terms & Conditions' },
+      { key: 'footer.links.privacy', default: 'Privacy Policy' },
+      { key: 'footer.links.refund', default: 'Refund & Cancellation' },
+      { key: 'footer.us_partner.cta', default: 'Visit US Partner' },
+    ],
+  },
+  {
+    id: 'footer.contact', page: 'global',
+    label: 'Footer — Contact details',
+    items: [
+      { key: 'footer.contact.phone', default: '+91 9004373305', hint: 'Phone number shown in the footer contact column' },
+      { key: 'footer.contact.email', default: 'hello@wearthehope.com', hint: 'Support email shown in the footer contact column' },
+      { key: 'footer.contact.location', default: 'Mumbai, India — Ships Worldwide' },
+    ],
+  },
+  {
+    id: 'footer.legal', page: 'global',
+    label: 'Footer — Legal strip (bottom)',
+    items: [
+      { key: 'footer.legal.copyright', default: '© {year} Wear The Hope. All rights reserved.', hint: '{year} is auto-replaced with the current year' },
+      { key: 'footer.legal.made', default: 'Handcrafted with love in India — Shipping Worldwide' },
+    ],
+  },
+
+  // ================= HOME =================
+  {
+    id: 'home.hero', page: 'home',
+    label: 'Home — Hero (primary slide)',
+    items: [
+      { key: 'home.hero.eyebrow', default: 'Since December 2018', hint: 'Small badge above the headline' },
+      { key: 'home.hero.title', default: 'Share the Message of', hint: 'Main headline (first line)' },
+      { key: 'home.hero.accent', default: 'Love & Hope', hint: 'Italic accent line (flamingo colour, second line)' },
+      { key: 'home.hero.subtitle', default: 'Faith-driven products, crafted to impact lives', hint: 'Paragraph below the headline' },
+      { key: 'home.hero.cta.primary', default: 'Shop The Collection', hint: 'Primary CTA button' },
+      { key: 'home.hero.cta.secondary', default: 'Our Story', hint: 'Secondary text link' },
+      { key: 'home.hero.stat1.value', default: '10K+', hint: 'Big number on badge 1' },
+      { key: 'home.hero.stat1.label', default: 'Happy Customers', hint: 'Label on badge 1' },
+      { key: 'home.hero.stat2.value', default: '180+' },
+      { key: 'home.hero.stat2.label', default: 'Unique Designs' },
+      { key: 'home.hero.stat3.value', default: '4.9★' },
+      { key: 'home.hero.stat3.label', default: 'Google Rating' },
+    ],
+  },
+  {
+    id: 'home.strip', page: 'home',
+    label: 'Home — Feature strip (4 icon items)',
     items: [
       { key: 'home.strip.1.title', default: 'Ships Worldwide' },
       { key: 'home.strip.1.sub',   default: 'Free over ₹999 in India' },
@@ -40,88 +131,117 @@ export const CONTENT_SECTIONS = [
     ],
   },
   {
-    id: 'home.categories',
-    label: 'Home — Categories block',
+    id: 'home.categories', page: 'home',
+    label: 'Home — "Shop by Category" block',
     items: [
-      { key: 'home.categories.eyebrow', default: 'Shop by Category' },
-      { key: 'home.categories.title', default: 'Curated with intention' },
-      { key: 'home.categories.subtitle', default: 'From wallets to caps — every piece designed to declare hope.' },
+      { key: 'home.categories.eyebrow', default: 'Curated Categories' },
+      { key: 'home.categories.title', default: 'Shop by', hint: 'Main heading (normal weight)' },
+      { key: 'home.categories.title_accent', default: 'purpose', hint: 'Italic accent word' },
+      { key: 'home.categories.subtitle', default: '', hint: 'Optional lead paragraph — leave blank to hide' },
     ],
   },
   {
-    id: 'home.about',
-    label: 'Home — About story',
+    id: 'home.about', page: 'home',
+    label: 'Home — About story block',
     items: [
-      { key: 'home.about.eyebrow', default: 'Our story' },
-      { key: 'home.about.title', default: 'Message-first. Beautifully made.' },
-      { key: 'home.about.body', default: 'Wear The Hope began as a simple prayer to remind others they are loved — and grew into a full range of handcrafted scripture gifts, shipping worldwide from Mumbai.' },
-      { key: 'home.about.cta', default: 'Learn more about us' },
+      { key: 'home.about.eyebrow', default: 'Our Story' },
+      { key: 'home.about.title', default: 'Five loaves. Two fish.', hint: 'Main heading' },
+      { key: 'home.about.title_accent', default: 'One mission.', hint: 'Italic accent phrase' },
+      { key: 'home.about.body', default: 'We started as a small hobby project in December 2018, holding on to a simple vision — to offer our "5 loaves and 2 fish" to God and impact the people of the nations.\n\nEvery wallet, tumbler, tote and tee that leaves our studio carries a whisper of scripture and a wave of hope. We create and customize for individuals, teams, organizations and churches worldwide.\n\n"We sincerely hope our products will impact your life and those around you."', hint: 'Multi-paragraph body — new lines preserved' },
+      { key: 'home.about.cta', default: 'Read Full Story', hint: 'Text link below the CTA' },
+      { key: 'home.about.catalogue_cta', default: 'Download Catalogue', hint: 'Solid button label' },
+      { key: 'home.about.badge_year', default: 'Since 2018', hint: 'White card badge — big line' },
+      { key: 'home.about.badge_sub',  default: 'A hobby project turned mission', hint: 'White card badge — small line' },
     ],
   },
   {
-    id: 'home.instagram',
-    label: 'Home — Instagram feed',
+    id: 'home.instagram', page: 'home',
+    label: 'Home — Instagram feed block',
     items: [
-      { key: 'home.instagram.eyebrow', default: 'From our journal' },
-      { key: 'home.instagram.title', default: 'Live love. Share hope.' },
-      { key: 'home.instagram.cta', default: 'Follow @wearthehope' },
+      { key: 'home.instagram.eyebrow', default: 'Follow along' },
+      { key: 'home.instagram.title_main', default: '@', hint: 'Prefix before the italic handle (normal weight)' },
+      { key: 'home.instagram.title_accent', default: 'wearthehope', hint: 'Italic accent (Instagram handle)' },
+      { key: 'home.instagram.body', default: 'Tag us in your Wear The Hope moments and get featured — over 10K+ believers spreading love and hope.' },
+      { key: 'home.instagram.url', default: 'https://www.instagram.com/wearthehope', hint: 'Instagram profile URL' },
     ],
   },
   {
-    id: 'home.testimonials',
-    label: 'Home — Testimonials',
+    id: 'home.testimonials', page: 'home',
+    label: 'Home — Testimonials block',
     items: [
-      { key: 'home.testimonials.eyebrow', default: 'Words from the community' },
-      { key: 'home.testimonials.title', default: 'Hope, in their words' },
+      { key: 'home.testimonials.eyebrow', default: 'What Our Customers Say' },
+      { key: 'home.testimonials.title', default: 'Loved by', hint: 'Main heading' },
+      { key: 'home.testimonials.title_accent', default: 'believers worldwide', hint: 'Italic accent phrase' },
+      { key: 'home.testimonials.rating_label', default: '4.9 / 5 on Google Reviews' },
     ],
   },
+
+  // ================= SHOP =================
   {
-    id: 'shop',
-    label: 'Shop page',
+    id: 'shop', page: 'shop',
+    label: 'Shop / Collections page',
     items: [
-      { key: 'shop.title', default: 'Shop the collection' },
-      { key: 'shop.subtitle', default: 'Every piece designed to remind you — and someone you love — that you are held.' },
+      { key: 'shop.title', default: 'All Collections', hint: 'Page heading' },
+      { key: 'shop.subtitle', default: 'Explore our full range', hint: 'Subtitle beneath the heading' },
       { key: 'shop.filters.title', default: 'Filters' },
-      { key: 'shop.empty.title', default: 'No products found' },
-      { key: 'shop.empty.body', default: 'Try adjusting your filters or search terms.' },
+      { key: 'shop.empty.title', default: 'Nothing here yet' },
+      { key: 'shop.empty.body', default: 'Try adjusting your filters or explore other collections.' },
     ],
   },
+
+  // ================= ABOUT =================
   {
-    id: 'about',
-    label: 'About page',
+    id: 'about', page: 'about',
+    label: 'About page — Hero + Mission + Values',
     items: [
-      { key: 'about.hero.eyebrow', default: 'Our story' },
-      { key: 'about.hero.title', default: 'A brand built on hope' },
-      { key: 'about.hero.body', default: 'Wear The Hope is a motivational gift brand. Every piece we make is designed to declare love, hope and faith — starting from a small workshop in Mumbai, shipped with prayer worldwide.' },
-      { key: 'about.mission.title', default: 'Our mission' },
-      { key: 'about.mission.body', default: 'To create everyday products that carry a message of hope — reminders that pause the noise and lift the spirit.' },
-      { key: 'about.values.title', default: 'What we stand for' },
+      { key: 'about.hero.eyebrow', default: 'Our Story' },
+      { key: 'about.hero.title', default: 'A small hobby that became', hint: 'Main heading' },
+      { key: 'about.hero.title_accent', default: 'a movement of hope', hint: 'Italic accent phrase (second line)' },
+      { key: 'about.hero.body', default: 'In December 2018, we offered our "5 loaves and 2 fish" to God with a simple prayer — to impact the people of nations through motivational, faith-inspired gifts.' },
+      { key: 'about.mission.eyebrow', default: 'Our Mission' },
+      { key: 'about.mission.title', default: 'To share the message of', hint: 'Main heading' },
+      { key: 'about.mission.title_accent', default: 'love & hope — one product at a time', hint: 'Italic accent phrase' },
+      { key: 'about.mission.body', default: 'We create and customize products for individuals, teams, organizations and churches. From wallets to wall frames, mugs to caps — each item is thoughtfully designed to remind you of who you are in Christ.' },
+      { key: 'about.mission.quote', default: '"We sincerely hope our products will impact your life and those around you."', hint: 'Italic quote in flamingo color' },
+      { key: 'about.values.eyebrow', default: 'What we stand for' },
+      { key: 'about.values.title', default: 'Values that shape everything we do' },
     ],
   },
+
+  // ================= BLOG =================
   {
-    id: 'blog',
-    label: 'Journal (Blog) index',
+    id: 'blog', page: 'blog',
+    label: 'Journal (Blog) — Index page',
     items: [
-      { key: 'blog.title', default: 'The Journal' },
-      { key: 'blog.subtitle', default: 'Stories of hope, craft, and faith from the Wear The Hope community.' },
+      { key: 'blog.eyebrow', default: 'The journal' },
+      { key: 'blog.title', default: 'Stories of', hint: 'Main heading' },
+      { key: 'blog.title_accent', default: 'hope', hint: 'Italic accent word' },
+      { key: 'blog.subtitle', default: 'Craft notes, gifting guides and stories behind the pieces we make.' },
     ],
   },
+
+  // ================= CONTACT =================
   {
-    id: 'contact',
-    label: 'Contact page',
+    id: 'contact', page: 'contact',
+    label: 'Contact page — Hero, Locations, Form',
     items: [
-      { key: 'contact.title', default: 'Get in touch' },
-      { key: 'contact.subtitle', default: "We'd love to hear from you — questions, custom orders, wholesale, prayer requests." },
-      { key: 'contact.locations.title', default: 'Visit us' },
+      { key: 'contact.eyebrow', default: "We'd love to hear from you" },
+      { key: 'contact.title', default: 'Get in', hint: 'Main heading' },
+      { key: 'contact.title_accent', default: 'touch', hint: 'Italic accent word' },
+      { key: 'contact.subtitle', default: 'Custom order, bulk enquiry, partnership or just to say hi — our inbox is always open.' },
+      { key: 'contact.locations.title', default: 'Our', hint: 'Locations block heading' },
+      { key: 'contact.locations.title_accent', default: 'locations', hint: 'Italic accent word' },
       { key: 'contact.form.name', default: 'Your name' },
-      { key: 'contact.form.email', default: 'Email address' },
-      { key: 'contact.form.message', default: 'How can we help?' },
-      { key: 'contact.form.submit', default: 'Send message' },
+      { key: 'contact.form.email', default: 'Email' },
+      { key: 'contact.form.message', default: 'Message' },
+      { key: 'contact.form.submit', default: 'Send Message' },
     ],
   },
+
+  // ================= PRODUCT DETAIL =================
   {
-    id: 'product',
-    label: 'Product detail page labels',
+    id: 'product', page: 'product',
+    label: 'Product detail — Labels & tabs',
     items: [
       { key: 'pd.details', default: 'Details' },
       { key: 'pd.shipping', default: 'Shipping' },
@@ -135,35 +255,6 @@ export const CONTENT_SECTIONS = [
       { key: 'pd.badge.gift.title', default: 'Gift Wrapped' },
       { key: 'pd.badge.gift.sub', default: 'Ready to give' },
       { key: 'pd.taxes_note', default: 'Inclusive of all taxes' },
-    ],
-  },
-  {
-    id: 'footer',
-    label: 'Footer',
-    items: [
-      { key: 'footer.newsletter.title', default: 'Join our journey of hope' },
-      { key: 'footer.newsletter.subtitle', default: 'Subscribe for scripture drops, new collections and exclusive gifts — straight to your inbox.' },
-      { key: 'footer.newsletter.placeholder', default: 'Enter your email' },
-      { key: 'footer.newsletter.cta', default: 'Subscribe' },
-      { key: 'footer.review.eyebrow', default: 'Share your story' },
-      { key: 'footer.review.title', default: 'Loved your Wear The Hope piece? Tell the world.' },
-      { key: 'footer.review.body', default: 'Scan the QR — or use the link below — to leave a review. Your words help other believers find us.' },
-      { key: 'footer.review.cta', default: 'Leave a review' },
-      { key: 'footer.review.instagram', default: 'Tag @wearthehope' },
-      { key: 'footer.tagline', default: 'A motivational gift brand — declaring love and hope through everyday products. Handcrafted with intention since 2018.' },
-      { key: 'footer.col.shop', default: 'Shop' },
-      { key: 'footer.col.company', default: 'Company' },
-      { key: 'footer.col.contact', default: 'Contact' },
-      { key: 'footer.links.story', default: 'Our Story' },
-      { key: 'footer.links.contact', default: 'Contact Us' },
-      { key: 'footer.links.size', default: 'Size Guide' },
-      { key: 'footer.links.terms', default: 'Terms & Conditions' },
-      { key: 'footer.links.privacy', default: 'Privacy Policy' },
-      { key: 'footer.links.refund', default: 'Refund & Cancellation' },
-      { key: 'footer.contact.location', default: 'Mumbai, India — Ships Worldwide' },
-      { key: 'footer.us_partner.cta', default: 'Visit US Partner' },
-      { key: 'footer.legal.copyright', default: '© {year} Wear The Hope. All rights reserved.' },
-      { key: 'footer.legal.made', default: 'Handcrafted with love in India — Shipping Worldwide' },
     ],
   },
 ];

@@ -10,9 +10,8 @@ const Testimonials = () => {
   const ref = useRef(null);
   const eyebrow = useContentText('home.testimonials.eyebrow');
   const title = useContentText('home.testimonials.title');
-  const parts = title.split(' ');
-  const titleMain = parts.length > 1 ? parts.slice(0, -1).join(' ') + ' ' : title;
-  const titleAccent = parts.length > 1 ? parts.slice(-1)[0] : '';
+  const titleAccent = useContentText('home.testimonials.title_accent');
+  const ratingLabel = useContentText('home.testimonials.rating_label', '4.9 / 5 on Google Reviews');
 
   useEffect(() => {
     fetchReviews().then(rs => { if (rs && rs.length) setItems(rs); }).catch(() => {});
@@ -43,10 +42,10 @@ const Testimonials = () => {
       <div className="max-w-[1200px] mx-auto px-6 lg:px-10 relative">
         <div className="text-center mb-14">
           <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">{eyebrow}</div>
-          <h2 className="font-serif-display text-4xl md:text-5xl text-[#1A1A1A]">{titleMain}<span className="italic">{titleAccent}</span></h2>
+          <h2 className="font-serif-display text-4xl md:text-5xl text-[#1A1A1A]">{title}{titleAccent && <> <span className="italic">{titleAccent}</span></>}</h2>
           <div className="flex items-center justify-center gap-1 mt-4">
             {[...Array(5)].map((_, k) => <Star key={k} className="w-4 h-4 fill-[#E8B364] stroke-[#E8B364]" />)}
-            <span className="ml-3 text-sm text-neutral-700">4.9 / 5 on Google Reviews</span>
+            <span className="ml-3 text-sm text-neutral-700">{ratingLabel}</span>
           </div>
         </div>
 
