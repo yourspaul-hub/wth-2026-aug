@@ -70,22 +70,25 @@ const MusicWidget = () => {
     armUnmuteOnGesture();
   }, [settings, hidden]);
 
-  // Chrome / Safari / iOS require a real activation gesture (click, tap,
-  // keydown) to unmute audio — mousemove does NOT count. The handler must be
-  // SYNCHRONOUS: iOS invalidates the user-gesture context if we `await`
-  // anything before calling play(), which is why previously mobile didn't
-  // produce sound.
+  // Chrome / Safari / iOS / Android require a real activation gesture
+  // (click, tap, keydown) to unmute audio — mousemove does NOT count. The
+  // handler must be SYNCHRONOUS: iOS/Android invalidate the user-gesture
+  // context if we `await` anything before calling play(). We also listen for
+  // `touchstart` which fires earliest on Android for maximum responsiveness.
   const armUnmuteOnGesture = () => {
-    const events = ['click', 'touchend', 'pointerup', 'keydown'];
+    const events = ['touchstart', 'touchend', 'pointerup', 'click', 'keydown'];
+    let done = false;
     const unmute = (e) => {
-      // Skip taps on the widget itself so its pause/play button keeps working.
+      if (done) return;
+      // Skip gestures on the widget itself so its pause/play button keeps working.
       if (e && widgetRef.current && widgetRef.current.contains(e.target)) return;
+      done = true;
       const a = audioRef.current;
       if (a) {
         a.muted = false;
         a.volume = 0.30;
-        const p = a.play();
-        if (p && typeof p.catch === 'function') p.catch(() => {});
+        // Fire play() SYNCHRONOUSLY inside the gesture callback (iOS/Android require this).
+        try { const p = a.play(); if (p && p.catch) p.catch(() => {}); } catch { /* noop */ }
       }
       setMuted(false);
       events.forEach(ev => document.removeEventListener(ev, unmute));
@@ -99,6 +102,15 @@ const MusicWidget = () => {
     const a = audioRef.current;
     if (!a) return;
     try {
+      // If audio is playing muted (autoplay phase), a tap should UNMUTE, not pause.
+      if (playing && muted) {
+        a.muted = false;
+        a.volume = 0.30;
+        try { const p = a.play(); if (p && p.catch) p.catch(() => {}); } catch { /* noop */ }
+        setMuted(false);
+        setCollapsed(false);
+        return;
+      }
       if (playing) { a.pause(); setPlaying(false); }
       else { a.muted = muted; await a.play(); setPlaying(true); }
       setCollapsed(false);
