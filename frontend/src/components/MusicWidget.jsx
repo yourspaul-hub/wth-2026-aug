@@ -69,22 +69,25 @@ const MusicWidget = () => {
     armUnmuteOnGesture();
   }, [settings, hidden]);
 
-  // Unmute + resume playback on the FIRST user signal — mousemove, scroll,
-  // click, keydown, or touchstart. In practice mousemove fires within ~200ms
-  // of page load on desktop, so the visitor perceives it as immediate autoplay.
+  // Unmute + resume playback on the FIRST user signal — mousemove, click, tap,
+  // scroll, keydown. Handlers are attached to the DOCUMENT (not window) so they
+  // don't interfere with the widget button clicks. `once: true` removes them
+  // after firing once.
   const armUnmuteOnGesture = () => {
-    const events = ['mousemove', 'pointerdown', 'touchstart', 'keydown', 'scroll', 'wheel'];
+    // Note: no 'click' — clicking the widget itself must not trigger unmute
+    // (the button's own onClick handles toggle).
+    const events = ['mousemove', 'touchstart', 'keydown', 'scroll', 'wheel'];
     const unmute = () => {
       const a = audioRef.current;
       if (a) {
         a.muted = false;
-        a.volume = volume || 0.30;
+        a.volume = 0.30;
         if (a.paused) { a.play().catch(() => {}); }
       }
       setMuted(false);
-      events.forEach(ev => window.removeEventListener(ev, unmute, true));
+      events.forEach(ev => document.removeEventListener(ev, unmute));
     };
-    events.forEach(ev => window.addEventListener(ev, unmute, { capture: true, once: true, passive: true }));
+    events.forEach(ev => document.addEventListener(ev, unmute, { once: true, passive: true }));
   };
 
   if (!settings || !settings.enabled || !settings.url || hidden) return null;
@@ -109,7 +112,7 @@ const MusicWidget = () => {
         src={settings.url}
         loop
         autoPlay
-        muted
+        muted={muted}
         preload="auto"
         onPlay={() => setPlaying(true)}
         onPause={() => { if (!hidden) setPlaying(false); }}
