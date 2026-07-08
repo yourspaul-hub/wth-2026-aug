@@ -50,7 +50,7 @@ const Categories = () => {
               style={{ transitionDelay: `${i * 60}ms` }}
             >
               <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-[#F5D0CE]/40 border border-[#EBD9CE]/60">
-                <img src={c.image} alt={c.name} className="w-full h-full object-cover transition-transform duration-[900ms] group-hover:scale-110" />
+                <img src={c.image} alt={c.name} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-70 group-hover:opacity-90 transition-opacity duration-500" />
                 {c.comingSoon && (
                   <div className="absolute top-3 left-3 bg-white/95 text-[10px] uppercase tracking-[0.2em] px-3 py-1.5 rounded-full text-[#1A1A1A]">Coming Soon</div>
