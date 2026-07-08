@@ -1,6 +1,6 @@
 """Wear The Hope backend — FastAPI + MongoDB.
 All API routes prefixed with /api (per ingress rules).
-Emergent Google OAuth for admin. Razorpay & Shiprocket MOCKED.
+Google OAuth for admin sign-in. Razorpay & Shiprocket MOCKED.
 """
 import os
 import logging
@@ -2837,10 +2837,12 @@ async def public_download_catalogue():
 # --- Mount ---
 app.include_router(api)
 
+_cors_env = os.environ.get('CORS_ORIGINS', '*').strip()
+_cors_origins = ['*'] if _cors_env in ('', '*') else [o.strip() for o in _cors_env.split(',') if o.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=['*'],
+    allow_origins=_cors_origins,
     allow_methods=['*'],
     allow_headers=['*'],
 )
@@ -2870,14 +2872,14 @@ async def startup_event():
     await db.categories.create_index('slug', unique=True)
     await db.settings.create_index('key', unique=True)
     await db.site_content.create_index('key', unique=True)
-    # Seed default music settings on first boot (idempotent)
+    # Seed default music settings on first boot (idempotent). Admin can replace via CMS.
     if not await db.settings.find_one({'key': 'MUSIC_URL'}):
-        default_music = 'https://customer-assets.emergentagent.com/job_wear-interactive/artifacts/rbsqc21r_Wear%20The%20Hope%20Music.mp3'
+        default_music = os.environ.get('DEFAULT_MUSIC_URL', '')
         now = datetime.now(timezone.utc)
         for k, v, cat in [
             ('MUSIC_URL', default_music, 'media'),
             ('MUSIC_LABEL', 'Wear The Hope — Ambient', 'media'),
-            ('MUSIC_ENABLED', 'true', 'media'),
+            ('MUSIC_ENABLED', 'false' if not default_music else 'true', 'media'),
             ('MUSIC_VOLUME', '0.30', 'media'),
         ]:
             await db.settings.update_one({'key': k}, {'$setOnInsert': {'key': k, 'value': v, 'category': cat, 'updated_at': now}}, upsert=True)

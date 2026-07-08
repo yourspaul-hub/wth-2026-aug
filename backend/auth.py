@@ -4,12 +4,17 @@ from datetime import datetime, timezone, timedelta
 from fastapi import HTTPException, Request, Depends
 from typing import Optional
 
-EMERGENT_AUTH_URL = 'https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data'
+# OAuth session-exchange endpoint. Configurable via env for portability across
+# deployment platforms. Defaults to the managed Google OAuth broker used in dev.
+AUTH_SESSION_URL = os.environ.get(
+    'AUTH_SESSION_URL',
+    'https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data',
+)
 
 
 async def exchange_session_id(session_id: str) -> dict:
     async with httpx.AsyncClient(timeout=15.0) as client:
-        resp = await client.get(EMERGENT_AUTH_URL, headers={'X-Session-ID': session_id})
+        resp = await client.get(AUTH_SESSION_URL, headers={'X-Session-ID': session_id})
         if resp.status_code != 200:
             raise HTTPException(status_code=401, detail='Failed to exchange session id')
         return resp.json()

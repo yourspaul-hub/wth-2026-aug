@@ -54,8 +54,15 @@ Full-featured, dynamic e-commerce clone of www.wearthehope.com with a comprehens
   - Applied to: Hero, ProductCard, InstagramFeed, ReviewsSection, Blog list, BlogPost, review avatars/photos
 
 ## Backlog / Roadmap
+### P0 — Deployment Prep ✅ (2026-07-08)
+- Emergent branding removed from frontend `index.html` (PostHog tracking script), `AdminLogin.jsx` (auth URL via `REACT_APP_AUTH_URL`), `App.js` comment, and `testIds/home.js` (unused `emergentLink`).
+- Backend cleaned: `server.py` docstring, default music seed now sourced from `DEFAULT_MUSIC_URL` env (empty by default), CORS now respects `CORS_ORIGINS` env, `auth.py` broker URL configurable via `AUTH_SESSION_URL`.
+- `requirements.txt`: removed unused `emergentintegrations`, replaced `litellm` Emergent-hosted wheel URL with PyPI `litellm==1.80.0`.
+- Added `backend/Procfile` (uvicorn start command) and `backend/.env.example` documenting all env vars for Render/Railway/Fly deployments.
+
 ### P1
-- Split `server.py` (~2600 lines) into modules per phase (deferred — dedicated round)
+- Split `server.py` (~2900 lines) into modules per phase (deferred — dedicated round)
+- Fix 4 ESLint React hook warnings (MusicWidget, ReviewsSection, Emails, Orders) so `CI=true` passes without bypass
 - Add `Cache-Control` preservation at k8s ingress OR direct-serve GridFS via a fastapi-static wrapper to bypass ingress rewrite
 - Storefront reviews section on ProductDetail (currently Home only)
 - Rate limiting on public review + image endpoints

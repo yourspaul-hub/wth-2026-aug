@@ -12,7 +12,8 @@ const AdminLogin = () => {
   const handleLogin = () => {
     // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
     const redirectUrl = window.location.origin + '/admin/callback';
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+    const authBase = process.env.REACT_APP_AUTH_URL || 'https://auth.emergentagent.com/';
+    window.location.href = `${authBase}?redirect=${encodeURIComponent(redirectUrl)}`;
   };
 
   return (
@@ -29,7 +30,7 @@ const AdminLogin = () => {
           <LogIn className="w-4 h-4" /> Continue with Google
         </button>
         <div className="mt-8 flex items-center justify-center gap-2 text-[11px] text-neutral-500">
-          <Sparkles className="w-3 h-3 text-[#B4593F]" /> Secured by Emergent Auth
+          <Sparkles className="w-3 h-3 text-[#B4593F]" /> Secured Sign-In
         </div>
       </div>
     </main>

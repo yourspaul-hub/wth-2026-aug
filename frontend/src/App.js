@@ -59,7 +59,7 @@ import { Toaster } from './components/ui/sonner';
 function AppRouter() {
   const location = useLocation();
 
-  // Handle Emergent Auth callback with #session_id — process before normal routing
+  // Handle OAuth callback with #session_id — process before normal routing
   if (location.hash?.includes('session_id=')) {
     return <AuthCallback />;
   }
