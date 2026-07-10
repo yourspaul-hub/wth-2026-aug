@@ -54,6 +54,19 @@ Full-featured, dynamic e-commerce clone of www.wearthehope.com with a comprehens
   - Applied to: Hero, ProductCard, InstagramFeed, ReviewsSection, Blog list, BlogPost, review avatars/photos
 
 ## Backlog / Roadmap
+### Phase M — Hero images admin-editable + dynamic images cleanup ✅ (2026-07-10)
+- **New backend endpoint** `POST /api/admin/images/upload` — direct multipart file upload (in addition to the existing URL-based `upload-from-url`). Same resize + WebP + GridFS/S3 pipeline.
+- **CMS registry** extended with 8 new hero-slide keys: `home.hero.slide1.image`, `home.hero.slide{2,3}.{image,heading,accent,subtitle,cta,href}` + `home.hero.href` for the primary CTA. All 3 slides are now fully admin-editable.
+- **New `ImageFieldEditor` component** (`/app/frontend/src/pages/admin/ImageFieldEditor.jsx`) with file-picker upload, paste-URL mode, thumbnail preview, and clear/reset actions. Rendered in the Design tab whenever a registry item has `type: 'image'`.
+- **Hero.jsx** rewritten to build all 3 slides purely from CMS. Slides without a configured image are auto-skipped, so admins can run 1-, 2-, or 3-slide carousels. Slide dots + Featured pill hide gracefully when there's only one slide.
+- Dropped the last `heroSlides` import from `mock/mock.js` — Hero is now 100% data-driven.
+
+### Phase L-follow-up — Removed `mockCategories`/`mockProducts` fallbacks in favour of live `/api` data
+- `useCategories` hook (shared session cache) used by Navbar, Footer, Categories, Shop.
+- FeaturedProducts / Shop / ProductDetail now hide gracefully instead of showing mock products on API failure.
+- About page pulls a featured quote from `/api/reviews` (was hardcoded to `testimonials[1]`).
+- Contact page reads phone/email/instagram/hours from CMS keys (was hardcoded `brandInfo`).
+
 ### Phase L — Admin Order Fulfilment + Data Reset + Import + Reviews cleanup ✅ (2026-07-08)
 - **Fulfil Order flow** in admin Orders drawer: modal with 4 methods (Courier / Hand delivery / Door delivery / Store pickup). Courier collects courier from India + international dropdown (`GET /api/admin/couriers`, 27 couriers), AWB (required), tracking URL (optional). `POST /api/admin/orders/{on}/fulfill` sets status='shipped' for courier or 'delivered' for hand/door/store, sends `order_shipped` or `order_delivered` email automatically.
 - **New email template**: `order_delivered` (for hand/door/store closure).

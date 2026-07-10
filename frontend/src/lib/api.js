@@ -69,6 +69,13 @@ export const pastOrdersTemplateUrl = () => `${API_BASE}/admin/orders/import-temp
 export const adminListResetTargets = () => api.get('/admin/dev/reset/targets').then(r => r.data?.items || []);
 export const adminResetData = (targets, confirm) => api.post('/admin/dev/reset', { targets, confirm }).then(r => r.data);
 
+export const adminUploadImageFile = (file) => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return api.post('/admin/images/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data);
+};
+export const adminUploadImageFromUrl = (url) => api.post('/admin/images/upload-from-url', { url }).then(r => r.data);
+
 export const adminListProducts = () => api.get('/products', { params: { limit: 500 } }).then(r => r.data.items);
 export const adminCreateProduct = (payload) => api.post('/admin/products', payload).then(r => r.data);
 export const adminUpdateProduct = (id, patch) => api.patch(`/admin/products/${id}`, patch).then(r => r.data);

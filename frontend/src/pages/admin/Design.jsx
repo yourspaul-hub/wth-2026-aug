@@ -4,6 +4,7 @@ import { Palette, Save, ExternalLink, RotateCcw, Search, ChevronDown, ChevronUp 
 import { CONTENT_SECTIONS, CONTENT_DEFAULTS, PAGES } from '../../lib/contentRegistry';
 import { fetchSiteContent, adminSaveSiteContent, adminResetSiteContentKey } from '../../lib/api';
 import CatalogueUploader from './CatalogueUploader';
+import ImageFieldEditor from './ImageFieldEditor';
 
 /**
  * Admin — Design tab. Edit every editable text string on the storefront,
@@ -188,7 +189,13 @@ const AdminDesign = () => {
                             )}
                           </div>
                         </div>
-                        {multi ? (
+                        {item.type === 'image' ? (
+                          <ImageFieldEditor
+                            value={val}
+                            onChange={(v) => onChange(item.key, v)}
+                            testKey={item.key}
+                          />
+                        ) : multi ? (
                           <textarea
                             id={`f-${item.key}`}
                             value={val}

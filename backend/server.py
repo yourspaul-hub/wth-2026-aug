@@ -3036,6 +3036,46 @@ async def admin_upload_image_from_url(payload: ImageUploadRequest, user: dict = 
     return meta
 
 
+@api.post('/admin/images/upload')
+async def admin_upload_image_file(file: UploadFile = File(...), user: dict = Depends(require_store)):
+    """Direct file upload for admin (Design tab hero images, product images, etc.).
+    Runs through the same resize + WebP pipeline as URL uploads, stores in S3 or GridFS.
+    """
+    if not file.content_type or not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail='File must be an image')
+    raw = await file.read()
+    if len(raw) > 15 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail='File too large — 15 MB max')
+    try:
+        body, ext, w, h = _process_image(raw)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f'Could not process image: {e}')
+
+    s3_meta = await _try_upload_to_s3(body, ext, file.filename or 'upload', w, h)
+    if s3_meta is not None:
+        return {**s3_meta, 'uploaded_by': user.get('email')}
+
+    fid = await gridfs_bucket.upload_from_stream(
+        f'wth_{uuid.uuid4().hex[:12]}.{ext}',
+        body,
+        metadata={
+            'content_type': 'image/webp',
+            'source_url': (file.filename or 'upload')[:500],
+            'width': w, 'height': h, 'size': len(body),
+            'uploaded_by': user.get('email'),
+            'created_at': datetime.now(timezone.utc),
+            'backend': 'gridfs',
+        },
+    )
+    return {
+        'id': str(fid),
+        'url': f'/api/images/{fid}',
+        'width': w, 'height': h, 'size': len(body),
+        'content_type': 'image/webp',
+        'backend': 'gridfs',
+    }
+
+
 @api.get('/images/{img_id}')
 async def get_image(img_id: str):
     try:
