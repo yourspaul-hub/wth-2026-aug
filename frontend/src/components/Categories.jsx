@@ -1,23 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
-import { categories as mockCategories } from '../mock/mock';
-import { fetchCategories } from '../lib/api';
+import { useCategories } from '../hooks/useCategories';
 import { useContentText } from '../context/ContentContext';
 
 const Categories = () => {
   const containerRef = useRef(null);
-  const [cats, setCats] = useState(mockCategories);
+  const { items: cats, loading } = useCategories();
   const eyebrow = useContentText('home.categories.eyebrow');
   const title = useContentText('home.categories.title');
   const titleAccent = useContentText('home.categories.title_accent');
   const subtitle = useContentText('home.categories.subtitle');
-
-  useEffect(() => {
-    fetchCategories().then(cs => {
-      if (cs && cs.length) setCats(cs.map(c => ({ ...c, comingSoon: c.coming_soon })));
-    }).catch(() => {});
-  }, []);
 
   useEffect(() => {
     const els = containerRef.current?.querySelectorAll('.reveal');
@@ -28,6 +21,8 @@ const Categories = () => {
     els.forEach(el => io.observe(el));
     return () => io.disconnect();
   }, [cats]);
+
+  if (loading || !cats.length) return null;
 
   return (
     <section id="categories" ref={containerRef} className="relative py-24 bg-[#FDF3EB]">

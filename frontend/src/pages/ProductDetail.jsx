@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { products as mockProducts } from '../mock/mock';
 import { fetchProduct } from '../lib/api';
 import { useCart } from '../context/CartContext';
 import { useCurrency } from '../context/CurrencyContext';
@@ -52,15 +51,13 @@ const ProductDetail = () => {
         setSelectedOptions({});
       }
     }).catch(() => {
-      const fallback = mockProducts.find(p => p.id === id);
-      if (fallback) { setProduct(fallback); track(fallback); }
+      setProduct(null);
       setRelated([]);
       setLoading(false);
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setActiveImg(0); setQty(1); setCustomName('');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, track]);
 
   // Compute active variant based on selected options
   const activeVariant = useMemo(() => {

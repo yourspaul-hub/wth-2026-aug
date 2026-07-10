@@ -3,12 +3,13 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingBag, Heart, Search, Menu, X, Instagram } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useCart } from '../context/CartContext';
-import { categories } from '../mock/mock';
+import { useCategories } from '../hooks/useCategories';
 import Logo from './Logo';
 import LangCurrencyMenu from './LangCurrencyMenu';
 
 const Navbar = () => {
   const { totals, setCartOpen, wishlist } = useCart();
+  const { items: categories } = useCategories();
   const { t } = useTranslation();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Mail, Phone, MapPin, Instagram, Send, Clock, ExternalLink, Star } from 'lucide-react';
 import { toast } from 'sonner';
-import { brandInfo } from '../mock/mock';
 import { listLocations } from '../lib/api';
 import { useContentText } from '../context/ContentContext';
 
@@ -18,6 +17,10 @@ const Contact = () => {
   const fEmail = useContentText('contact.form.email');
   const fMsg = useContentText('contact.form.message');
   const fSubmit = useContentText('contact.form.submit');
+  const phone = useContentText('footer.contact.phone');
+  const email = useContentText('footer.contact.email');
+  const igHandle = useContentText('contact.instagram_handle', '@wearthehope');
+  const hours = useContentText('contact.hours', 'Mon–Sat, 10 AM – 7 PM IST');
 
   useEffect(() => {
     listLocations().then(setLocations).catch(() => setLocations([]));
@@ -118,10 +121,10 @@ const Contact = () => {
             <h2 className="font-serif-display text-3xl mb-6">Reach out directly</h2>
             <div className="space-y-5">
               {[
-                { icon: Phone, l: 'Call / WhatsApp', v: brandInfo.phone },
-                { icon: Mail, l: 'Email', v: brandInfo.email },
-                { icon: Instagram, l: 'Instagram', v: '@wearthehope' },
-                { icon: Clock, l: 'Hours', v: 'Mon–Sat, 10 AM – 7 PM IST' },
+                { icon: Phone, l: 'Call / WhatsApp', v: phone },
+                { icon: Mail, l: 'Email', v: email },
+                { icon: Instagram, l: 'Instagram', v: igHandle },
+                { icon: Clock, l: 'Hours', v: hours },
               ].map((c, i) => {
                 const I = c.icon;
                 return (

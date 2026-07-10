@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Users, Globe2, Sparkles, Award } from 'lucide-react';
-import { testimonials } from '../mock/mock';
+import { fetchReviewsFull } from '../lib/api';
 import { useContentText } from '../context/ContentContext';
 
 const stats = [
@@ -18,6 +18,17 @@ const values = [
 ];
 
 const About = () => {
+  const [featuredReview, setFeaturedReview] = useState(null);
+  useEffect(() => {
+    fetchReviewsFull({ limit: 10 })
+      .then(d => {
+        const items = d?.items || [];
+        // Prefer a longer 5-star review; fallback to any review
+        const pick = items.find(r => r.rating === 5 && (r.text || '').length > 60) || items[0];
+        setFeaturedReview(pick || null);
+      })
+      .catch(() => setFeaturedReview(null));
+  }, []);
   const heroEyebrow = useContentText('about.hero.eyebrow');
   const heroTitle = useContentText('about.hero.title');
   const heroAccent = useContentText('about.hero.title_accent');
@@ -99,20 +110,28 @@ const About = () => {
         </div>
       </section>
 
-      {/* Testimonial highlight */}
-      <section className="py-24 gradient-blush">
-        <div className="max-w-[900px] mx-auto px-6 lg:px-10 text-center">
-          <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-4">Voices of our community</div>
-          <p className="font-serif-display text-3xl md:text-4xl italic leading-relaxed text-[#1A1A1A]">“{testimonials[1].text}”</p>
-          <div className="mt-8 inline-flex items-center gap-3">
-            <img src={testimonials[1].avatar} alt="" className="w-12 h-12 rounded-full" />
-            <div className="text-left">
-              <div className="font-medium">{testimonials[1].name}</div>
-              <div className="text-xs text-neutral-600">{testimonials[1].when}</div>
+      {/* Testimonial highlight (pulled live from Reviews) */}
+      {featuredReview && (
+        <section className="py-24 gradient-blush">
+          <div className="max-w-[900px] mx-auto px-6 lg:px-10 text-center">
+            <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-4">Voices of our community</div>
+            <p className="font-serif-display text-3xl md:text-4xl italic leading-relaxed text-[#1A1A1A]">&ldquo;{featuredReview.text}&rdquo;</p>
+            <div className="mt-8 inline-flex items-center gap-3">
+              {featuredReview.avatar ? (
+                <img src={featuredReview.avatar} alt="" className="w-12 h-12 rounded-full object-cover" />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-[#FDF3EB] flex items-center justify-center text-[#B4593F] font-semibold">
+                  {featuredReview.name?.[0]?.toUpperCase() || '?'}
+                </div>
+              )}
+              <div className="text-left">
+                <div className="font-medium">{featuredReview.name}</div>
+                <div className="text-xs text-neutral-600">{featuredReview.when || 'recently'}</div>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* CTA */}
       <section className="py-24 bg-[#FDF3EB] text-center">

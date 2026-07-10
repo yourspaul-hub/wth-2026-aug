@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Instagram, Facebook, Youtube, Mail, Phone, MapPin, Send } from 'lucide-react';
-import { categories, brandInfo } from '../mock/mock';
 import { subscribeNewsletter, publicGenericQrImageUrl } from '../lib/api';
 import { toast } from 'sonner';
 import Logo from './Logo';
 import { useContentText } from '../context/ContentContext';
+import { useCategories } from '../hooks/useCategories';
 
 const Footer = () => {
   const [email, setEmail] = useState('');
+  const { items: categories } = useCategories();
   const T = {
     newsTitle: useContentText('footer.newsletter.title'),
     newsTitleAccent: useContentText('footer.newsletter.title_accent'),
@@ -32,9 +33,11 @@ const Footer = () => {
     privacy: useContentText('footer.links.privacy'),
     refund: useContentText('footer.links.refund'),
     location: useContentText('footer.contact.location'),
-    email: useContentText('footer.contact.email', brandInfo.email),
-    phone: useContentText('footer.contact.phone', brandInfo.phone),
+    email: useContentText('footer.contact.email'),
+    phone: useContentText('footer.contact.phone'),
+    instagram: useContentText('footer.social.instagram_url', 'https://www.instagram.com/wearthehope.co/'),
     usPartner: useContentText('footer.us_partner.cta'),
+    usPartnerUrl: useContentText('footer.us_partner.url', 'https://wearthehope.co/'),
     copyright: useContentText('footer.legal.copyright'),
     made: useContentText('footer.legal.made'),
   };
@@ -101,7 +104,7 @@ const Footer = () => {
             <Logo variant="light" withTagline className="h-12 mb-4" />
             <p className="text-white/70 text-sm leading-relaxed max-w-xs">{T.tagline}</p>
             <div className="flex items-center gap-3 mt-6">
-              <a href={brandInfo.instagram} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-white/10 hover:bg-[#B4593F] flex items-center justify-center transition-colors"><Instagram className="w-4 h-4" /></a>
+              <a href={T.instagram} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-white/10 hover:bg-[#B4593F] flex items-center justify-center transition-colors"><Instagram className="w-4 h-4" /></a>
               <a href="#" onClick={e => e.preventDefault()} className="w-10 h-10 rounded-full bg-white/10 hover:bg-[#B4593F] flex items-center justify-center transition-colors"><Facebook className="w-4 h-4" /></a>
               <a href="#" onClick={e => e.preventDefault()} className="w-10 h-10 rounded-full bg-white/10 hover:bg-[#B4593F] flex items-center justify-center transition-colors"><Youtube className="w-4 h-4" /></a>
             </div>
@@ -135,7 +138,7 @@ const Footer = () => {
               <li className="flex items-start gap-3"><Mail className="w-4 h-4 mt-0.5 text-[#E88864]" /> {T.email}</li>
               <li className="flex items-start gap-3"><MapPin className="w-4 h-4 mt-0.5 text-[#E88864]" /> {T.location}</li>
             </ul>
-            <a href={brandInfo.usPartner} target="_blank" rel="noreferrer" className="mt-6 inline-block bg-[#FFDD00] text-[#1A1A1A] px-5 py-2.5 rounded-full text-[11px] uppercase tracking-[0.2em] hover:bg-white transition-colors">{T.usPartner}</a>
+            <a href={T.usPartnerUrl} target="_blank" rel="noreferrer" className="mt-6 inline-block bg-[#FFDD00] text-[#1A1A1A] px-5 py-2.5 rounded-full text-[11px] uppercase tracking-[0.2em] hover:bg-white transition-colors">{T.usPartner}</a>
           </div>
         </div>
 

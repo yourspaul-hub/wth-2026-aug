@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from './ProductCard';
-import { products as mockProducts } from '../mock/mock';
 import { fetchProducts } from '../lib/api';
 import { ArrowRight } from 'lucide-react';
 
@@ -18,11 +17,8 @@ const FeaturedProducts = ({ title = 'Bestsellers', subtitle = 'Handpicked for yo
 
   useEffect(() => {
     fetchProducts({ limit: 50, tag: apiTag || undefined })
-      .then(res => {
-        const list = (res.items || []).map(normalize);
-        setItems(list.length ? list : mockProducts);
-      })
-      .catch(() => setItems(mockProducts));
+      .then(res => setItems((res.items || []).map(normalize)))
+      .catch(() => setItems([]));
   }, [apiTag]);
 
   useEffect(() => {

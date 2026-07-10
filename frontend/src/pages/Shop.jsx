@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
-import { products as mockProducts, categories as mockCategories } from '../mock/mock';
-import { fetchProducts, fetchCategories } from '../lib/api';
+import { fetchProducts } from '../lib/api';
 import { SlidersHorizontal, ChevronDown, X } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useContentText } from '../context/ContentContext';
+import { useCategories } from '../hooks/useCategories';
 
 const normalize = (p) => ({ ...p, originalPrice: p.original_price ?? p.originalPrice, hoverImage: p.hover_image ?? p.hoverImage });
 
@@ -19,7 +19,7 @@ const Shop = () => {
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [products, setProducts] = useState([]);
-  const [cats, setCats] = useState(mockCategories);
+  const { items: cats } = useCategories();
   const shopTitle = useContentText('shop.title');
   const shopSubtitle = useContentText('shop.subtitle');
   const filtersLabel = useContentText('shop.filters.title');
@@ -27,16 +27,9 @@ const Shop = () => {
   const emptyBody = useContentText('shop.empty.body');
 
   useEffect(() => {
-    fetchCategories().then(cs => { if (cs?.length) setCats(cs.map(c => ({ ...c, comingSoon: c.coming_soon }))); }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
     fetchProducts({ category: categorySlug || undefined, q: q || undefined, sort, limit: 100 })
-      .then(res => {
-        const list = (res.items || []).map(normalize);
-        setProducts(list);
-      })
-      .catch(() => setProducts(mockProducts));
+      .then(res => setProducts((res.items || []).map(normalize)))
+      .catch(() => setProducts([]));
   }, [categorySlug, q, sort]);
 
   const currentCategory = cats.find(c => c.slug === categorySlug);
