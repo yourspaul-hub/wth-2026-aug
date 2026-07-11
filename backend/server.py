@@ -1195,11 +1195,16 @@ async def list_hero_slides_admin(user: dict = Depends(require_admin)):
 async def create_hero_slide(payload: HeroSlideCreate, user: dict = Depends(require_admin)):
     if not payload.image.strip():
         raise HTTPException(status_code=400, detail='image is required')
-    doc = HeroSlide(**payload.model_dump()).model_dump()
-    if payload.order is None:
-        # append to end
+    # Compute the order first (append to end if unspecified) so we can pass a
+    # non-null value into HeroSlide, whose `order` field is typed `int` not
+    # Optional[int]. Passing None was rejected by Pydantic → the admin saw a
+    # 422 and the row never landed in Mongo.
+    order = payload.order
+    if order is None:
         last = await db.hero_slides.find_one({}, sort=[('order', -1)])
-        doc['order'] = ((last or {}).get('order', -1) + 1) if last else 0
+        order = ((last or {}).get('order', -1) + 1) if last else 0
+    fields = {k: v for k, v in payload.model_dump().items() if k != 'order'}
+    doc = HeroSlide(order=order, **fields).model_dump()
     await db.hero_slides.insert_one(doc)
     doc.pop('_id', None)
     return doc

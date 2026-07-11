@@ -1,0 +1,38 @@
+{
+  "summary": "Phase M — Hero-slide CRUD (bug fix regression), Lightbox module, direct file upload endpoint. Added /app/backend/tests/test_phase_m_hero_lightbox_upload.py with 28 tests — ALL 28 PASSED. Critical bug re-verified: POST /api/admin/hero-slides now persists on all three code paths (order omitted, order=0, order explicit). Phase L regression (23 tests) still 100% pass. Frontend testing skipped per review request.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase_m_hero_lightbox_upload.py",
+    "/app/test_reports/pytest/phase_m_results.xml"
+  ],
+  "action_items": [
+    "None from Phase M — all fixes verified. From iteration_10 still open: 2 obsolete assertions in test_phase_c_orders.py::test_b_verify_payment_shiprocket_and_email (lines expecting SR-prefixed AWB / shiprocket.co tracking URL auto-population in verify_payment). Intentional behaviour change from Phase L, tests just need those 2 assertions removed."
+  ],
+  "critical_code_review_comments": [
+    "server.py L1194-1210 create_hero_slide: fix is correct — order is computed first (falls back to max+1 when None), then HeroSlide is constructed with a concrete int. Also uses model_dump()-minus-order to spread other fields. Clean and safe. Small nit: if the last doc has no `order` key at all, (last or {}).get('order', -1) returns -1 and new_order becomes 0 — currently OK because existing rows always have an int order, but consider defensive `int(last.get('order') or 0) + 1` if any legacy data could be missing order.",
+    "server.py L3338-3371 admin_update_lightbox: correctly bumps LIGHTBOX_VERSION only on content changes (image/heading/subtitle/cta_label/cta_href) and skips the bump for enabled/show_once toggles. Verified via before/after version comparison. Nice touch: version stored as string but coerced to int for arithmetic.",
+    "server.py L3300-3310 get_public_settings.lightbox: enabled is (LIGHTBOX_ENABLED and image not empty) — correctly forces false when image is blank so a half-configured lightbox can never be shown to end users. Verified.",
+    "server.py L3166-3203 admin_upload_image_file: content-type check → 15 MB size cap (413) → _process_image → optional S3 → GridFS fallback. Returns { id, url, width, height, size, content_type } as spec'd. Note: content_type header is trusted (client-supplied). A truly malicious client could send a non-image blob with `Content-Type: image/png` and only trip the 400 at _process_image; the current 400 branch does catch it, but consider using python-magic sniffing for a stronger guarantee.",
+    "server.py L3174 size limit: `await file.read()` reads the whole body BEFORE checking size — means a 50 MB payload from a malicious client is still fully buffered into memory before 413 is returned. Not a functional bug, but for hardening consider streaming or checking Content-Length header first.",
+    "models.py L437-445 HeroSlideCreate.order: Optional[int]=None is now correctly handled in the endpoint. The Pydantic definition itself is fine — the bug was purely in the endpoint's spread-into-HeroSlide construction, which is now fixed. No model change needed.",
+    "server.py L1233-1240 reorder_hero_slides: does NOT validate that every id in the payload exists — an admin can silently no-op with junk ids. Returns {ok: true, count: N} regardless. Minor UX concern only; the admin UI can only send known ids."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase_m_hero_lightbox_upload.py (new)"
+  ],
+  "success_rate": {"backend": "100% (28/28 Phase M + 23/23 Phase L regression)", "frontend": "N/A — skipped per review request"},
+  "test_credentials": "Admin session cookies minted via mongosh inside the test itself (helper _mint_admin_token). Pattern matches iteration_10 / /app/memory/test_credentials.md.",
+  "seed_data_creation": "Each hero-slide test creates 1-3 TEST_-tagged slides with 'TEST-M-...' image URLs; these accumulate in db.hero_slides but do not interfere because the public endpoint filters by active/image and admin listing tolerates them. Lightbox tests mutate the singleton settings — LIGHTBOX_VERSION was bumped once during this run. Image upload tests inserted 1 tiny WebP file into GridFS.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run tests with `pytest -n 0` — mongosh subprocess auth-token minting is not xdist-safe (documented in iteration_10 too). test_phase_m_hero_lightbox_upload.py covers hero-slide CRUD + reorder + public visibility, lightbox admin GET/PUT with version-bump semantics, public settings lightbox block, and direct file upload (200/400/413/401 paths). Primary user-reported bug ('new hero slide not getting saved') has been verified fixed via THREE separate test cases: (1) minimal body with order omitted, (2) explicit order=0, (3) full body — all persist correctly and are retrievable via GET.",
+  "rca_of_the_issue": "Original bug: POST /api/admin/hero-slides returned 422 because HeroSlideCreate.order: Optional[int]=None was passed as **kwargs into HeroSlide where order: int (no Optional). Pydantic rejected None during HeroSlide validation → 422 → nothing persisted. Fix (verified): endpoint now resolves order to a concrete int (max+1 if None, or 0 if collection is empty) BEFORE constructing HeroSlide, and constructs with `HeroSlide(order=order, **fields_without_order)`. Verified via 3 targeted test cases including the previously-uncovered `order omitted` path that slipped through iteration 9/10 (their tests only sent explicit orders). Iteration_10 note about this test gap was accurate and has now been closed."
+}
