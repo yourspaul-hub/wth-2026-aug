@@ -54,6 +54,11 @@ Full-featured, dynamic e-commerce clone of www.wearthehope.com with a comprehens
   - Applied to: Hero, ProductCard, InstagramFeed, ReviewsSection, Blog list, BlogPost, review avatars/photos
 
 ## Backlog / Roadmap
+### Phase O — Homepage Review QR + Duplicate Slide + Admin Nav ✅ (2026-07-11)
+- **Homepage review QR card** added inside `ReviewsSection.jsx` — sits above the reviews grid with the auto-generated `/api/reviews/generic-qr.png` image, "Scan & share your story" eyebrow, headline, description, and a "Leave a review" CTA linking to `/review`. Verified: image loads (410×410 native), CTA href correct.
+- **Duplicate slide** button on `/admin/hero-slides` — clones an existing slide with `active: false` (hidden by default so the admin can tweak before publishing) and auto-opens the new record in the editor. `data-testid="hero-slide-duplicate-{id}"`.
+- **Admin sidebar reordered**: `Design` and `Hero Slides` moved to the top (right after Dashboard) — the two most-touched configuration screens are now the first items in the nav.
+
 ### Phase N — Dynamic Hero Slides + Navy Palette ✅ (2026-07-11)
 - **New collection** `hero_slides` with full CRUD backend endpoints:
   - `GET /api/hero-slides` (public — active slides with images, ordered)

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { fetchReviewsFull } from '../lib/api';
+import { Link } from 'react-router-dom';
+import { fetchReviewsFull, publicGenericQrImageUrl } from '../lib/api';
 import { imgProps } from '../lib/imgSrc';
 import { Star, Globe, ShieldCheck, QrCode, X, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -63,6 +64,29 @@ const ReviewsSection = () => {
               {f.label}
             </button>
           ))}
+        </div>
+
+        {/* QR — scan to leave a review */}
+        <div className="bg-[#FDF3EB] border border-[#EBD9CE] rounded-2xl p-6 md:p-8 mb-10 grid md:grid-cols-[auto_1fr_auto] gap-6 items-center" data-testid="reviews-qr-card">
+          <div className="bg-white p-3 rounded-xl w-max mx-auto md:mx-0 shadow-sm">
+            <img src={publicGenericQrImageUrl()} alt="Scan to leave a review" className="w-28 h-28 md:w-32 md:h-32" data-testid="reviews-qr-image" />
+          </div>
+          <div className="text-center md:text-left">
+            <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-2 inline-flex items-center gap-2 justify-center md:justify-start">
+              <QrCode className="w-3 h-3" /> Scan &amp; share your story
+            </div>
+            <h3 className="font-serif-display text-2xl md:text-3xl leading-tight text-[#213a60]">Loved your <em className="text-[#B4593F]">Wear The Hope</em> piece?</h3>
+            <p className="mt-2 text-sm text-neutral-600 max-w-md">Scan the code with your phone or tap the button — takes a minute and helps other believers discover the message.</p>
+          </div>
+          <div className="flex md:justify-end justify-center">
+            <Link
+              to="/review"
+              data-testid="reviews-qr-cta"
+              className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] transition-colors text-white px-6 py-3 rounded-full text-xs uppercase tracking-[0.2em]"
+            >
+              Leave a review
+            </Link>
+          </div>
         </div>
 
         {/* Reviews grid */}

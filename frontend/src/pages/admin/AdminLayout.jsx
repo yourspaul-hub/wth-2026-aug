@@ -6,6 +6,8 @@ import Logo from '../../components/Logo';
 
 const NAV = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true, roles: ['admin', 'store_manager', 'blogger'] },
+  { to: '/admin/design', label: 'Design', icon: Palette, roles: ['admin'] },
+  { to: '/admin/hero-slides', label: 'Hero Slides', icon: Sparkles, roles: ['admin'] },
   { to: '/admin/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin'] },
   { to: '/admin/orders', label: 'Orders', icon: ShoppingCart, roles: ['admin'] },
   { to: '/admin/products', label: 'Products', icon: Package, roles: ['admin', 'store_manager'] },
@@ -25,8 +27,6 @@ const NAV = [
   { to: '/admin/locations', label: 'Locations', icon: MapPin, roles: ['admin'] },
   { to: '/admin/users', label: 'Team & Access', icon: UsersIcon, roles: ['admin'] },
   { to: '/admin/integrations', label: 'Integrations', icon: Puzzle, roles: ['admin'] },
-  { to: '/admin/design', label: 'Design', icon: Palette, roles: ['admin'] },
-  { to: '/admin/hero-slides', label: 'Hero Slides', icon: Sparkles, roles: ['admin'] },
   { to: '/admin/reset-data', label: 'Reset Data', icon: Trash2, roles: ['admin'] },
 ];
 

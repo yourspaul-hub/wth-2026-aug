@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Trash2, ChevronUp, ChevronDown, Eye, EyeOff, Save, X, Sparkles } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, Eye, EyeOff, Save, X, Sparkles, Copy } from 'lucide-react';
 import { adminListHeroSlides, adminCreateHeroSlide, adminUpdateHeroSlide, adminDeleteHeroSlide, adminReorderHeroSlides } from '../../lib/api';
 import ImageFieldEditor from './ImageFieldEditor';
 
@@ -58,6 +58,27 @@ const AdminHeroSlides = () => {
       toast.success('Slide deleted');
       load();
     } catch (e) { toast.error(e?.response?.data?.detail || 'Delete failed'); }
+  };
+
+  const duplicate = async (s) => {
+    try {
+      const clone = {
+        image: s.image,
+        heading: s.heading || '',
+        accent: s.accent || '',
+        subtitle: s.subtitle || '',
+        cta: s.cta || 'Shop the Collection',
+        href: s.href || '/shop',
+        active: false, // duplicates start hidden so the admin can review before publishing
+      };
+      const created = await adminCreateHeroSlide(clone);
+      toast.success('Slide duplicated (hidden until you publish)');
+      await load();
+      // Open the new slide in the editor for quick tweaking
+      if (created?.id) startEdit(created);
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || 'Duplicate failed');
+    }
   };
 
   const toggleActive = async (s) => {
@@ -190,6 +211,9 @@ const AdminHeroSlides = () => {
                   {s.active ? <Eye className="w-4 h-4 text-emerald-600" /> : <EyeOff className="w-4 h-4 text-neutral-400" />}
                 </button>
                 <button onClick={() => startEdit(s)} className="text-xs uppercase tracking-widest px-3 py-2 rounded-full bg-white border border-[#EBD9CE] hover:border-[#B4593F] transition-colors" data-testid={`hero-slide-edit-${s.id}`}>Edit</button>
+                <button onClick={() => duplicate(s)} title="Duplicate slide" className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-neutral-100 text-[#213a60] transition-colors" data-testid={`hero-slide-duplicate-${s.id}`}>
+                  <Copy className="w-4 h-4" />
+                </button>
                 <button onClick={() => remove(s)} title="Delete slide" className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-rose-50 text-rose-600 transition-colors" data-testid={`hero-slide-delete-${s.id}`}>
                   <Trash2 className="w-4 h-4" />
                 </button>
