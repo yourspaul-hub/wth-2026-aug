@@ -54,6 +54,11 @@ Full-featured, dynamic e-commerce clone of www.wearthehope.com with a comprehens
   - Applied to: Hero, ProductCard, InstagramFeed, ReviewsSection, Blog list, BlogPost, review avatars/photos
 
 ## Backlog / Roadmap
+### Phase Q — Hero-slide save bug fix ✅ (2026-07-11)
+- **Bug**: New hero slides created via `/admin/hero-slides` weren't persisting. Root cause: `HeroSlideCreate.order: Optional[int] = None` was passed to `HeroSlide(**...)` where `HeroSlide.order: int = 0` — Pydantic rejected None → 422 → nothing landed in Mongo.
+- **Fix**: `create_hero_slide` now computes `order` first (append-to-end if unspecified), then constructs `HeroSlide` with a resolved integer.
+- **Verified**: testing_agent iteration_11 — 28/28 new tests pass covering all 3 code paths (order omitted / explicit 0 / explicit value), full CRUD round-trip, and lightbox + image-upload endpoints. Phase L regression (23 tests) still 100% pass.
+
 ### Phase P — Desktop Lightbox + Music First-Click Fix ✅ (2026-07-11)
 - **Homepage lightbox** module — full admin editor at `/admin/lightbox`:
   - Enable/disable toggle
