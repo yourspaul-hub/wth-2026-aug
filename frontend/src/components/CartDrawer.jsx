@@ -34,7 +34,7 @@ const CartDrawer = () => {
                 </div>
                 <div className="font-serif-display text-2xl mb-2">{t('cart.empty_title')}</div>
                 <p className="text-sm text-neutral-600 mb-6">{t('cart.empty_subtitle')}</p>
-                <Link to="/shop" onClick={() => setCartOpen(false)} className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-6 py-3 rounded-full text-xs uppercase tracking-[0.2em] transition-colors">
+                <Link to="/shop" onClick={() => setCartOpen(false)} className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white px-6 py-3 rounded-full text-xs uppercase tracking-[0.2em] transition-colors">
                   {t('cart.start_shopping')} <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -81,7 +81,7 @@ const CartDrawer = () => {
                 <span>{t('common.shipping')}</span>
                 <span>{totals.subtotal >= 999 ? t('common.free') : 'Calculated at checkout'}</span>
               </div>
-              <Link to="/checkout" onClick={() => setCartOpen(false)} className="w-full bg-[#1A1A1A] hover:bg-[#B4593F] transition-colors text-white py-4 rounded-full text-xs uppercase tracking-[0.2em] inline-flex items-center justify-center gap-2">
+              <Link to="/checkout" onClick={() => setCartOpen(false)} className="w-full bg-[#213a60] hover:bg-[#B4593F] transition-colors text-white py-4 rounded-full text-xs uppercase tracking-[0.2em] inline-flex items-center justify-center gap-2">
                 {t('common.proceed_to_checkout')} <ArrowRight className="w-4 h-4" />
               </Link>
               <button onClick={() => setCartOpen(false)} className="w-full mt-3 text-xs uppercase tracking-[0.2em] text-neutral-600 hover:text-[#B4593F]">{t('common.continue_shopping')}</button>

@@ -235,7 +235,7 @@ const AdminDesign = () => {
 
       {/* Sticky save bar when dirty */}
       {dirtyCount > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 bg-[#1A1A1A] text-white rounded-full pl-5 pr-2 py-2 flex items-center gap-4 shadow-2xl" data-testid="design-sticky-save">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 bg-[#213a60] text-white rounded-full pl-5 pr-2 py-2 flex items-center gap-4 shadow-2xl" data-testid="design-sticky-save">
           <span className="text-xs">{dirtyCount} unsaved change{dirtyCount === 1 ? '' : 's'}</span>
           <button
             onClick={onSaveAll}

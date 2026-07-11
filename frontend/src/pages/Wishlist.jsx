@@ -48,7 +48,7 @@ const Wishlist = () => {
             <span className="mx-2">/</span>
             <span className="text-[#B4593F]">{t('wishlist.title')}</span>
           </nav>
-          <h1 className="font-serif-display text-5xl md:text-6xl text-[#1A1A1A] flex items-center gap-4">
+          <h1 className="font-serif-display text-5xl md:text-6xl text-[#213a60] flex items-center gap-4">
             <Heart className="w-10 h-10 text-[#B4593F]" />
             {t('wishlist.title')}
           </h1>
@@ -66,7 +66,7 @@ const Wishlist = () => {
             <p className="text-neutral-600 mb-6">{t('wishlist.empty_subtitle')}</p>
             <Link
               to="/shop"
-              className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-6 py-3 rounded-full text-xs uppercase tracking-[0.2em] transition-colors"
+              className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white px-6 py-3 rounded-full text-xs uppercase tracking-[0.2em] transition-colors"
               data-testid="wishlist-browse-shop"
             >
               {t('wishlist.browse_shop')} <ArrowRight className="w-4 h-4" />
@@ -122,7 +122,7 @@ const Wishlist = () => {
                     </div>
                     <button
                       onClick={() => moveOne(p)}
-                      className="mt-3 w-full inline-flex items-center justify-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-[10px] uppercase tracking-[0.2em] py-2.5 rounded-full transition-colors"
+                      className="mt-3 w-full inline-flex items-center justify-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white text-[10px] uppercase tracking-[0.2em] py-2.5 rounded-full transition-colors"
                       data-testid={`wishlist-move-${p.id}`}
                     >
                       <ShoppingBag className="w-3 h-3" /> {t('common.move_to_bag')}

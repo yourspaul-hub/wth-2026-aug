@@ -48,7 +48,7 @@ const AdminInstagram = () => {
           <h1 className="font-serif-display text-4xl">Instagram Feed</h1>
           <p className="text-sm text-neutral-600 mt-1">{items.length} curated post(s) · shown on the homepage. Tag products to make posts shoppable.</p>
         </div>
-        <button onClick={() => start(null)} data-testid="add-ig-btn" className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full transition-colors">
+        <button onClick={() => start(null)} data-testid="add-ig-btn" className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full transition-colors">
           <Plus className="w-3.5 h-3.5" /> Add Post
         </button>
       </div>
@@ -114,7 +114,7 @@ const AdminInstagram = () => {
               </Field>
               <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={form.active} onChange={e => setForm({ ...form, active: e.target.checked })} /> Active</label>
               <div className="pt-2 flex gap-3">
-                <button type="submit" className="bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-6 py-2.5 rounded-full">Save</button>
+                <button type="submit" className="bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-6 py-2.5 rounded-full">Save</button>
                 <button type="button" onClick={close} className="text-xs uppercase tracking-widest px-6 py-2.5 rounded-full border border-[#EBD9CE]">Cancel</button>
               </div>
             </form>

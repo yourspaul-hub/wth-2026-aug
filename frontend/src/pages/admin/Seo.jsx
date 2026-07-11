@@ -33,7 +33,7 @@ const AdminSeo = () => {
         <div className="flex items-center gap-3">
           <a href="/api/sitemap.xml" target="_blank" rel="noreferrer" className="text-xs uppercase tracking-widest inline-flex items-center gap-1 border border-[#EBD9CE] px-4 py-2.5 rounded-full hover:border-[#B4593F]">Sitemap <ExternalLink className="w-3 h-3" /></a>
           <a href="/api/robots.txt" target="_blank" rel="noreferrer" className="text-xs uppercase tracking-widest inline-flex items-center gap-1 border border-[#EBD9CE] px-4 py-2.5 rounded-full hover:border-[#B4593F]">Robots <ExternalLink className="w-3 h-3" /></a>
-          <button onClick={() => setEditing({ ...empty })} className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest"><Plus className="w-4 h-4" /> Add</button>
+          <button onClick={() => setEditing({ ...empty })} className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest"><Plus className="w-4 h-4" /> Add</button>
         </div>
       </div>
 
@@ -80,7 +80,7 @@ const AdminSeo = () => {
               <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Canonical URL (optional)</span><input value={editing.canonical || ''} onChange={e => setEditing({ ...editing, canonical: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
               <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Robots</span><select value={editing.robots} onChange={e => setEditing({ ...editing, robots: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]"><option value="index,follow">index,follow</option><option value="noindex,follow">noindex,follow</option><option value="index,nofollow">index,nofollow</option><option value="noindex,nofollow">noindex,nofollow</option></select></label>
             </div>
-            <div className="px-6 py-5 border-t border-[#EBD9CE] flex gap-3"><button onClick={onSave} className="flex-1 bg-[#1A1A1A] hover:bg-[#B4593F] text-white py-3 rounded-full text-xs uppercase tracking-widest">Save</button><button onClick={() => setEditing(null)} className="px-6 py-3 border border-[#EBD9CE] rounded-full text-xs uppercase tracking-widest">Cancel</button></div>
+            <div className="px-6 py-5 border-t border-[#EBD9CE] flex gap-3"><button onClick={onSave} className="flex-1 bg-[#213a60] hover:bg-[#B4593F] text-white py-3 rounded-full text-xs uppercase tracking-widest">Save</button><button onClick={() => setEditing(null)} className="px-6 py-3 border border-[#EBD9CE] rounded-full text-xs uppercase tracking-widest">Cancel</button></div>
           </aside>
         </>
       )}

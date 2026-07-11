@@ -9,7 +9,7 @@ const KpiCard = ({ icon: Icon, label, value, sub, tint = 'text-[#B4593F]' }) => 
       <div className={`w-10 h-10 rounded-full bg-[#FDF3EB] flex items-center justify-center ${tint}`}><Icon className="w-5 h-5" /></div>
       {sub && <span className="text-[11px] text-neutral-500">{sub}</span>}
     </div>
-    <div className="text-3xl font-serif-display text-[#1A1A1A]">{value}</div>
+    <div className="text-3xl font-serif-display text-[#213a60]">{value}</div>
     <div className="text-xs uppercase tracking-[0.15em] text-neutral-500 mt-1">{label}</div>
   </div>
 );

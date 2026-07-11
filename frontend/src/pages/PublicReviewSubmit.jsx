@@ -71,7 +71,7 @@ const PublicReviewSubmit = () => {
 
           {err && <div className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{err}</div>}
 
-          <button type="submit" disabled={submitting || form.text.trim().length < 5} data-testid="public-review-submit" className="w-full bg-[#1A1A1A] hover:bg-[#B4593F] disabled:bg-neutral-300 text-white uppercase tracking-[0.2em] text-xs px-6 py-3.5 rounded-full transition-colors">
+          <button type="submit" disabled={submitting || form.text.trim().length < 5} data-testid="public-review-submit" className="w-full bg-[#213a60] hover:bg-[#B4593F] disabled:bg-neutral-300 text-white uppercase tracking-[0.2em] text-xs px-6 py-3.5 rounded-full transition-colors">
             {submitting ? 'Submitting…' : 'Submit Review'}
           </button>
         </form>

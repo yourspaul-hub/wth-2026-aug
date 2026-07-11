@@ -55,16 +55,16 @@ const Shop = () => {
             <Link to="/shop" className="hover:text-[#B4593F]">Shop</Link>
             {currentCategory && <><span className="mx-2">/</span><span className="text-[#B4593F]">{currentCategory.name}</span></>}
           </nav>
-          <h1 className="font-serif-display text-5xl md:text-6xl text-[#1A1A1A]">{title}</h1>
+          <h1 className="font-serif-display text-5xl md:text-6xl text-[#213a60]">{title}</h1>
           <p className="text-neutral-600 mt-3">{subtitle}</p>
         </div>
       </div>
 
       {!wishlistView && (
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-6 flex flex-wrap gap-2 overflow-x-auto">
-          <Link to="/shop" className={`text-xs uppercase tracking-[0.15em] px-5 py-2.5 rounded-full transition-colors ${!currentCategory ? 'bg-[#1A1A1A] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}>All</Link>
+          <Link to="/shop" className={`text-xs uppercase tracking-[0.15em] px-5 py-2.5 rounded-full transition-colors ${!currentCategory ? 'bg-[#213a60] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}>All</Link>
           {cats.filter(c => !c.comingSoon).map(c => (
-            <Link key={c.id} to={`/shop/${c.slug}`} className={`text-xs uppercase tracking-[0.15em] px-5 py-2.5 rounded-full transition-colors whitespace-nowrap ${currentCategory?.slug === c.slug ? 'bg-[#1A1A1A] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}>{c.name}</Link>
+            <Link key={c.id} to={`/shop/${c.slug}`} className={`text-xs uppercase tracking-[0.15em] px-5 py-2.5 rounded-full transition-colors whitespace-nowrap ${currentCategory?.slug === c.slug ? 'bg-[#213a60] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}>{c.name}</Link>
           ))}
         </div>
       )}
@@ -115,7 +115,7 @@ const Shop = () => {
           <div className="text-center py-20">
             <div className="font-serif-display text-3xl mb-3">{emptyTitle}</div>
             <p className="text-neutral-600 mb-6">{emptyBody}</p>
-            <Link to="/shop" className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-6 py-3 rounded-full text-xs uppercase tracking-[0.2em] transition-colors">Browse All</Link>
+            <Link to="/shop" className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white px-6 py-3 rounded-full text-xs uppercase tracking-[0.2em] transition-colors">Browse All</Link>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 md:gap-7">

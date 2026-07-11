@@ -50,7 +50,7 @@ const AdminEmails = () => {
 
       <div className="mb-6 flex flex-wrap gap-2">
         {TEMPLATES.map(t => (
-          <button key={t.id} onClick={() => setFilter(t.id)} className={`text-xs uppercase tracking-widest px-4 py-2 rounded-full transition-colors ${filter === t.id ? 'bg-[#1A1A1A] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}>{t.label}</button>
+          <button key={t.id} onClick={() => setFilter(t.id)} className={`text-xs uppercase tracking-widest px-4 py-2 rounded-full transition-colors ${filter === t.id ? 'bg-[#213a60] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}>{t.label}</button>
         ))}
       </div>
 

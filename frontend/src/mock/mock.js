@@ -98,7 +98,7 @@ export const products = [
     tag: 'Bestseller',
     rating: 4.9,
     reviews: 124,
-    colors: ['#0F1F3B', '#1A1A1A', '#4A5B6C'],
+    colors: ['#0F1F3B', '#213a60', '#4A5B6C'],
     description: 'Premium 100% cotton baseball cap with embroidered "Blessed" text. A daily reminder to walk in confidence and grace.',
   },
   {
@@ -218,7 +218,7 @@ export const products = [
     tag: 'Bestseller',
     rating: 4.9,
     reviews: 340,
-    colors: ['#0F1F3B', '#F5D0CE', '#1A1A1A'],
+    colors: ['#0F1F3B', '#F5D0CE', '#213a60'],
     description: '100% premium cotton tee with a bold Psalm 46 print. Soft, breathable and built to last.',
   },
   {

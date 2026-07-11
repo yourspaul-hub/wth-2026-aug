@@ -44,7 +44,7 @@ const ProductCard = ({ product }) => {
           </span>
         )}
         {discount > 0 && (
-          <span className="absolute top-3 right-3 bg-[#1A1A1A] text-white text-[10px] uppercase tracking-[0.15em] px-3 py-1 rounded-full">-{discount}%</span>
+          <span className="absolute top-3 right-3 bg-[#213a60] text-white text-[10px] uppercase tracking-[0.15em] px-3 py-1 rounded-full">-{discount}%</span>
         )}
 
         {/* Actions overlay */}
@@ -60,7 +60,7 @@ const ProductCard = ({ product }) => {
         {/* Add to bag CTA */}
         <button
           onClick={onAdd}
-          className="absolute bottom-3 left-3 right-3 bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-[11px] uppercase tracking-[0.2em] py-3 rounded-full flex items-center justify-center gap-2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500"
+          className="absolute bottom-3 left-3 right-3 bg-[#213a60] hover:bg-[#B4593F] text-white text-[11px] uppercase tracking-[0.2em] py-3 rounded-full flex items-center justify-center gap-2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500"
           data-testid={`product-card-add-${product.id}`}
         >
           <ShoppingBag className="w-3.5 h-3.5" /> {t('common.add_to_bag')}
@@ -69,7 +69,7 @@ const ProductCard = ({ product }) => {
 
       <div className="pt-4">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-medium text-[#1A1A1A] group-hover:text-[#B4593F] transition-colors line-clamp-1">{product.name}</h3>
+          <h3 className="text-sm font-medium text-[#213a60] group-hover:text-[#B4593F] transition-colors line-clamp-1">{product.name}</h3>
           <div className="flex items-center gap-1 text-[11px] text-neutral-600 shrink-0">
             <Star className="w-3 h-3 fill-[#E8B364] stroke-[#E8B364]" />
             {product.rating}

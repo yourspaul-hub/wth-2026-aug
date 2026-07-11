@@ -4,7 +4,7 @@ import { TrendingUp, Eye, ShoppingCart, IndianRupee, Percent, Info } from 'lucid
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, BarChart, Bar, Legend, CartesianGrid, Area, AreaChart } from 'recharts';
 
 const RANGES = [7, 14, 30, 90];
-const COLORS = ['#B4593F', '#1A1A1A', '#8B5A2B', '#E88864', '#EBD9CE'];
+const COLORS = ['#B4593F', '#213a60', '#8B5A2B', '#E88864', '#EBD9CE'];
 
 const AdminAnalytics = () => {
   const [days, setDays] = useState(30);
@@ -29,7 +29,7 @@ const AdminAnalytics = () => {
         </div>
         <div className="flex gap-2">
           {RANGES.map(r => (
-            <button key={r} onClick={() => setDays(r)} className={`text-xs uppercase tracking-widest px-4 py-2 rounded-full ${days === r ? 'bg-[#1A1A1A] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}>
+            <button key={r} onClick={() => setDays(r)} className={`text-xs uppercase tracking-widest px-4 py-2 rounded-full ${days === r ? 'bg-[#213a60] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}>
               {r} days
             </button>
           ))}
@@ -45,7 +45,7 @@ const AdminAnalytics = () => {
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-        <Kpi icon={Eye} label="Page views" value={t.page_views.toLocaleString('en-IN')} accent="#1A1A1A" />
+        <Kpi icon={Eye} label="Page views" value={t.page_views.toLocaleString('en-IN')} accent="#213a60" />
         <Kpi icon={ShoppingCart} label="Orders" value={t.orders.toLocaleString('en-IN')} accent="#B4593F" />
         <Kpi icon={IndianRupee} label="Revenue" value={`₹${t.revenue.toLocaleString('en-IN')}`} accent="#8B5A2B" />
         <Kpi icon={Percent} label="Conversion" value={`${t.conversion_percent}%`} accent="#E88864" />
@@ -111,7 +111,7 @@ const AdminAnalytics = () => {
               <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#8a8a8a' }} />
               <Tooltip contentStyle={{ background: 'white', border: '1px solid #EBD9CE', borderRadius: 8, fontSize: 12 }} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Line yAxisId="left" type="monotone" dataKey="page_views" stroke="#1A1A1A" strokeWidth={2} dot={false} name="Page views" />
+              <Line yAxisId="left" type="monotone" dataKey="page_views" stroke="#213a60" strokeWidth={2} dot={false} name="Page views" />
               <Line yAxisId="right" type="monotone" dataKey="orders" stroke="#B4593F" strokeWidth={2} dot={false} name="Orders" />
             </LineChart>
           </ResponsiveContainer>
@@ -127,7 +127,7 @@ const AdminAnalytics = () => {
               <BarChart data={data.top_products} layout="vertical" margin={{ top: 0, right: 20, bottom: 0, left: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#EBD9CE" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 11, fill: '#8a8a8a' }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#1A1A1A' }} width={120} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#213a60' }} width={120} />
                 <Tooltip contentStyle={{ background: 'white', border: '1px solid #EBD9CE', borderRadius: 8, fontSize: 12 }} formatter={(v, k) => k === 'revenue' ? [`₹${v.toLocaleString('en-IN')}`, 'Revenue'] : [v, 'Units']} />
                 <Bar dataKey="units" fill="#B4593F" radius={[0, 4, 4, 0]} />
               </BarChart>

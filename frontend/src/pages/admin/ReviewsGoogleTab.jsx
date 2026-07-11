@@ -66,7 +66,7 @@ const ReviewsGoogleTab = () => {
           <button onClick={syncAll} disabled={syncingAll || items.length === 0} data-testid="sync-all-btn" className="inline-flex items-center gap-2 bg-white border border-[#EBD9CE] hover:border-[#B4593F] text-xs uppercase tracking-widest px-5 py-2.5 rounded-full disabled:opacity-50">
             <RefreshCw className={`w-3.5 h-3.5 ${syncingAll ? 'animate-spin' : ''}`} /> {syncingAll ? 'Syncing all…' : 'Sync all'}
           </button>
-          <button onClick={() => setEditing({ ...empty })} data-testid="add-gbl-btn" className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full">
+          <button onClick={() => setEditing({ ...empty })} data-testid="add-gbl-btn" className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full">
             <Plus className="w-3.5 h-3.5" /> Add Location
           </button>
         </div>
@@ -138,7 +138,7 @@ const ReviewsGoogleTab = () => {
                 <label className="inline-flex items-center gap-2"><input type="checkbox" checked={editing.active} onChange={e => setEditing({ ...editing, active: e.target.checked })} /> Active</label>
               </div>
               <div className="pt-2 flex gap-3">
-                <button type="submit" data-testid="save-gbl-btn" className="flex-1 bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-6 py-2.5 rounded-full">Save</button>
+                <button type="submit" data-testid="save-gbl-btn" className="flex-1 bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-6 py-2.5 rounded-full">Save</button>
                 <button type="button" onClick={() => setEditing(null)} className="px-6 py-2.5 border border-[#EBD9CE] rounded-full text-xs uppercase tracking-widest">Cancel</button>
               </div>
             </form>

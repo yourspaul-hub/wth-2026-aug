@@ -139,7 +139,7 @@ const MusicWidget = () => {
         <button
           onClick={toggle}
           onDoubleClick={() => setCollapsed(false)}
-          className="group flex items-center gap-2 pl-3 pr-4 py-2.5 bg-[#1A1A1A]/95 hover:bg-[#B4593F] text-white rounded-full shadow-2xl backdrop-blur transition-all"
+          className="group flex items-center gap-2 pl-3 pr-4 py-2.5 bg-[#213a60]/95 hover:bg-[#B4593F] text-white rounded-full shadow-2xl backdrop-blur transition-all"
           aria-label={playing ? 'Pause ambient music' : 'Play ambient music'}
           data-testid="music-widget-toggle"
         >
@@ -168,7 +168,7 @@ const MusicWidget = () => {
 
       {/* Expanded panel */}
       {!collapsed && (
-        <div className="bg-[#1A1A1A]/95 text-white rounded-2xl shadow-2xl backdrop-blur px-4 py-3 w-72 border border-white/10" data-testid="music-widget-panel">
+        <div className="bg-[#213a60]/95 text-white rounded-2xl shadow-2xl backdrop-blur px-4 py-3 w-72 border border-white/10" data-testid="music-widget-panel">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-full bg-[#B4593F] flex items-center justify-center">
               <Music className="w-4 h-4" />

@@ -58,7 +58,7 @@ const ReviewsSection = () => {
               key={f.key}
               onClick={() => setFilter(f.key)}
               data-testid={`reviews-filter-${f.key}`}
-              className={`text-xs uppercase tracking-widest px-4 py-2 rounded-full transition-colors ${filter === f.key ? 'bg-[#1A1A1A] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}
+              className={`text-xs uppercase tracking-widest px-4 py-2 rounded-full transition-colors ${filter === f.key ? 'bg-[#213a60] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}
             >
               {f.label}
             </button>
@@ -128,7 +128,7 @@ const ReviewsSection = () => {
           <div className="flex flex-col items-center gap-3 mt-10" data-testid="reviews-load-more-wrap">
             <button
               onClick={() => setVisible(v => v + PAGE_SIZE)}
-              className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-6 py-3 rounded-full transition-colors"
+              className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] bg-[#213a60] hover:bg-[#B4593F] text-white px-6 py-3 rounded-full transition-colors"
               data-testid="reviews-load-more-btn"
             >
               Load more reviews <ChevronDown className="w-3.5 h-3.5" />

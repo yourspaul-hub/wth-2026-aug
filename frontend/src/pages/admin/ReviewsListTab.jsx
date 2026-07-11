@@ -67,13 +67,13 @@ const ReviewsListTab = () => {
               key={f.k}
               onClick={() => setFilter(f.k)}
               data-testid={`filter-${f.k}`}
-              className={`text-xs uppercase tracking-widest px-4 py-2 rounded-full inline-flex items-center gap-2 ${filter === f.k ? 'bg-[#1A1A1A] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'} ${f.warn && counts[f.k] > 0 && filter !== f.k ? 'ring-1 ring-amber-400' : ''}`}
+              className={`text-xs uppercase tracking-widest px-4 py-2 rounded-full inline-flex items-center gap-2 ${filter === f.k ? 'bg-[#213a60] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'} ${f.warn && counts[f.k] > 0 && filter !== f.k ? 'ring-1 ring-amber-400' : ''}`}
             >
               {f.l} <span className="text-[10px] opacity-70">{counts[f.k]}</span>
             </button>
           ))}
         </div>
-        <button onClick={() => setEditing({ ...empty })} data-testid="add-review-btn" className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest">
+        <button onClick={() => setEditing({ ...empty })} data-testid="add-review-btn" className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest">
           <Plus className="w-4 h-4" /> Add Review
         </button>
       </div>
@@ -138,7 +138,7 @@ const ReviewsListTab = () => {
               <label className="inline-flex items-center gap-2"><input type="checkbox" checked={!!editing.published} onChange={e => setEditing({ ...editing, published: e.target.checked })} /> <span>Published (visible on storefront)</span></label>
             </div>
             <div className="px-6 py-5 border-t border-[#EBD9CE] flex gap-3">
-              <button onClick={onSave} data-testid="save-review-btn" className="flex-1 bg-[#1A1A1A] hover:bg-[#B4593F] text-white py-3 rounded-full text-xs uppercase tracking-widest">Save</button>
+              <button onClick={onSave} data-testid="save-review-btn" className="flex-1 bg-[#213a60] hover:bg-[#B4593F] text-white py-3 rounded-full text-xs uppercase tracking-widest">Save</button>
               <button onClick={() => setEditing(null)} className="px-6 py-3 border border-[#EBD9CE] rounded-full text-xs uppercase tracking-widest">Cancel</button>
             </div>
           </aside>

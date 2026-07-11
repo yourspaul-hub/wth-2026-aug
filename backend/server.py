@@ -42,6 +42,7 @@ from models import (
     Review, ReviewCreate, ReviewUpdate,
     Coupon, CouponCreate, CouponUpdate, CouponValidate,
     Order, OrderCreate, OrderStatusUpdate, OrderFulfill, OrderItem, ShippingAddress,
+    HeroSlide, HeroSlideCreate, HeroSlideUpdate, HeroSlidesReorder,
     ShippingRule, ShippingRuleCreate, TaxRate, TaxRateCreate,
     SeoMeta, SeoMetaCreate,
     Redirect, RedirectCreate,
@@ -1113,7 +1114,128 @@ async def admin_reset_targets(user: dict = Depends(require_admin)):
     return {'items': out}
 
 
-# --- Bulk import of past orders (CSV / XLSX) ---
+# --- Hero slides (homepage carousel) ---
+async def _seed_hero_slides_if_empty():
+    """One-time migration: if hero_slides is empty but the old CMS slide keys exist,
+    seed the collection from them so existing installs keep their slides.
+    """
+    if await db.hero_slides.count_documents({}) > 0:
+        return
+    async def _cms(key: str) -> str:
+        d = await db.site_content.find_one({'key': key}, {'_id': 0, 'value': 1})
+        return (d or {}).get('value') or ''
+
+    now = datetime.now(timezone.utc)
+    seeds = []
+    # Slide 1 uses the primary hero keys
+    s1_img = await _cms('home.hero.slide1.image')
+    if s1_img:
+        seeds.append({
+            'id': f'hs_{uuid.uuid4().hex[:12]}', 'order': 0,
+            'image': s1_img,
+            'heading': await _cms('home.hero.title') or 'Share the Message of',
+            'accent': await _cms('home.hero.accent') or 'Love & Hope',
+            'subtitle': await _cms('home.hero.subtitle') or 'Faith-driven products, crafted to impact lives',
+            'cta': await _cms('home.hero.cta.primary') or 'Shop The Collection',
+            'href': await _cms('home.hero.href') or '/shop',
+            'active': True, 'created_at': now, 'updated_at': now,
+        })
+    for i in (2, 3):
+        img = await _cms(f'home.hero.slide{i}.image')
+        if not img:
+            continue
+        seeds.append({
+            'id': f'hs_{uuid.uuid4().hex[:12]}', 'order': len(seeds),
+            'image': img,
+            'heading': await _cms(f'home.hero.slide{i}.heading'),
+            'accent': await _cms(f'home.hero.slide{i}.accent'),
+            'subtitle': await _cms(f'home.hero.slide{i}.subtitle'),
+            'cta': await _cms(f'home.hero.slide{i}.cta'),
+            'href': await _cms(f'home.hero.slide{i}.href') or '/shop',
+            'active': True, 'created_at': now, 'updated_at': now,
+        })
+    if seeds:
+        await db.hero_slides.insert_many(seeds)
+        logger.info('Seeded %d hero slides from CMS content keys', len(seeds))
+    else:
+        # Fresh install with no CMS overrides — seed a single sample slide
+        # so the homepage never renders blank. Admin can replace or remove it.
+        await db.hero_slides.insert_one({
+            'id': f'hs_{uuid.uuid4().hex[:12]}', 'order': 0,
+            'image': 'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?crop=entropy&cs=srgb&fm=jpg&q=85&w=1600',
+            'heading': 'Share the Message of',
+            'accent': 'Love & Hope',
+            'subtitle': 'Faith-driven products, crafted to impact lives',
+            'cta': 'Shop The Collection',
+            'href': '/shop',
+            'active': True, 'created_at': now, 'updated_at': now,
+        })
+        logger.info('Seeded 1 default hero slide (fresh install)')
+
+
+@api.get('/hero-slides')
+async def list_hero_slides_public():
+    """Public: returns active slides with an image, ordered."""
+    await _seed_hero_slides_if_empty()
+    docs = await db.hero_slides.find(
+        {'active': True, 'image': {'$ne': ''}},
+        {'_id': 0}
+    ).sort('order', 1).to_list(50)
+    return {'items': docs}
+
+
+@api.get('/admin/hero-slides')
+async def list_hero_slides_admin(user: dict = Depends(require_admin)):
+    await _seed_hero_slides_if_empty()
+    docs = await db.hero_slides.find({}, {'_id': 0}).sort('order', 1).to_list(50)
+    return {'items': docs}
+
+
+@api.post('/admin/hero-slides')
+async def create_hero_slide(payload: HeroSlideCreate, user: dict = Depends(require_admin)):
+    if not payload.image.strip():
+        raise HTTPException(status_code=400, detail='image is required')
+    doc = HeroSlide(**payload.model_dump()).model_dump()
+    if payload.order is None:
+        # append to end
+        last = await db.hero_slides.find_one({}, sort=[('order', -1)])
+        doc['order'] = ((last or {}).get('order', -1) + 1) if last else 0
+    await db.hero_slides.insert_one(doc)
+    doc.pop('_id', None)
+    return doc
+
+
+@api.patch('/admin/hero-slides/{slide_id}')
+async def update_hero_slide(slide_id: str, payload: HeroSlideUpdate, user: dict = Depends(require_admin)):
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(status_code=400, detail='No fields to update')
+    updates['updated_at'] = datetime.now(timezone.utc)
+    res = await db.hero_slides.update_one({'id': slide_id}, {'$set': updates})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail='Slide not found')
+    return await db.hero_slides.find_one({'id': slide_id}, {'_id': 0})
+
+
+@api.delete('/admin/hero-slides/{slide_id}')
+async def delete_hero_slide(slide_id: str, user: dict = Depends(require_admin)):
+    res = await db.hero_slides.delete_one({'id': slide_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail='Slide not found')
+    return {'ok': True, 'id': slide_id}
+
+
+@api.post('/admin/hero-slides/reorder')
+async def reorder_hero_slides(payload: HeroSlidesReorder, user: dict = Depends(require_admin)):
+    for idx, sid in enumerate(payload.ids):
+        await db.hero_slides.update_one(
+            {'id': sid},
+            {'$set': {'order': idx, 'updated_at': datetime.now(timezone.utc)}},
+        )
+    return {'ok': True, 'count': len(payload.ids)}
+
+
+
 PAST_ORDER_TEMPLATE_COLUMNS = [
     'order_number', 'created_at',
     'customer_name', 'customer_email', 'customer_phone',

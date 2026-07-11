@@ -37,7 +37,7 @@ const AdminCategories = () => {
           <h1 className="font-serif-display text-4xl">Categories</h1>
           <p className="text-sm text-neutral-600 mt-1">{items.length} categor{items.length === 1 ? 'y' : 'ies'} · shown in Shop nav & filters</p>
         </div>
-        <button onClick={() => start(null)} data-testid="add-category-btn" className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full">
+        <button onClick={() => start(null)} data-testid="add-category-btn" className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full">
           <Plus className="w-3.5 h-3.5" /> Add Category
         </button>
       </div>
@@ -87,7 +87,7 @@ const AdminCategories = () => {
               <F label="Description"><textarea rows="3" value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} className="input !rounded-lg" /></F>
               <F label="Order"><input type="number" value={editing.order || 0} onChange={e => setEditing({ ...editing, order: e.target.value })} className="input w-32" /></F>
               <div className="pt-2 flex gap-3">
-                <button type="submit" data-testid="save-category-btn" className="flex-1 bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-6 py-2.5 rounded-full">Save</button>
+                <button type="submit" data-testid="save-category-btn" className="flex-1 bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-6 py-2.5 rounded-full">Save</button>
                 <button type="button" onClick={close} className="px-6 py-2.5 border border-[#EBD9CE] rounded-full text-xs uppercase tracking-widest">Cancel</button>
               </div>
             </form>

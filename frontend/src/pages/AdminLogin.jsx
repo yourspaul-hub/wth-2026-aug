@@ -26,7 +26,7 @@ const AdminLogin = () => {
         <div className="text-[11px] uppercase tracking-[0.2em] text-[#B4593F]">Admin Portal</div>
         <h1 className="font-serif-display text-3xl mt-6">Welcome back</h1>
         <p className="text-sm text-neutral-600 mt-2">Sign in with your authorised Google account to manage the storefront.</p>
-        <button onClick={handleLogin} className="mt-8 w-full inline-flex items-center justify-center gap-3 bg-[#1A1A1A] hover:bg-[#B4593F] transition-colors text-white px-6 py-4 rounded-full text-xs uppercase tracking-[0.2em]">
+        <button onClick={handleLogin} className="mt-8 w-full inline-flex items-center justify-center gap-3 bg-[#213a60] hover:bg-[#B4593F] transition-colors text-white px-6 py-4 rounded-full text-xs uppercase tracking-[0.2em]">
           <LogIn className="w-4 h-4" /> Continue with Google
         </button>
         <div className="mt-8 flex items-center justify-center gap-2 text-[11px] text-neutral-500">

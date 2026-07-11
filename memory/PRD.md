@@ -54,6 +54,17 @@ Full-featured, dynamic e-commerce clone of www.wearthehope.com with a comprehens
   - Applied to: Hero, ProductCard, InstagramFeed, ReviewsSection, Blog list, BlogPost, review avatars/photos
 
 ## Backlog / Roadmap
+### Phase N — Dynamic Hero Slides + Navy Palette ✅ (2026-07-11)
+- **New collection** `hero_slides` with full CRUD backend endpoints:
+  - `GET /api/hero-slides` (public — active slides with images, ordered)
+  - `GET /api/admin/hero-slides` (admin — all slides incl. hidden)
+  - `POST /api/admin/hero-slides` (create), `PATCH /admin/hero-slides/{id}` (update), `DELETE /admin/hero-slides/{id}`
+  - `POST /api/admin/hero-slides/reorder` (bulk reorder)
+  - Auto-seed on first fetch: migrates from old `home.hero.slide{N}.*` CMS keys if present, otherwise seeds one sample slide.
+- **New admin page** `/admin/hero-slides` — dedicated CRUD UI with: image upload (via ImageFieldEditor), per-slide text fields (heading, accent, subtitle, CTA, href, active toggle), up/down reorder, visibility toggle, delete confirm.
+- **Hero.jsx** rewritten to consume `/api/hero-slides` — **unlimited slide count**, filter by active+image, carousel auto-hides dots for single-slide setups.
+- Removed the now-redundant `home.hero.slides` CMS section from `contentRegistry.js` (replaced by the dedicated admin page). Kept shared hero text (eyebrow, secondary CTA, stat badges) in Design tab.
+- **Global palette shift**: `#1A1A1A` → `#213a60` (navy blue) applied across 54 files, 116 occurrences. All buttons, headings, borders, and UI accents now use the new brand navy. Verified on homepage — hero title and CTA both render `rgb(33, 58, 96)`.
 ### Phase M — Hero images admin-editable + dynamic images cleanup ✅ (2026-07-10)
 - **New backend endpoint** `POST /api/admin/images/upload` — direct multipart file upload (in addition to the existing URL-based `upload-from-url`). Same resize + WebP + GridFS/S3 pipeline.
 - **CMS registry** extended with 8 new hero-slide keys: `home.hero.slide1.image`, `home.hero.slide{2,3}.{image,heading,accent,subtitle,cta,href}` + `home.hero.href` for the primary CTA. All 3 slides are now fully admin-editable.

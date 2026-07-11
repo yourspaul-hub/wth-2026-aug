@@ -60,7 +60,7 @@ const ReviewsQrTab = () => {
               <p className="text-sm text-neutral-700 mt-2 max-w-lg leading-relaxed">{genericQr.description}</p>
               <div className="mt-3 text-[11px] text-neutral-500 font-mono break-all">{genericQr.review_url}</div>
               <div className="mt-4 flex flex-wrap gap-2">
-                <a href={genericQrImageUrl()} download="wth-review-qr.png" data-testid="generic-qr-download" className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full transition-colors">
+                <a href={genericQrImageUrl()} download="wth-review-qr.png" data-testid="generic-qr-download" className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full transition-colors">
                   <Download className="w-3.5 h-3.5" /> Download PNG
                 </a>
                 <button onClick={() => copy('generic', genericQr.review_url)} className="inline-flex items-center gap-2 bg-white border border-[#EBD9CE] hover:border-[#B4593F] text-xs uppercase tracking-widest px-5 py-2.5 rounded-full transition-colors">
@@ -84,7 +84,7 @@ const ReviewsQrTab = () => {
 
       <div className="flex items-center justify-between mb-4">
         <div className="text-sm text-neutral-600">{items.length} QR code(s) generated · {items.filter(i => i.used).length} submitted · {items.filter(i => !i.used).length} pending</div>
-        <button onClick={() => setCreating(true)} data-testid="gen-qr-btn" className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full">
+        <button onClick={() => setCreating(true)} data-testid="gen-qr-btn" className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full">
           <Plus className="w-3.5 h-3.5" /> Generate QR
         </button>
       </div>
@@ -157,7 +157,7 @@ const ReviewsQrTab = () => {
               </F>
               <F label="Expires in (days)"><input type="number" min="1" value={form.expires_days} onChange={e => setForm({ ...form, expires_days: e.target.value })} className="input" /></F>
               <div className="pt-2 flex gap-3">
-                <button type="submit" data-testid="qr-submit-btn" className="flex-1 bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-6 py-2.5 rounded-full">Generate</button>
+                <button type="submit" data-testid="qr-submit-btn" className="flex-1 bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-6 py-2.5 rounded-full">Generate</button>
                 <button type="button" onClick={() => setCreating(false)} className="px-6 py-2.5 border border-[#EBD9CE] rounded-full text-xs uppercase tracking-widest">Cancel</button>
               </div>
             </form>
@@ -183,7 +183,7 @@ const ReviewsQrTab = () => {
                 <a
                   href={qrImageUrl(preview.token)}
                   download={`wth-qr-${preview.token}.png`}
-                  className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full transition-colors"
+                  className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full transition-colors"
                 >
                   <Download className="w-3.5 h-3.5" /> Download PNG
                 </a>

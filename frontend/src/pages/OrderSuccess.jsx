@@ -95,7 +95,7 @@ const OrderSuccess = () => {
         </div>
 
         <div className="mt-8 text-center">
-          <Link to="/" className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-7 py-3.5 rounded-full text-xs uppercase tracking-widest transition-colors"><Home className="w-4 h-4" /> Continue Shopping</Link>
+          <Link to="/" className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white px-7 py-3.5 rounded-full text-xs uppercase tracking-widest transition-colors"><Home className="w-4 h-4" /> Continue Shopping</Link>
         </div>
       </div>
     </main>

@@ -49,7 +49,7 @@ const About = () => {
             <Heart className="w-3.5 h-3.5 text-[#B4593F]" />
             <span className="text-[11px] uppercase tracking-[0.2em]">{heroEyebrow}</span>
           </div>
-          <h1 className="font-serif-display text-5xl md:text-7xl leading-[1.05] text-[#1A1A1A]">
+          <h1 className="font-serif-display text-5xl md:text-7xl leading-[1.05] text-[#213a60]">
             {heroTitle}{heroAccent && <><br /><span className="italic text-[#B4593F]">{heroAccent}</span></>}
           </h1>
           <p className="mt-6 text-lg text-neutral-700 max-w-2xl mx-auto">
@@ -66,7 +66,7 @@ const About = () => {
             return (
               <div key={i}>
                 <Icon className="w-6 h-6 text-[#B4593F] mx-auto mb-3" />
-                <div className="font-serif-display text-4xl text-[#1A1A1A]">{s.num}</div>
+                <div className="font-serif-display text-4xl text-[#213a60]">{s.num}</div>
                 <div className="text-xs uppercase tracking-[0.2em] text-neutral-500 mt-1">{s.label}</div>
               </div>
             );
@@ -115,7 +115,7 @@ const About = () => {
         <section className="py-24 gradient-blush">
           <div className="max-w-[900px] mx-auto px-6 lg:px-10 text-center">
             <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-4">Voices of our community</div>
-            <p className="font-serif-display text-3xl md:text-4xl italic leading-relaxed text-[#1A1A1A]">&ldquo;{featuredReview.text}&rdquo;</p>
+            <p className="font-serif-display text-3xl md:text-4xl italic leading-relaxed text-[#213a60]">&ldquo;{featuredReview.text}&rdquo;</p>
             <div className="mt-8 inline-flex items-center gap-3">
               {featuredReview.avatar ? (
                 <img src={featuredReview.avatar} alt="" className="w-12 h-12 rounded-full object-cover" />
@@ -139,8 +139,8 @@ const About = () => {
           <h3 className="font-serif-display text-4xl md:text-5xl leading-tight">Ready to <span className="italic text-[#B4593F]">wear the hope</span>?</h3>
           <p className="mt-4 text-neutral-700">Explore our full collection or reach out for custom orders. We’d love to hear your story.</p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <Link to="/shop" className="bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-7 py-4 rounded-full text-xs uppercase tracking-[0.2em] transition-colors">Shop Now</Link>
-            <Link to="/contact" className="border border-[#1A1A1A] text-[#1A1A1A] px-7 py-4 rounded-full text-xs uppercase tracking-[0.2em] hover:bg-[#1A1A1A] hover:text-white transition-colors">Get In Touch</Link>
+            <Link to="/shop" className="bg-[#213a60] hover:bg-[#B4593F] text-white px-7 py-4 rounded-full text-xs uppercase tracking-[0.2em] transition-colors">Shop Now</Link>
+            <Link to="/contact" className="border border-[#213a60] text-[#213a60] px-7 py-4 rounded-full text-xs uppercase tracking-[0.2em] hover:bg-[#213a60] hover:text-white transition-colors">Get In Touch</Link>
           </div>
         </div>
       </section>

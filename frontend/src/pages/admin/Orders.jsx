@@ -65,7 +65,7 @@ const AdminOrders = () => {
         <div className="flex flex-wrap items-center gap-2">
           <a
             href={pastOrdersTemplateUrl()}
-            className="inline-flex items-center gap-2 text-xs uppercase tracking-widest bg-white border border-[#EBD9CE] hover:border-[#B4593F] text-[#1A1A1A] px-4 py-2.5 rounded-full transition-colors"
+            className="inline-flex items-center gap-2 text-xs uppercase tracking-widest bg-white border border-[#EBD9CE] hover:border-[#B4593F] text-[#213a60] px-4 py-2.5 rounded-full transition-colors"
             data-testid="orders-download-template-btn"
           >
             <Download className="w-3.5 h-3.5" /> Template
@@ -74,7 +74,7 @@ const AdminOrders = () => {
           <button
             onClick={() => fileRef.current?.click()}
             disabled={importing}
-            className="inline-flex items-center gap-2 text-xs uppercase tracking-widest bg-white border border-[#EBD9CE] hover:border-[#B4593F] disabled:opacity-40 text-[#1A1A1A] px-4 py-2.5 rounded-full transition-colors"
+            className="inline-flex items-center gap-2 text-xs uppercase tracking-widest bg-white border border-[#EBD9CE] hover:border-[#B4593F] disabled:opacity-40 text-[#213a60] px-4 py-2.5 rounded-full transition-colors"
             data-testid="orders-import-btn"
           >
             <Upload className="w-3.5 h-3.5" /> {importing ? 'Importing…' : 'Import past orders'}
@@ -181,7 +181,7 @@ const AdminOrders = () => {
                   target="_blank"
                   rel="noreferrer"
                   data-testid="order-invoice-btn"
-                  className="inline-flex items-center gap-2 text-xs uppercase tracking-widest bg-white border border-[#EBD9CE] hover:border-[#B4593F] text-[#1A1A1A] px-4 py-2.5 rounded-full transition-colors"
+                  className="inline-flex items-center gap-2 text-xs uppercase tracking-widest bg-white border border-[#EBD9CE] hover:border-[#B4593F] text-[#213a60] px-4 py-2.5 rounded-full transition-colors"
                 >
                   <FileText className="w-3.5 h-3.5" /> Invoice / Print
                 </a>
@@ -189,7 +189,7 @@ const AdminOrders = () => {
                   <button
                     onClick={() => setFulfilling(selected)}
                     data-testid="order-fulfill-btn"
-                    className="inline-flex items-center gap-2 text-xs uppercase tracking-widest bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-4 py-2.5 rounded-full transition-colors"
+                    className="inline-flex items-center gap-2 text-xs uppercase tracking-widest bg-[#213a60] hover:bg-[#B4593F] text-white px-4 py-2.5 rounded-full transition-colors"
                   >
                     <PackageCheck className="w-3.5 h-3.5" /> {selected.status === 'shipped' ? 'Update fulfilment' : 'Fulfil order'}
                   </button>

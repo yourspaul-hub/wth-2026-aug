@@ -22,7 +22,7 @@ const AdminNewsletter = () => {
           <h1 className="font-serif-display text-4xl">Newsletter</h1>
           <p className="text-sm text-neutral-600 mt-1">{subs.length} subscribers</p>
         </div>
-        <button onClick={exportCsv} className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest"><Download className="w-4 h-4" /> Export CSV</button>
+        <button onClick={exportCsv} className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest"><Download className="w-4 h-4" /> Export CSV</button>
       </div>
 
       <div className="bg-white rounded-xl border border-[#EBD9CE] overflow-hidden">

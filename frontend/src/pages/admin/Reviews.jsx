@@ -26,7 +26,7 @@ const AdminReviews = () => {
               key={t.key}
               onClick={() => setTab(t.key)}
               data-testid={`tab-${t.key}`}
-              className={`inline-flex items-center gap-2 px-5 py-3 text-xs uppercase tracking-widest border-b-2 transition-colors ${active ? 'border-[#B4593F] text-[#B4593F]' : 'border-transparent text-neutral-500 hover:text-[#1A1A1A]'}`}
+              className={`inline-flex items-center gap-2 px-5 py-3 text-xs uppercase tracking-widest border-b-2 transition-colors ${active ? 'border-[#B4593F] text-[#B4593F]' : 'border-transparent text-neutral-500 hover:text-[#213a60]'}`}
             >
               <I className="w-3.5 h-3.5" /> {t.label}
             </button>

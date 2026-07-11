@@ -76,6 +76,14 @@ export const adminUploadImageFile = (file) => {
 };
 export const adminUploadImageFromUrl = (url) => api.post('/admin/images/upload-from-url', { url }).then(r => r.data);
 
+// --- Hero slides ---
+export const fetchHeroSlides = () => api.get('/hero-slides').then(r => r.data?.items || []);
+export const adminListHeroSlides = () => api.get('/admin/hero-slides').then(r => r.data?.items || []);
+export const adminCreateHeroSlide = (payload) => api.post('/admin/hero-slides', payload).then(r => r.data);
+export const adminUpdateHeroSlide = (id, patch) => api.patch(`/admin/hero-slides/${id}`, patch).then(r => r.data);
+export const adminDeleteHeroSlide = (id) => api.delete(`/admin/hero-slides/${id}`).then(r => r.data);
+export const adminReorderHeroSlides = (ids) => api.post('/admin/hero-slides/reorder', { ids }).then(r => r.data);
+
 export const adminListProducts = () => api.get('/products', { params: { limit: 500 } }).then(r => r.data.items);
 export const adminCreateProduct = (payload) => api.post('/admin/products', payload).then(r => r.data);
 export const adminUpdateProduct = (id, patch) => api.patch(`/admin/products/${id}`, patch).then(r => r.data);

@@ -47,7 +47,7 @@ const AdminUsers = () => {
           <h1 className="font-serif-display text-4xl">Team & Access</h1>
           <p className="text-sm text-neutral-600 mt-1">{items.length} team member(s) · role-based access to admin panel</p>
         </div>
-        <button onClick={() => setEditing('new')} data-testid="invite-user-btn" className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full">
+        <button onClick={() => setEditing('new')} data-testid="invite-user-btn" className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full">
           <Plus className="w-3.5 h-3.5" /> Invite User
         </button>
       </div>
@@ -132,7 +132,7 @@ const AdminUsers = () => {
                 </div>
               </F>
               <div className="pt-2 flex gap-3">
-                <button type="submit" data-testid="send-invite-btn" className="flex-1 bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-6 py-2.5 rounded-full">Send Invite</button>
+                <button type="submit" data-testid="send-invite-btn" className="flex-1 bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-6 py-2.5 rounded-full">Send Invite</button>
                 <button type="button" onClick={() => setEditing(null)} className="px-6 py-2.5 border border-[#EBD9CE] rounded-full text-xs uppercase tracking-widest">Cancel</button>
               </div>
             </form>

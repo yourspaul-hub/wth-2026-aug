@@ -33,14 +33,14 @@ const AboutStory = () => {
             </div>
             <div className="absolute -bottom-6 -right-6 bg-white rounded-2xl p-6 shadow-xl border border-[#EBD9CE] max-w-[240px]">
               <Heart className="w-6 h-6 text-[#B4593F] mb-2" />
-              <div className="font-serif-display text-2xl text-[#1A1A1A] italic leading-tight">{badge1}</div>
+              <div className="font-serif-display text-2xl text-[#213a60] italic leading-tight">{badge1}</div>
               <div className="text-xs text-neutral-600 mt-1">{badge2}</div>
             </div>
           </div>
 
           <div>
             <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">{eyebrow}</div>
-            <h2 className="font-serif-display text-4xl md:text-5xl text-[#1A1A1A] leading-tight">
+            <h2 className="font-serif-display text-4xl md:text-5xl text-[#213a60] leading-tight">
               {title}{titleAccent && <> <span className="italic">{titleAccent}</span></>}
             </h2>
             <div className="mt-6 space-y-5 text-neutral-700 leading-relaxed whitespace-pre-line">

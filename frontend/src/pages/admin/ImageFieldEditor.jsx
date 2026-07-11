@@ -76,7 +76,7 @@ const ImageFieldEditor = ({ value, onChange, testKey }) => {
               type="button"
               onClick={onPick}
               disabled={uploading}
-              className="inline-flex items-center gap-2 text-[11px] uppercase tracking-widest bg-[#1A1A1A] hover:bg-[#B4593F] disabled:opacity-40 text-white px-4 py-2 rounded-full transition-colors"
+              className="inline-flex items-center gap-2 text-[11px] uppercase tracking-widest bg-[#213a60] hover:bg-[#B4593F] disabled:opacity-40 text-white px-4 py-2 rounded-full transition-colors"
               data-testid={`image-upload-${testKey}`}
             >
               <Upload className="w-3 h-3" /> {uploading ? 'Working…' : 'Upload file'}
@@ -85,7 +85,7 @@ const ImageFieldEditor = ({ value, onChange, testKey }) => {
               type="button"
               onClick={() => setUrlMode(m => !m)}
               disabled={uploading}
-              className="inline-flex items-center gap-2 text-[11px] uppercase tracking-widest bg-white border border-neutral-200 hover:border-[#B4593F] text-[#1A1A1A] px-4 py-2 rounded-full transition-colors"
+              className="inline-flex items-center gap-2 text-[11px] uppercase tracking-widest bg-white border border-neutral-200 hover:border-[#B4593F] text-[#213a60] px-4 py-2 rounded-full transition-colors"
               data-testid={`image-url-${testKey}`}
             >
               <LinkIcon className="w-3 h-3" /> Use URL

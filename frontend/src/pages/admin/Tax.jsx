@@ -32,7 +32,7 @@ const AdminTax = () => {
           <h1 className="font-serif-display text-4xl">Tax Rates</h1>
           <p className="text-sm text-neutral-600 mt-1">Global GST slab or per-category rates. Applied server-side on checkout.</p>
         </div>
-        <button onClick={() => setEditing({ ...empty })} className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest"><Plus className="w-4 h-4" /> New Rate</button>
+        <button onClick={() => setEditing({ ...empty })} className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest"><Plus className="w-4 h-4" /> New Rate</button>
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -75,7 +75,7 @@ const AdminTax = () => {
               </div>
               <div className="text-[11px] text-neutral-500 bg-[#FDF3EB] rounded-lg p-3">If multiple global rates are active, the one with lowest order is used. Per-category rates always take priority over global.</div>
             </div>
-            <div className="px-6 py-5 border-t border-[#EBD9CE] flex gap-3"><button onClick={onSave} className="flex-1 bg-[#1A1A1A] hover:bg-[#B4593F] text-white py-3 rounded-full text-xs uppercase tracking-widest">Save</button><button onClick={() => setEditing(null)} className="px-6 py-3 border border-[#EBD9CE] rounded-full text-xs uppercase tracking-widest">Cancel</button></div>
+            <div className="px-6 py-5 border-t border-[#EBD9CE] flex gap-3"><button onClick={onSave} className="flex-1 bg-[#213a60] hover:bg-[#B4593F] text-white py-3 rounded-full text-xs uppercase tracking-widest">Save</button><button onClick={() => setEditing(null)} className="px-6 py-3 border border-[#EBD9CE] rounded-full text-xs uppercase tracking-widest">Cancel</button></div>
           </aside>
         </>
       )}

@@ -26,8 +26,8 @@ const AdminAbandonedCarts = () => {
           <p className="text-sm text-neutral-600 mt-1">{data.stale.length} stale (≥30 min old) · {data.all.length} total</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setTab('stale')} className={`text-xs uppercase tracking-widest px-4 py-2 rounded-full ${tab === 'stale' ? 'bg-[#1A1A1A] text-white' : 'bg-white border border-[#EBD9CE]'}`}>Stale</button>
-          <button onClick={() => setTab('all')} className={`text-xs uppercase tracking-widest px-4 py-2 rounded-full ${tab === 'all' ? 'bg-[#1A1A1A] text-white' : 'bg-white border border-[#EBD9CE]'}`}>All</button>
+          <button onClick={() => setTab('stale')} className={`text-xs uppercase tracking-widest px-4 py-2 rounded-full ${tab === 'stale' ? 'bg-[#213a60] text-white' : 'bg-white border border-[#EBD9CE]'}`}>Stale</button>
+          <button onClick={() => setTab('all')} className={`text-xs uppercase tracking-widest px-4 py-2 rounded-full ${tab === 'all' ? 'bg-[#213a60] text-white' : 'bg-white border border-[#EBD9CE]'}`}>All</button>
         </div>
       </div>
 
@@ -58,7 +58,7 @@ const AdminAbandonedCarts = () => {
               ) : c.recovery_email_sent ? (
                 <span className="inline-flex items-center gap-1 text-xs text-blue-700 bg-blue-50 px-3 py-1.5 rounded-full"><Send className="w-3 h-3" /> Recovery sent</span>
               ) : (
-                <button onClick={() => doSend(c)} className="inline-flex items-center gap-2 text-xs uppercase tracking-widest bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-4 py-2 rounded-full transition-colors"><Send className="w-3 h-3" /> Send Recovery Email</button>
+                <button onClick={() => doSend(c)} className="inline-flex items-center gap-2 text-xs uppercase tracking-widest bg-[#213a60] hover:bg-[#B4593F] text-white px-4 py-2 rounded-full transition-colors"><Send className="w-3 h-3" /> Send Recovery Email</button>
               )}
             </div>
           </div>

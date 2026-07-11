@@ -145,11 +145,11 @@ const AdminProducts = () => {
           <button
             onClick={() => { setBulkOpen(true); setBulkResult(null); }}
             data-testid="bulk-upload-btn"
-            className="inline-flex items-center gap-2 bg-white border border-[#EBD9CE] hover:border-[#B4593F] text-[#1A1A1A] px-5 py-2.5 rounded-full text-xs uppercase tracking-widest transition-colors"
+            className="inline-flex items-center gap-2 bg-white border border-[#EBD9CE] hover:border-[#B4593F] text-[#213a60] px-5 py-2.5 rounded-full text-xs uppercase tracking-widest transition-colors"
           >
             <FileSpreadsheet className="w-4 h-4" /> Bulk Upload
           </button>
-          <button onClick={() => startEdit(null)} className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest transition-colors"><Plus className="w-4 h-4" /> New</button>
+          <button onClick={() => startEdit(null)} className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest transition-colors"><Plus className="w-4 h-4" /> New</button>
         </div>
       </div>
 
@@ -195,7 +195,7 @@ const AdminProducts = () => {
                 {TABS.map(t => {
                   const I = t.icon;
                   return (
-                    <button key={t.id} onClick={() => setTab(t.id)} className={`inline-flex items-center gap-1.5 px-4 py-3 text-xs uppercase tracking-widest border-b-2 whitespace-nowrap transition-colors ${tab === t.id ? 'border-[#B4593F] text-[#B4593F]' : 'border-transparent text-neutral-500 hover:text-[#1A1A1A]'}`}>
+                    <button key={t.id} onClick={() => setTab(t.id)} className={`inline-flex items-center gap-1.5 px-4 py-3 text-xs uppercase tracking-widest border-b-2 whitespace-nowrap transition-colors ${tab === t.id ? 'border-[#B4593F] text-[#B4593F]' : 'border-transparent text-neutral-500 hover:text-[#213a60]'}`}>
                       <I className="w-3.5 h-3.5" /> {t.label}
                     </button>
                   );
@@ -347,7 +347,7 @@ const AdminProducts = () => {
             </div>
 
             <div className="px-6 py-5 border-t border-[#EBD9CE] flex items-center gap-3 shrink-0 bg-white">
-              <button onClick={onSave} className="flex-1 bg-[#1A1A1A] hover:bg-[#B4593F] text-white py-3 rounded-full text-xs uppercase tracking-widest transition-colors">Save Product</button>
+              <button onClick={onSave} className="flex-1 bg-[#213a60] hover:bg-[#B4593F] text-white py-3 rounded-full text-xs uppercase tracking-widest transition-colors">Save Product</button>
               <button onClick={() => setEditing(null)} className="px-6 py-3 border border-[#EBD9CE] rounded-full text-xs uppercase tracking-widest">Cancel</button>
             </div>
           </aside>
@@ -381,14 +381,14 @@ const AdminProducts = () => {
                 href={productTemplateUrl()}
                 download
                 data-testid="download-template-btn"
-                className="inline-flex items-center gap-2 bg-white border border-[#EBD9CE] hover:border-[#B4593F] text-[#1A1A1A] px-5 py-3 rounded-full text-xs uppercase tracking-widest transition-colors"
+                className="inline-flex items-center gap-2 bg-white border border-[#EBD9CE] hover:border-[#B4593F] text-[#213a60] px-5 py-3 rounded-full text-xs uppercase tracking-widest transition-colors"
               >
                 <Download className="w-4 h-4" /> Download CSV Template
               </a>
 
               <div className="border-2 border-dashed border-[#EBD9CE] rounded-2xl p-8 text-center bg-[#FDF3EB]/40">
                 <FileSpreadsheet className="w-8 h-8 mx-auto text-[#B4593F] mb-3" />
-                <label className="inline-flex items-center gap-2 cursor-pointer bg-[#1A1A1A] hover:bg-[#B4593F] text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest transition-colors">
+                <label className="inline-flex items-center gap-2 cursor-pointer bg-[#213a60] hover:bg-[#B4593F] text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest transition-colors">
                   <Upload className="w-4 h-4" /> {uploading ? 'Uploading…' : 'Choose CSV / Excel file'}
                   <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" data-testid="bulk-upload-input" disabled={uploading} onChange={e => doBulk(e.target.files?.[0])} className="hidden" />
                 </label>
@@ -417,7 +417,7 @@ const AdminProducts = () => {
                     onClick={doSheetImport}
                     disabled={uploading || !sheetUrl.trim()}
                     data-testid="sheet-import-btn"
-                    className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] disabled:bg-neutral-300 text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest transition-colors whitespace-nowrap"
+                    className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] disabled:bg-neutral-300 text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest transition-colors whitespace-nowrap"
                   >
                     {uploading ? 'Importing…' : 'Import Sheet'}
                   </button>

@@ -419,6 +419,47 @@ class OrderFulfill(BaseModel):
     notes: Optional[str] = None
 
 
+# ---------- Hero slides (homepage carousel) ----------
+class HeroSlide(BaseModel):
+    id: str = Field(default_factory=lambda: _uid('hs_'))
+    order: int = 0
+    image: str = ''  # required to be shown publicly
+    heading: str = ''
+    accent: str = ''
+    subtitle: str = ''
+    cta: str = ''
+    href: str = '/shop'
+    active: bool = True
+    created_at: datetime = Field(default_factory=_now)
+    updated_at: datetime = Field(default_factory=_now)
+
+
+class HeroSlideCreate(BaseModel):
+    image: str
+    heading: str = ''
+    accent: str = ''
+    subtitle: str = ''
+    cta: str = ''
+    href: str = '/shop'
+    active: bool = True
+    order: Optional[int] = None
+
+
+class HeroSlideUpdate(BaseModel):
+    image: Optional[str] = None
+    heading: Optional[str] = None
+    accent: Optional[str] = None
+    subtitle: Optional[str] = None
+    cta: Optional[str] = None
+    href: Optional[str] = None
+    active: Optional[bool] = None
+    order: Optional[int] = None
+
+
+class HeroSlidesReorder(BaseModel):
+    ids: List[str]
+
+
 # ---------- SEO ----------
 class SeoMeta(BaseModel):
     id: str = Field(default_factory=lambda: _uid('seo_'))

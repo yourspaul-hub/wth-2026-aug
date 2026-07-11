@@ -41,7 +41,7 @@ const Navbar = () => {
           <Link to="/" className="flex flex-col items-start shrink-0" aria-label="Wear The Hope home">
             <Logo variant="dark" withTagline className="h-11" />
           </Link>
-          <nav className="flex items-center gap-7 text-[13px] uppercase tracking-[0.15em] text-[#1A1A1A] justify-self-center">
+          <nav className="flex items-center gap-7 text-[13px] uppercase tracking-[0.15em] text-[#213a60] justify-self-center">
             <Link to="/" className="link-underline">{t('nav.home')}</Link>
             <div className="relative" onMouseEnter={() => setShopOpen(true)} onMouseLeave={() => setShopOpen(false)}>
               <button className="link-underline flex items-center gap-1 uppercase">{t('nav.shop')}</button>
@@ -51,7 +51,7 @@ const Navbar = () => {
                     <Link key={c.id} to={`/shop/${c.slug}`} className="group flex items-center gap-3 px-3 py-2.5 rounded hover:bg-[#FDF3EB] transition-colors">
                       <img src={c.image} alt={c.name} className="w-10 h-10 object-cover rounded" />
                       <div>
-                        <div className="text-[13px] font-medium normal-case tracking-normal text-[#1A1A1A] group-hover:text-[#B4593F]">{c.name}</div>
+                        <div className="text-[13px] font-medium normal-case tracking-normal text-[#213a60] group-hover:text-[#B4593F]">{c.name}</div>
                         <div className="text-[11px] normal-case tracking-normal text-neutral-500">{c.tagline}</div>
                       </div>
                     </Link>

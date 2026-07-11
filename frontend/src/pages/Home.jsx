@@ -28,7 +28,7 @@ const FeatureStrip = () => {
                 <Icon className="w-5 h-5 text-[#B4593F]" />
               </div>
               <div className="min-w-0">
-                <div className="text-sm font-medium text-[#1A1A1A]">{f.title}</div>
+                <div className="text-sm font-medium text-[#213a60]">{f.title}</div>
                 <div className="text-[11px] text-neutral-500 mt-0.5">{f.sub}</div>
               </div>
             </div>

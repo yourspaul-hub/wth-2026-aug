@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Tag, Star, Search, Send, ArrowUpRight, LogOut, ExternalLink, Layers, Truck, Percent, Mail, Clock, MapPin, FileText, Instagram, BarChart3, Users as UsersIcon, Puzzle, FolderOpen, Palette, Trash2 } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Tag, Star, Search, Send, ArrowUpRight, LogOut, ExternalLink, Layers, Truck, Percent, Mail, Clock, MapPin, FileText, Instagram, BarChart3, Users as UsersIcon, Puzzle, FolderOpen, Palette, Trash2, Sparkles } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Logo from '../../components/Logo';
 
@@ -26,6 +26,7 @@ const NAV = [
   { to: '/admin/users', label: 'Team & Access', icon: UsersIcon, roles: ['admin'] },
   { to: '/admin/integrations', label: 'Integrations', icon: Puzzle, roles: ['admin'] },
   { to: '/admin/design', label: 'Design', icon: Palette, roles: ['admin'] },
+  { to: '/admin/hero-slides', label: 'Hero Slides', icon: Sparkles, roles: ['admin'] },
   { to: '/admin/reset-data', label: 'Reset Data', icon: Trash2, roles: ['admin'] },
 ];
 
@@ -36,7 +37,7 @@ const AdminLayout = () => {
 
   return (
     <div className="min-h-screen bg-[#FDF3EB] flex">
-      <aside className="w-64 shrink-0 bg-[#1A1A1A] text-white flex flex-col">
+      <aside className="w-64 shrink-0 bg-[#213a60] text-white flex flex-col">
         <div className="px-6 py-6 border-b border-white/10">
           <Link to="/" aria-label="Wear The Hope home">
             <Logo variant="light" className="h-7" />

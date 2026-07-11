@@ -192,7 +192,7 @@ const Checkout = () => {
               <div className="mt-5 flex items-center gap-2">
                 <Tag className="w-4 h-4 text-[#B4593F]" />
                 <input value={couponCode} onChange={e => setCouponCode(e.target.value.toUpperCase())} placeholder="Coupon code" className="flex-1 bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2 text-sm outline-none focus:border-[#B4593F] font-mono" />
-                <button onClick={applyCoupon} className="bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-4 py-2 rounded-full transition-colors">Apply</button>
+                <button onClick={applyCoupon} className="bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-4 py-2 rounded-full transition-colors">Apply</button>
               </div>
               {coupon && (
                 <div className="mt-2 flex items-center justify-between bg-[#FDF3EB] rounded-lg px-3 py-2 text-xs">
@@ -213,7 +213,7 @@ const Checkout = () => {
                 <div className="text-[10px] text-neutral-500">Final tax computed on server</div>
               </div>
 
-              <button disabled={processing || !canProceed} onClick={placeOrder} className="mt-6 w-full bg-[#1A1A1A] hover:bg-[#B4593F] disabled:bg-neutral-300 text-white py-4 rounded-full text-xs uppercase tracking-widest inline-flex items-center justify-center gap-2 transition-colors">
+              <button disabled={processing || !canProceed} onClick={placeOrder} className="mt-6 w-full bg-[#213a60] hover:bg-[#B4593F] disabled:bg-neutral-300 text-white py-4 rounded-full text-xs uppercase tracking-widest inline-flex items-center justify-center gap-2 transition-colors">
                 {processing ? 'Processing...' : (<>Pay via {PAYMENT_METHODS.find(p => p.id === paymentProvider)?.label} · {format(total)} <ArrowRight className="w-4 h-4" /></>)}
               </button>
               <div className="mt-4 text-[10px] uppercase tracking-widest text-neutral-500 text-center inline-flex items-center gap-2 justify-center w-full"><Lock className="w-3 h-3" /> Secure checkout · SSL encrypted</div>

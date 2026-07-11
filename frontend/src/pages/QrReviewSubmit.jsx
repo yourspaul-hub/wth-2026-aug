@@ -129,7 +129,7 @@ const QrReviewSubmit = () => {
             type="submit"
             disabled={submitting || form.text.trim().length < 5}
             data-testid="submit-review-btn"
-            className="w-full bg-[#1A1A1A] hover:bg-[#B4593F] disabled:bg-neutral-300 text-white uppercase tracking-[0.2em] text-xs px-6 py-3.5 rounded-full transition-colors"
+            className="w-full bg-[#213a60] hover:bg-[#B4593F] disabled:bg-neutral-300 text-white uppercase tracking-[0.2em] text-xs px-6 py-3.5 rounded-full transition-colors"
           >
             {submitting ? 'Submitting…' : 'Submit Review'}
           </button>

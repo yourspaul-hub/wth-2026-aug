@@ -176,7 +176,7 @@ const ProductDetail = () => {
               {product.product_type === 'digital' && <span className="bg-emerald-600 text-white text-[10px] uppercase tracking-[0.15em] px-3 py-1 rounded-full inline-flex items-center gap-1"><Download className="w-3 h-3" /> Digital</span>}
               <span className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">SKU: {displaySku}</span>
             </div>
-            <h1 className="font-serif-display text-4xl md:text-5xl text-[#1A1A1A] leading-tight">{product.name}</h1>
+            <h1 className="font-serif-display text-4xl md:text-5xl text-[#213a60] leading-tight">{product.name}</h1>
             {product.verse && <div className="italic text-neutral-600 mt-2">{product.verse}</div>}
 
             <div className="flex items-center gap-3 mt-4">
@@ -255,7 +255,7 @@ const ProductDetail = () => {
                 <span className="w-12 text-center">{qty}</span>
                 <button onClick={() => setQty(q => Math.min(displayStock || 99, q + 1))} className="w-11 h-12 flex items-center justify-center hover:bg-[#FDF3EB] rounded-r-full"><Plus className="w-4 h-4" /></button>
               </div>
-              <button disabled={!inStock} onClick={handleAdd} className="flex-1 bg-[#1A1A1A] hover:bg-[#B4593F] disabled:bg-neutral-300 disabled:cursor-not-allowed transition-colors text-white py-4 rounded-full text-xs uppercase tracking-[0.2em] inline-flex items-center justify-center gap-2">
+              <button disabled={!inStock} onClick={handleAdd} className="flex-1 bg-[#213a60] hover:bg-[#B4593F] disabled:bg-neutral-300 disabled:cursor-not-allowed transition-colors text-white py-4 rounded-full text-xs uppercase tracking-[0.2em] inline-flex items-center justify-center gap-2">
                 <ShoppingBag className="w-4 h-4" /> {inStock ? 'Add to Bag' : 'Out of Stock'}
               </button>
               <button onClick={() => toggleWishlist(product)} className={`w-12 h-12 rounded-full border border-[#EBD9CE] flex items-center justify-center hover:border-[#B4593F] transition-colors ${wished ? 'text-[#B4593F]' : ''}`} aria-label="Wishlist">

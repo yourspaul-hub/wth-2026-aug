@@ -15,7 +15,7 @@ const AnnouncementBar = () => {
   if (items.length === 0) return null;
 
   return (
-    <div className="w-full bg-[#1A1A1A] text-[#FDF3EB] overflow-hidden text-xs tracking-wider py-2.5 border-b border-black/20" data-testid="announcement-bar">
+    <div className="w-full bg-[#213a60] text-[#FDF3EB] overflow-hidden text-xs tracking-wider py-2.5 border-b border-black/20" data-testid="announcement-bar">
       <div className="flex whitespace-nowrap animate-marquee">
         {[...items, ...items, ...items].map((it, idx) => {
           const Icon = it.icon;

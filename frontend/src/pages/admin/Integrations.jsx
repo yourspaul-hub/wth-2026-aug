@@ -117,7 +117,7 @@ const AdminIntegrations = () => {
                           onClick={() => save(f.key)}
                           disabled={!isDirty || saving === f.key}
                           data-testid={`save-${f.key}`}
-                          className={`inline-flex items-center gap-1 text-xs uppercase tracking-widest px-3 py-2 rounded-full transition-colors ${isDirty ? 'bg-[#1A1A1A] hover:bg-[#B4593F] text-white' : 'bg-neutral-100 text-neutral-400 cursor-not-allowed'}`}
+                          className={`inline-flex items-center gap-1 text-xs uppercase tracking-widest px-3 py-2 rounded-full transition-colors ${isDirty ? 'bg-[#213a60] hover:bg-[#B4593F] text-white' : 'bg-neutral-100 text-neutral-400 cursor-not-allowed'}`}
                         >
                           <Save className="w-3 h-3" /> {saving === f.key ? '…' : 'Save'}
                         </button>

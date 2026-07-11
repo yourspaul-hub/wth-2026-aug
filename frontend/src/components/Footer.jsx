@@ -62,7 +62,7 @@ const Footer = () => {
   const revMain = T.revTitle;
 
   return (
-    <footer className="bg-[#1A1A1A] text-[#FDF3EB] pt-20 pb-10 mt-10" data-testid="site-footer">
+    <footer className="bg-[#213a60] text-[#FDF3EB] pt-20 pb-10 mt-10" data-testid="site-footer">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
         {/* Newsletter */}
         <div className="grid md:grid-cols-2 gap-10 items-center pb-14 border-b border-white/10">
@@ -138,7 +138,7 @@ const Footer = () => {
               <li className="flex items-start gap-3"><Mail className="w-4 h-4 mt-0.5 text-[#E88864]" /> {T.email}</li>
               <li className="flex items-start gap-3"><MapPin className="w-4 h-4 mt-0.5 text-[#E88864]" /> {T.location}</li>
             </ul>
-            <a href={T.usPartnerUrl} target="_blank" rel="noreferrer" className="mt-6 inline-block bg-[#FFDD00] text-[#1A1A1A] px-5 py-2.5 rounded-full text-[11px] uppercase tracking-[0.2em] hover:bg-white transition-colors">{T.usPartner}</a>
+            <a href={T.usPartnerUrl} target="_blank" rel="noreferrer" className="mt-6 inline-block bg-[#FFDD00] text-[#213a60] px-5 py-2.5 rounded-full text-[11px] uppercase tracking-[0.2em] hover:bg-white transition-colors">{T.usPartner}</a>
           </div>
         </div>
 

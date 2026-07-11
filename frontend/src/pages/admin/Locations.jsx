@@ -54,7 +54,7 @@ const AdminLocations = () => {
           <h1 className="font-serif-display text-4xl">Store Locations</h1>
           <p className="text-sm text-neutral-600 mt-1">{items.length} location(s) · shown on the Contact page</p>
         </div>
-        <button onClick={startNew} data-testid="add-location-btn" className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full transition-colors">
+        <button onClick={startNew} data-testid="add-location-btn" className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full transition-colors">
           <Plus className="w-3.5 h-3.5" /> Add Location
         </button>
       </div>
@@ -143,7 +143,7 @@ const AdminLocations = () => {
                 <label className="inline-flex items-center gap-2 text-sm">Order <input type="number" value={form.order} onChange={e => setForm({ ...form, order: e.target.value })} className="input w-20 py-1.5" /></label>
               </div>
               <div className="pt-4 flex gap-3">
-                <button type="submit" data-testid="save-location-btn" className="bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-6 py-2.5 rounded-full transition-colors">Save</button>
+                <button type="submit" data-testid="save-location-btn" className="bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-6 py-2.5 rounded-full transition-colors">Save</button>
                 <button type="button" onClick={close} className="text-xs uppercase tracking-widest px-6 py-2.5 rounded-full border border-[#EBD9CE] hover:bg-[#FDF3EB]">Cancel</button>
               </div>
             </form>

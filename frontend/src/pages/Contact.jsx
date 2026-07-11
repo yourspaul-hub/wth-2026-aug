@@ -168,7 +168,7 @@ const Contact = () => {
                 <span className="text-[11px] uppercase tracking-[0.2em] text-neutral-600">{fMsg}</span>
                 <textarea required rows="5" value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} data-testid="contact-message-input" className="mt-2 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-2xl px-5 py-4 text-sm outline-none focus:border-[#B4593F] transition-colors resize-none" />
               </label>
-              <button type="submit" data-testid="contact-submit-btn" className="mt-6 inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] transition-colors text-white px-7 py-3.5 rounded-full text-xs uppercase tracking-[0.2em]">
+              <button type="submit" data-testid="contact-submit-btn" className="mt-6 inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] transition-colors text-white px-7 py-3.5 rounded-full text-xs uppercase tracking-[0.2em]">
                 <Send className="w-4 h-4" /> {fSubmit}
               </button>
             </form>

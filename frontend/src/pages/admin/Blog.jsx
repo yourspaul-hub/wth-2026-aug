@@ -51,7 +51,7 @@ const AdminBlog = () => {
           <h1 className="font-serif-display text-4xl">Blog</h1>
           <p className="text-sm text-neutral-600 mt-1">{items.length} post(s) · {items.filter(i => i.published).length} published</p>
         </div>
-        <button onClick={() => start(null)} data-testid="add-post-btn" className="inline-flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full">
+        <button onClick={() => start(null)} data-testid="add-post-btn" className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full">
           <Plus className="w-3.5 h-3.5" /> New Post
         </button>
       </div>
@@ -129,7 +129,7 @@ const AdminBlog = () => {
                 <label className="inline-flex items-center gap-2"><input type="checkbox" checked={form.featured} onChange={e => setForm({ ...form, featured: e.target.checked })} /> Featured</label>
               </div>
               <div className="pt-2 flex gap-3">
-                <button type="submit" className="bg-[#1A1A1A] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-6 py-2.5 rounded-full">Save</button>
+                <button type="submit" className="bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-6 py-2.5 rounded-full">Save</button>
                 <button type="button" onClick={close} className="text-xs uppercase tracking-widest px-6 py-2.5 rounded-full border border-[#EBD9CE]">Cancel</button>
               </div>
             </form>

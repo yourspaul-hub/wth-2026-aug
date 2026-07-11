@@ -164,7 +164,7 @@ const FulfillOrderDialog = ({ order, onClose, onFulfilled }) => {
               type="button"
               onClick={submit}
               disabled={!canSubmit || saving}
-              className="inline-flex items-center gap-2 text-xs uppercase tracking-widest px-5 py-2.5 rounded-full bg-[#1A1A1A] hover:bg-[#B4593F] disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors"
+              className="inline-flex items-center gap-2 text-xs uppercase tracking-widest px-5 py-2.5 rounded-full bg-[#213a60] hover:bg-[#B4593F] disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors"
               data-testid="fulfill-submit-btn"
             >
               <PackageCheck className="w-3.5 h-3.5" />
