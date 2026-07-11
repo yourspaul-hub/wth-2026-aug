@@ -460,6 +460,44 @@ class HeroSlidesReorder(BaseModel):
     ids: List[str]
 
 
+# ---------- Partnerships (About page "Business is ministry" section) ----------
+class Partnership(BaseModel):
+    id: str = Field(default_factory=lambda: _uid('pt_'))
+    order: int = 0
+    name: str = ''
+    location: str = ''
+    description: str = ''
+    image: str = ''
+    website: str = ''
+    active: bool = True
+    created_at: datetime = Field(default_factory=_now)
+    updated_at: datetime = Field(default_factory=_now)
+
+
+class PartnershipCreate(BaseModel):
+    name: str
+    location: str = ''
+    description: str = ''
+    image: str = ''
+    website: str = ''
+    active: bool = True
+    order: Optional[int] = None
+
+
+class PartnershipUpdate(BaseModel):
+    name: Optional[str] = None
+    location: Optional[str] = None
+    description: Optional[str] = None
+    image: Optional[str] = None
+    website: Optional[str] = None
+    active: Optional[bool] = None
+    order: Optional[int] = None
+
+
+class PartnershipsReorder(BaseModel):
+    ids: List[str]
+
+
 # ---------- SEO ----------
 class SeoMeta(BaseModel):
     id: str = Field(default_factory=lambda: _uid('seo_'))

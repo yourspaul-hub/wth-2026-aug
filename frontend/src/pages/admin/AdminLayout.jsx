@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Tag, Star, Search, Send, ArrowUpRight, LogOut, ExternalLink, Layers, Truck, Percent, Mail, Clock, MapPin, FileText, Instagram, BarChart3, Users as UsersIcon, Puzzle, FolderOpen, Palette, Trash2, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Tag, Star, Search, Send, ArrowUpRight, LogOut, ExternalLink, Layers, Truck, Percent, Mail, Clock, MapPin, FileText, Instagram, BarChart3, Users as UsersIcon, Puzzle, FolderOpen, Palette, Trash2, Sparkles, Image as ImageIcon, Handshake } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Logo from '../../components/Logo';
 
@@ -9,6 +9,7 @@ const NAV = [
   { to: '/admin/design', label: 'Design', icon: Palette, roles: ['admin'] },
   { to: '/admin/hero-slides', label: 'Hero Slides', icon: Sparkles, roles: ['admin'] },
   { to: '/admin/lightbox', label: 'Lightbox', icon: ImageIcon, roles: ['admin'] },
+  { to: '/admin/partnerships', label: 'Partnerships', icon: Handshake, roles: ['admin'] },
   { to: '/admin/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin'] },
   { to: '/admin/orders', label: 'Orders', icon: ShoppingCart, roles: ['admin'] },
   { to: '/admin/products', label: 'Products', icon: Package, roles: ['admin', 'store_manager'] },

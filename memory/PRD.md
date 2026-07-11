@@ -54,6 +54,20 @@ Full-featured, dynamic e-commerce clone of www.wearthehope.com with a comprehens
   - Applied to: Hero, ProductCard, InstagramFeed, ReviewsSection, Blog list, BlogPost, review avatars/photos
 
 ## Backlog / Roadmap
+### Phase S — Partnerships CRUD + Image Swap + Homepage Story Rewrite ✅ (2026-07-11)
+- **New Partnerships module** — full admin CRUD at `/admin/partnerships`:
+  - Fields: name (required), location, description, image (via ImageFieldEditor → auto-WebP pipeline), website URL, active toggle, order
+  - Endpoints: `GET /api/partnerships` (public), `GET/POST/PATCH/DELETE /api/admin/partnerships`, `POST /api/admin/partnerships/reorder`
+  - Auto-seeds the 5 existing partnerships on first fetch so migration is zero-effort
+  - Duplicate + reorder + toggle visibility (identical UX to Hero Slides admin)
+- **About page** updated to fetch partnerships from `/api/partnerships` and render each as a rich card: photo (with graceful handshake-icon placeholder when no photo), name, location, description, and a "Visit website →" link (opens in new tab) when a URL is set
+- **Origin-story image swapped**: About page + homepage AboutStory now use a bread/loaves image (photo-1509440159596) — inspired by the five-loaves-and-two-fish story — instead of the previous "flipping Bible" stock photo
+- **Homepage story rewritten** (`home.about.*` CMS defaults) — more impactful, drives clicks to About:
+  - Title: "A vision at midnight." · Accent: "A mission for a lifetime."
+  - Body: 3 punchy paragraphs — vision → obedience → invitation ("every purchase becomes part of a bigger story")
+  - CTA renamed to "Read the full story"
+  - Badge tagline updated: "A vision that became a movement"
+
 ### Phase R — About Us rewrite from brand story ✅ (2026-07-11)
 - Rewrote the About page to match the user-provided brand-story document (Wear The Hope Story.docx):
   - **Hero** — "This began with a vision — *not a business plan*" with the 2018 origin one-liner

@@ -28,7 +28,7 @@ const AboutStory = () => {
         <div className="grid md:grid-cols-2 gap-14 items-center">
           <div className="relative">
             <div className="relative aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl">
-              <img src="https://images.unsplash.com/photo-1509021436665-8f07dbf5bf1d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHwyfHxiaWJsZXxlbnwwfHx8fDE3ODMzMjYxMTd8MA&ixlib=rb-4.1.0&q=85" alt="Our story" className="w-full h-full object-cover" />
+              <img src="https://images.unsplash.com/photo-1509440159596-0249088772ff?crop=entropy&cs=srgb&fm=jpg&q=85&w=1200" alt="Loaves of bread — inspired by the five loaves and two fish" className="w-full h-full object-cover" loading="lazy" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
             </div>
             <div className="absolute -bottom-6 -right-6 bg-white rounded-2xl p-6 shadow-xl border border-[#EBD9CE] max-w-[240px]">

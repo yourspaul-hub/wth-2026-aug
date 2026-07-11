@@ -51,6 +51,7 @@ import AdminIntegrations from './pages/admin/Integrations';
 import AdminDesign from './pages/admin/Design';
 import AdminHeroSlides from './pages/admin/HeroSlides';
 import AdminLightbox from './pages/admin/Lightbox';
+import AdminPartnerships from './pages/admin/Partnerships';
 import AdminResetData from './pages/admin/ResetData';
 import Wishlist from './pages/Wishlist';
 import MusicWidget from './components/MusicWidget';
@@ -120,6 +121,7 @@ function AppRouter() {
           <Route path="design" element={<AdminDesign />} />
           <Route path="hero-slides" element={<AdminHeroSlides />} />
           <Route path="lightbox" element={<AdminLightbox />} />
+          <Route path="partnerships" element={<AdminPartnerships />} />
           <Route path="reset-data" element={<AdminResetData />} />
         </Route>
       </Routes>

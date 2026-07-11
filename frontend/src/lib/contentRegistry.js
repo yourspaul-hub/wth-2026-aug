@@ -141,13 +141,13 @@ export const CONTENT_SECTIONS = [
     label: 'Home — About story block',
     items: [
       { key: 'home.about.eyebrow', default: 'Our Story' },
-      { key: 'home.about.title', default: 'Five loaves. Two fish.', hint: 'Main heading' },
-      { key: 'home.about.title_accent', default: 'One mission.', hint: 'Italic accent phrase' },
-      { key: 'home.about.body', default: 'We started as a small hobby project in December 2018, holding on to a simple vision — to offer our "5 loaves and 2 fish" to God and impact the people of the nations.\n\nEvery wallet, tumbler, tote and tee that leaves our studio carries a whisper of scripture and a wave of hope. We create and customize for individuals, teams, organizations and churches worldwide.\n\n"We sincerely hope our products will impact your life and those around you."', hint: 'Multi-paragraph body — new lines preserved' },
-      { key: 'home.about.cta', default: 'Read Full Story', hint: 'Text link below the CTA' },
+      { key: 'home.about.title', default: 'A vision at midnight.', hint: 'Main heading' },
+      { key: 'home.about.title_accent', default: 'A mission for a lifetime.', hint: 'Italic accent phrase' },
+      { key: 'home.about.body', default: 'In late 2018, God awakened us in the middle of the night with a vivid vision — a kiosk filled with products carrying His message of hope. No experience, no roadmap, no certainty. Only obedience.\n\nWe placed our humble five loaves and two fish into His hands. Six years later, that small step has grown into a brand serving believers across India and beyond — and into partnerships that build lives, restore dignity, and carry His love across nations.\n\nEvery product you see here carries a prayer. And every purchase becomes part of a bigger story.', hint: 'Multi-paragraph body — new lines preserved' },
+      { key: 'home.about.cta', default: 'Read the full story', hint: 'Text link below the CTA' },
       { key: 'home.about.catalogue_cta', default: 'Download Catalogue', hint: 'Solid button label' },
       { key: 'home.about.badge_year', default: 'Since 2018', hint: 'White card badge — big line' },
-      { key: 'home.about.badge_sub',  default: 'A hobby project turned mission', hint: 'White card badge — small line' },
+      { key: 'home.about.badge_sub',  default: 'A vision that became a movement', hint: 'White card badge — small line' },
     ],
   },
   {

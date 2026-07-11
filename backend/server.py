@@ -43,6 +43,7 @@ from models import (
     Coupon, CouponCreate, CouponUpdate, CouponValidate,
     Order, OrderCreate, OrderStatusUpdate, OrderFulfill, OrderItem, ShippingAddress,
     HeroSlide, HeroSlideCreate, HeroSlideUpdate, HeroSlidesReorder,
+    Partnership, PartnershipCreate, PartnershipUpdate, PartnershipsReorder,
     ShippingRule, ShippingRuleCreate, TaxRate, TaxRateCreate,
     SeoMeta, SeoMetaCreate,
     Redirect, RedirectCreate,
@@ -1235,6 +1236,88 @@ async def reorder_hero_slides(payload: HeroSlidesReorder, user: dict = Depends(r
     for idx, sid in enumerate(payload.ids):
         await db.hero_slides.update_one(
             {'id': sid},
+            {'$set': {'order': idx, 'updated_at': datetime.now(timezone.utc)}},
+        )
+    return {'ok': True, 'count': len(payload.ids)}
+
+
+# --- Partnerships (About page "Business is ministry") ---
+_DEFAULT_PARTNERSHIPS = [
+    {'name': 'Project Arise', 'location': 'Believers Church Medical College Hospital · Kerala', 'description': 'Design + technology support for patient-care programs, turning healthcare access into a message of dignity.', 'website': ''},
+    {'name': 'Project Bounce', 'location': 'Dr. Mary Verghese Trust @ CMC Vellore', 'description': "Working alongside one of India's most respected rehabilitation trusts to rebuild lives after spinal-cord injury.", 'website': ''},
+    {'name': 'Agape Skill Development Institute', 'location': 'Punjab, India', 'description': 'Vocational training + livelihood pathways that turn skill-building into sustainable income for marginalized communities.', 'website': ''},
+    {'name': 'Wear The Hope with Ben', 'location': 'Michigan, USA', 'description': 'Our U.S. partner bringing the message of hope to North American communities through faith-driven apparel.', 'website': ''},
+    {'name': 'Therapeutic Media Lab', 'location': 'Wayne State University', 'description': 'Academic collaboration exploring how design, media, and technology can accelerate therapeutic outcomes.', 'website': ''},
+]
+
+
+async def _seed_partnerships_if_empty():
+    if await db.partnerships.count_documents({}) > 0:
+        return
+    now = datetime.now(timezone.utc)
+    docs = [
+        {'id': f'pt_{uuid.uuid4().hex[:12]}', 'order': i, 'active': True, 'image': '',
+         'created_at': now, 'updated_at': now, **d}
+        for i, d in enumerate(_DEFAULT_PARTNERSHIPS)
+    ]
+    await db.partnerships.insert_many(docs)
+    logger.info('Seeded %d default partnerships', len(docs))
+
+
+@api.get('/partnerships')
+async def list_partnerships_public():
+    await _seed_partnerships_if_empty()
+    docs = await db.partnerships.find({'active': True}, {'_id': 0}).sort('order', 1).to_list(100)
+    return {'items': docs}
+
+
+@api.get('/admin/partnerships')
+async def list_partnerships_admin(user: dict = Depends(require_admin)):
+    await _seed_partnerships_if_empty()
+    docs = await db.partnerships.find({}, {'_id': 0}).sort('order', 1).to_list(100)
+    return {'items': docs}
+
+
+@api.post('/admin/partnerships')
+async def create_partnership(payload: PartnershipCreate, user: dict = Depends(require_admin)):
+    if not (payload.name or '').strip():
+        raise HTTPException(status_code=400, detail='name is required')
+    order = payload.order
+    if order is None:
+        last = await db.partnerships.find_one({}, sort=[('order', -1)])
+        order = ((last or {}).get('order', -1) + 1) if last else 0
+    fields = {k: v for k, v in payload.model_dump().items() if k != 'order'}
+    doc = Partnership(order=order, **fields).model_dump()
+    await db.partnerships.insert_one(doc)
+    doc.pop('_id', None)
+    return doc
+
+
+@api.patch('/admin/partnerships/{partnership_id}')
+async def update_partnership(partnership_id: str, payload: PartnershipUpdate, user: dict = Depends(require_admin)):
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(status_code=400, detail='No fields to update')
+    updates['updated_at'] = datetime.now(timezone.utc)
+    res = await db.partnerships.update_one({'id': partnership_id}, {'$set': updates})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail='Partnership not found')
+    return await db.partnerships.find_one({'id': partnership_id}, {'_id': 0})
+
+
+@api.delete('/admin/partnerships/{partnership_id}')
+async def delete_partnership(partnership_id: str, user: dict = Depends(require_admin)):
+    res = await db.partnerships.delete_one({'id': partnership_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail='Partnership not found')
+    return {'ok': True, 'id': partnership_id}
+
+
+@api.post('/admin/partnerships/reorder')
+async def reorder_partnerships(payload: PartnershipsReorder, user: dict = Depends(require_admin)):
+    for idx, pid in enumerate(payload.ids):
+        await db.partnerships.update_one(
+            {'id': pid},
             {'$set': {'order': idx, 'updated_at': datetime.now(timezone.utc)}},
         )
     return {'ok': True, 'count': len(payload.ids)}

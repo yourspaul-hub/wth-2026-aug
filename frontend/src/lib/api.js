@@ -88,6 +88,14 @@ export const adminReorderHeroSlides = (ids) => api.post('/admin/hero-slides/reor
 export const adminGetLightbox = () => api.get('/admin/lightbox').then(r => r.data);
 export const adminUpdateLightbox = (patch) => api.put('/admin/lightbox', patch).then(r => r.data);
 
+// --- Partnerships (About page "Business is ministry") ---
+export const fetchPartnerships = () => api.get('/partnerships').then(r => r.data?.items || []);
+export const adminListPartnerships = () => api.get('/admin/partnerships').then(r => r.data?.items || []);
+export const adminCreatePartnership = (payload) => api.post('/admin/partnerships', payload).then(r => r.data);
+export const adminUpdatePartnership = (id, patch) => api.patch(`/admin/partnerships/${id}`, patch).then(r => r.data);
+export const adminDeletePartnership = (id) => api.delete(`/admin/partnerships/${id}`).then(r => r.data);
+export const adminReorderPartnerships = (ids) => api.post('/admin/partnerships/reorder', { ids }).then(r => r.data);
+
 export const adminListProducts = () => api.get('/products', { params: { limit: 500 } }).then(r => r.data.items);
 export const adminCreateProduct = (payload) => api.post('/admin/products', payload).then(r => r.data);
 export const adminUpdateProduct = (id, patch) => api.patch(`/admin/products/${id}`, patch).then(r => r.data);
