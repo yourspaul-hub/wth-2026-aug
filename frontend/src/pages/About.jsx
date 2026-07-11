@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Users, Globe2, Sparkles, Award } from 'lucide-react';
+import { Heart, Users, Globe2, Sparkles, Award, HandHeart, Building2, GraduationCap, Handshake, Stethoscope } from 'lucide-react';
 import { fetchReviewsFull } from '../lib/api';
 import { useContentText } from '../context/ContentContext';
 
@@ -12,9 +12,54 @@ const stats = [
 ];
 
 const values = [
-  { title: 'Faith First', desc: 'Every design begins with prayer and scripture. Our products are not just products — they are declarations.' },
-  { title: 'Handcrafted Quality', desc: 'From sourcing materials to final packaging, we obsess over the details so that you can feel the love in every stitch.' },
-  { title: 'Impact Driven', desc: 'A portion of every sale funds outreach and community programs across India and beyond.' },
+  {
+    icon: HandHeart,
+    title: 'Obedience Before Understanding',
+    desc: 'We registered the brand before we saw the roadmap. Like Joshua stepping into the Jordan, we choose faith over fear at every fork in the road.',
+  },
+  {
+    icon: Sparkles,
+    title: 'Business as Ministry',
+    desc: 'Every product carries a prayer. Every partnership becomes a platform. Commerce is our canvas — the message of hope is our masterpiece.',
+  },
+  {
+    icon: Handshake,
+    title: 'Lives Before Brands',
+    desc: 'Sustainable jobs, restored dignity, empowered communities. Our success is measured in the lives touched, not just the units shipped.',
+  },
+];
+
+const partnerships = [
+  {
+    icon: Stethoscope,
+    name: 'Project Arise',
+    where: 'Believers Church Medical College Hospital · Kerala',
+    desc: 'Design + technology support for patient-care programs, turning healthcare access into a message of dignity.',
+  },
+  {
+    icon: Stethoscope,
+    name: 'Project Bounce',
+    where: 'Dr. Mary Verghese Trust @ CMC Vellore',
+    desc: 'Working alongside one of India\'s most respected rehabilitation trusts to rebuild lives after spinal-cord injury.',
+  },
+  {
+    icon: GraduationCap,
+    name: 'Agape Skill Development Institute',
+    where: 'Punjab, India',
+    desc: 'Vocational training + livelihood pathways that turn skill-building into sustainable income for marginalized communities.',
+  },
+  {
+    icon: Handshake,
+    name: 'Wear The Hope with Ben',
+    where: 'Michigan, USA',
+    desc: 'Our U.S. partner bringing the message of hope to North American communities through faith-driven apparel.',
+  },
+  {
+    icon: Building2,
+    name: 'Therapeutic Media Lab',
+    where: 'Wayne State University',
+    desc: 'Academic collaboration exploring how design, media, and technology can accelerate therapeutic outcomes.',
+  },
 ];
 
 const About = () => {
@@ -23,7 +68,6 @@ const About = () => {
     fetchReviewsFull({ limit: 10 })
       .then(d => {
         const items = d?.items || [];
-        // Prefer a longer 5-star review; fallback to any review
         const pick = items.find(r => r.rating === 5 && (r.text || '').length > 60) || items[0];
         setFeaturedReview(pick || null);
       })
@@ -33,13 +77,14 @@ const About = () => {
   const heroTitle = useContentText('about.hero.title');
   const heroAccent = useContentText('about.hero.title_accent');
   const heroBody = useContentText('about.hero.body');
-  const missionEyebrow = useContentText('about.mission.eyebrow', 'Our Mission');
+  const missionEyebrow = useContentText('about.mission.eyebrow', 'From vision to obedience');
   const missionTitle = useContentText('about.mission.title');
   const missionAccent = useContentText('about.mission.title_accent');
   const missionBody = useContentText('about.mission.body');
-  const missionQuote = useContentText('about.mission.quote', '"We sincerely hope our products will impact your life and those around you."');
-  const valuesEyebrow = useContentText('about.values.eyebrow', 'What we stand for');
+  const missionQuote = useContentText('about.mission.quote');
+  const valuesEyebrow = useContentText('about.values.eyebrow', 'What we believe');
   const valuesTitle = useContentText('about.values.title');
+
   return (
     <main className="pt-6" data-testid="about-page">
       {/* Hero */}
@@ -52,7 +97,7 @@ const About = () => {
           <h1 className="font-serif-display text-5xl md:text-7xl leading-[1.05] text-[#213a60]">
             {heroTitle}{heroAccent && <><br /><span className="italic text-[#B4593F]">{heroAccent}</span></>}
           </h1>
-          <p className="mt-6 text-lg text-neutral-700 max-w-2xl mx-auto">
+          <p className="mt-6 text-lg text-neutral-700 max-w-2xl mx-auto leading-relaxed">
             {heroBody}
           </p>
         </div>
@@ -74,17 +119,19 @@ const About = () => {
         </div>
       </section>
 
-      {/* Mission */}
+      {/* Origin story */}
       <section className="py-24 bg-[#FDF3EB]">
         <div className="max-w-[1200px] mx-auto px-6 lg:px-10 grid md:grid-cols-2 gap-14 items-center">
           <div className="aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl">
-            <img src="https://images.unsplash.com/photo-1497621122273-f5cfb6065c56?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHwxfHxiaWJsZXxlbnwwfHx8fDE3ODMzMjYxMTd8MA&ixlib=rb-4.1.0&q=85" alt="Mission" className="w-full h-full object-cover" />
+            <img src="https://images.unsplash.com/photo-1497621122273-f5cfb6065c56?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHwxfHxiaWJsZXxlbnwwfHx8fDE3ODMzMjYxMTd8MA&ixlib=rb-4.1.0&q=85" alt="Faith journey" className="w-full h-full object-cover" />
           </div>
           <div>
             <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">{missionEyebrow}</div>
-            <h2 className="font-serif-display text-4xl md:text-5xl leading-tight">{missionTitle}{missionAccent && <> <span className="italic">{missionAccent}</span></>}</h2>
-            <p className="mt-6 text-neutral-700 leading-relaxed whitespace-pre-line">{missionBody}</p>
-            <p className="mt-4 italic text-[#B4593F] font-serif-display text-2xl">{missionQuote}</p>
+            <h2 className="font-serif-display text-4xl md:text-5xl leading-tight text-[#213a60]">{missionTitle}{missionAccent && <> <span className="italic">{missionAccent}</span></>}</h2>
+            <div className="mt-6 text-neutral-700 leading-relaxed whitespace-pre-line space-y-4">
+              {missionBody.split('\n\n').map((p, i) => <p key={i}>{p}</p>)}
+            </div>
+            <p className="mt-6 italic text-[#B4593F] font-serif-display text-2xl leading-snug border-l-4 border-[#B4593F]/40 pl-5">{missionQuote}</p>
           </div>
         </div>
       </section>
@@ -92,21 +139,69 @@ const About = () => {
       {/* Values */}
       <section className="py-24 bg-white">
         <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
-          <div className="text-center mb-14">
+          <div className="text-center mb-14 max-w-2xl mx-auto">
             <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">{valuesEyebrow}</div>
-            <h2 className="font-serif-display text-4xl md:text-5xl">{valuesTitle}</h2>
+            <h2 className="font-serif-display text-4xl md:text-5xl text-[#213a60]">{valuesTitle}</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
-            {values.map((v, i) => (
-              <div key={i} className="bg-[#FDF3EB] rounded-2xl p-8 border border-[#EBD9CE] hover-lift">
-                <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center mb-4 border border-[#EBD9CE]">
-                  <span className="font-serif-display text-xl text-[#B4593F]">{i + 1}</span>
+            {values.map((v, i) => {
+              const Icon = v.icon;
+              return (
+                <div key={i} className="bg-[#FDF3EB] rounded-2xl p-8 border border-[#EBD9CE] hover-lift transition-shadow">
+                  <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center mb-5 border border-[#EBD9CE]">
+                    <Icon className="w-5 h-5 text-[#B4593F]" />
+                  </div>
+                  <div className="font-serif-display text-2xl mb-3 text-[#213a60] leading-tight">{v.title}</div>
+                  <p className="text-neutral-700 leading-relaxed text-sm">{v.desc}</p>
                 </div>
-                <div className="font-serif-display text-2xl mb-3">{v.title}</div>
-                <p className="text-neutral-700 leading-relaxed text-sm">{v.desc}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
+        </div>
+      </section>
+
+      {/* Partnerships */}
+      <section className="py-24 gradient-cream border-y border-[#EBD9CE]" data-testid="about-partnerships">
+        <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
+          <div className="text-center mb-14 max-w-2xl mx-auto">
+            <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">Partners in the mission</div>
+            <h2 className="font-serif-display text-4xl md:text-5xl text-[#213a60]">Business is <span className="italic text-[#B4593F]">ministry</span></h2>
+            <p className="mt-5 text-neutral-700 leading-relaxed">
+              Our vision has always extended far beyond products. Through these collaborations, we&apos;re helping create sustainable opportunities through design, technology, training and skill development — empowering individuals, strengthening communities, and restoring dignity through meaningful work.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {partnerships.map((p) => {
+              const Icon = p.icon;
+              return (
+                <article
+                  key={p.name}
+                  data-testid={`partnership-${p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                  className="bg-white rounded-2xl p-6 border border-[#EBD9CE] hover-lift transition-shadow"
+                >
+                  <div className="w-11 h-11 rounded-full bg-[#FDF3EB] flex items-center justify-center mb-4 border border-[#EBD9CE]">
+                    <Icon className="w-5 h-5 text-[#B4593F]" />
+                  </div>
+                  <div className="font-serif-display text-xl text-[#213a60] leading-tight">{p.name}</div>
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-[#B4593F] mt-1.5">{p.where}</div>
+                  <p className="mt-4 text-sm text-neutral-700 leading-relaxed">{p.desc}</p>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Looking forward */}
+      <section className="py-24 bg-white">
+        <div className="max-w-[900px] mx-auto px-6 lg:px-10 text-center">
+          <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-4">The journey continues</div>
+          <h2 className="font-serif-display text-4xl md:text-5xl leading-tight text-[#213a60]">
+            We believe this is <span className="italic text-[#B4593F]">only the beginning</span>
+          </h2>
+          <p className="mt-6 text-neutral-700 leading-relaxed text-lg">
+            As God continues to open new doors, our prayer is that Wear The Hope will remain a faithful instrument in His hands — building lives before brands, creating hope before products, and carrying His love to people and nations for generations to come.
+          </p>
         </div>
       </section>
 
@@ -136,8 +231,8 @@ const About = () => {
       {/* CTA */}
       <section className="py-24 bg-[#FDF3EB] text-center">
         <div className="max-w-[900px] mx-auto px-6 lg:px-10">
-          <h3 className="font-serif-display text-4xl md:text-5xl leading-tight">Ready to <span className="italic text-[#B4593F]">wear the hope</span>?</h3>
-          <p className="mt-4 text-neutral-700">Explore our full collection or reach out for custom orders. We’d love to hear your story.</p>
+          <h3 className="font-serif-display text-4xl md:text-5xl leading-tight text-[#213a60]">Ready to <span className="italic text-[#B4593F]">wear the hope</span>?</h3>
+          <p className="mt-4 text-neutral-700">Explore our full collection or reach out for custom orders. We&rsquo;d love to hear your story.</p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <Link to="/shop" className="bg-[#213a60] hover:bg-[#B4593F] text-white px-7 py-4 rounded-full text-xs uppercase tracking-[0.2em] transition-colors">Shop Now</Link>
             <Link to="/contact" className="border border-[#213a60] text-[#213a60] px-7 py-4 rounded-full text-xs uppercase tracking-[0.2em] hover:bg-[#213a60] hover:text-white transition-colors">Get In Touch</Link>

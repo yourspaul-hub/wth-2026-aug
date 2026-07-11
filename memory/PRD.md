@@ -54,6 +54,15 @@ Full-featured, dynamic e-commerce clone of www.wearthehope.com with a comprehens
   - Applied to: Hero, ProductCard, InstagramFeed, ReviewsSection, Blog list, BlogPost, review avatars/photos
 
 ## Backlog / Roadmap
+### Phase R — About Us rewrite from brand story ✅ (2026-07-11)
+- Rewrote the About page to match the user-provided brand-story document (Wear The Hope Story.docx):
+  - **Hero** — "This began with a vision — *not a business plan*" with the 2018 origin one-liner
+  - **Origin story section** ("Five loaves. Two fish. One God.") with the full three-paragraph narrative: God's vision in late 2018 → obedience before understanding → Joshua/Jordan analogy → registered brand + prayer over every product
+  - **Values section** rewritten to the actual pillars: Obedience Before Understanding · Business as Ministry · Lives Before Brands
+  - **New Partnerships section** ("Business is *ministry*") with 5 dedicated cards: Project Arise · Project Bounce · Agape Skill Development Institute · Wear The Hope with Ben · Therapeutic Media Lab
+  - **New "The journey continues" closing section** with the "we believe this is only the beginning" paragraph verbatim
+- Also updated CMS defaults in `contentRegistry.js` so admin edits stay possible via the Design tab — the DOCX text is now the default, not seed placeholder copy.
+
 ### Phase Q — Hero-slide save bug fix ✅ (2026-07-11)
 - **Bug**: New hero slides created via `/admin/hero-slides` weren't persisting. Root cause: `HeroSlideCreate.order: Optional[int] = None` was passed to `HeroSlide(**...)` where `HeroSlide.order: int = 0` — Pydantic rejected None → 422 → nothing landed in Mongo.
 - **Fix**: `create_hero_slide` now computes `order` first (append-to-end if unspecified), then constructs `HeroSlide` with a resolved integer.
