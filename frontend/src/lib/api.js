@@ -84,6 +84,10 @@ export const adminUpdateHeroSlide = (id, patch) => api.patch(`/admin/hero-slides
 export const adminDeleteHeroSlide = (id) => api.delete(`/admin/hero-slides/${id}`).then(r => r.data);
 export const adminReorderHeroSlides = (ids) => api.post('/admin/hero-slides/reorder', { ids }).then(r => r.data);
 
+// --- Lightbox (homepage promotional modal) ---
+export const adminGetLightbox = () => api.get('/admin/lightbox').then(r => r.data);
+export const adminUpdateLightbox = (patch) => api.put('/admin/lightbox', patch).then(r => r.data);
+
 export const adminListProducts = () => api.get('/products', { params: { limit: 500 } }).then(r => r.data.items);
 export const adminCreateProduct = (payload) => api.post('/admin/products', payload).then(r => r.data);
 export const adminUpdateProduct = (id, patch) => api.patch(`/admin/products/${id}`, patch).then(r => r.data);

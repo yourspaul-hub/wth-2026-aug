@@ -66,7 +66,9 @@ const MusicWidget = () => {
     if (!a) return;
     a.muted = true;                    // start muted → browsers allow autoplay
     a.volume = volume || 0.30;
-    a.play().catch(() => { /* recover via gesture handler */ });
+    a.play()
+      .then(() => setPlaying(true))    // keep the widget UI in sync with reality
+      .catch(() => { /* recover via gesture handler */ });
     armUnmuteOnGesture();
   }, [settings, hidden]);
 
@@ -105,14 +107,23 @@ const MusicWidget = () => {
       // If audio is playing muted (autoplay phase), a tap should UNMUTE, not pause.
       if (playing && muted) {
         a.muted = false;
-        a.volume = 0.30;
+        a.volume = volume || 0.30;
         try { const p = a.play(); if (p && p.catch) p.catch(() => {}); } catch { /* noop */ }
         setMuted(false);
         setCollapsed(false);
         return;
       }
       if (playing) { a.pause(); setPlaying(false); }
-      else { a.muted = muted; await a.play(); setPlaying(true); }
+      else {
+        // First user-initiated play — always start UNMUTED. `muted` state may
+        // still be `true` from the autoplay bootstrap; clicking play is an
+        // explicit signal the visitor wants to hear audio.
+        a.muted = false;
+        a.volume = volume || 0.30;
+        await a.play();
+        setPlaying(true);
+        setMuted(false);
+      }
       setCollapsed(false);
     } catch { /* ignore */ }
   };

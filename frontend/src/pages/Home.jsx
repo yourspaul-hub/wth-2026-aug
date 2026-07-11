@@ -6,6 +6,7 @@ import USBanner from '../components/USBanner';
 import InstagramFeed from '../components/InstagramFeed';
 import ReviewsSection from '../components/ReviewsSection';
 import AboutStory from '../components/AboutStory';
+import Lightbox from '../components/Lightbox';
 import { Truck, Sparkles, ShieldCheck, RefreshCw } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
 
@@ -42,6 +43,7 @@ const FeatureStrip = () => {
 const Home = () => {
   return (
     <main>
+      <Lightbox />
       <Hero />
       <FeatureStrip />
       <Categories />

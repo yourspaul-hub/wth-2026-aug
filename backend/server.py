@@ -3278,6 +3278,9 @@ async def get_public_settings():
     volume = max(0.0, min(1.0, volume))
     catalogue_id = (await get_setting('CATALOGUE_FILE_ID', '')) or ''
     catalogue_name = (await get_setting('CATALOGUE_FILENAME', '')) or ''
+
+    lb_enabled = ((await get_setting('LIGHTBOX_ENABLED', '')) or '').strip().lower() in ('true', '1', 'yes', 'on')
+    lb_image = (await get_setting('LIGHTBOX_IMAGE', '')) or ''
     return {
         'music': {
             'enabled': bool(music_enabled and music_url),
@@ -3289,7 +3292,78 @@ async def get_public_settings():
             'url': '/api/catalogue' if catalogue_id else '',
             'filename': catalogue_name,
         },
+        'lightbox': {
+            'enabled': bool(lb_enabled and lb_image),
+            'image': lb_image,
+            'heading': (await get_setting('LIGHTBOX_HEADING', '')) or '',
+            'subtitle': (await get_setting('LIGHTBOX_SUBTITLE', '')) or '',
+            'cta_label': (await get_setting('LIGHTBOX_CTA_LABEL', '')) or '',
+            'cta_href': (await get_setting('LIGHTBOX_CTA_HREF', '')) or '',
+            'show_once': ((await get_setting('LIGHTBOX_SHOW_ONCE', 'true')) or 'true').strip().lower() in ('true', '1', 'yes', 'on'),
+            # Increment this in admin to force re-display for previously-dismissed visitors
+            'version': (await get_setting('LIGHTBOX_VERSION', '1')) or '1',
+        },
     }
+
+
+class LightboxUpdate(BaseModel):
+    enabled: Optional[bool] = None
+    image: Optional[str] = None
+    heading: Optional[str] = None
+    subtitle: Optional[str] = None
+    cta_label: Optional[str] = None
+    cta_href: Optional[str] = None
+    show_once: Optional[bool] = None
+
+
+@api.get('/admin/lightbox')
+async def admin_get_lightbox(user: dict = Depends(require_admin)):
+    return {
+        'enabled': ((await get_setting('LIGHTBOX_ENABLED', '')) or '').strip().lower() in ('true', '1', 'yes', 'on'),
+        'image': (await get_setting('LIGHTBOX_IMAGE', '')) or '',
+        'heading': (await get_setting('LIGHTBOX_HEADING', '')) or '',
+        'subtitle': (await get_setting('LIGHTBOX_SUBTITLE', '')) or '',
+        'cta_label': (await get_setting('LIGHTBOX_CTA_LABEL', '')) or '',
+        'cta_href': (await get_setting('LIGHTBOX_CTA_HREF', '')) or '',
+        'show_once': ((await get_setting('LIGHTBOX_SHOW_ONCE', 'true')) or 'true').strip().lower() in ('true', '1', 'yes', 'on'),
+        'version': (await get_setting('LIGHTBOX_VERSION', '1')) or '1',
+    }
+
+
+@api.put('/admin/lightbox')
+async def admin_update_lightbox(payload: LightboxUpdate, user: dict = Depends(require_admin)):
+    mapping = {
+        'enabled': ('LIGHTBOX_ENABLED', lambda v: 'true' if v else 'false'),
+        'image': ('LIGHTBOX_IMAGE', lambda v: v or ''),
+        'heading': ('LIGHTBOX_HEADING', lambda v: v or ''),
+        'subtitle': ('LIGHTBOX_SUBTITLE', lambda v: v or ''),
+        'cta_label': ('LIGHTBOX_CTA_LABEL', lambda v: v or ''),
+        'cta_href': ('LIGHTBOX_CTA_HREF', lambda v: v or ''),
+        'show_once': ('LIGHTBOX_SHOW_ONCE', lambda v: 'true' if v else 'false'),
+    }
+    data = payload.model_dump()
+    now = datetime.now(timezone.utc)
+    changed_content = False  # image/heading/etc. changes should force re-display
+    for field, (key, coerce) in mapping.items():
+        v = data.get(field)
+        if v is not None:
+            await db.settings.update_one(
+                {'key': key},
+                {'$set': {'key': key, 'value': coerce(v), 'category': 'lightbox', 'updated_at': now}},
+                upsert=True,
+            )
+            if field in ('image', 'heading', 'subtitle', 'cta_label', 'cta_href'):
+                changed_content = True
+
+    if changed_content:
+        # Bump the version so previously-dismissed visitors see the new lightbox.
+        cur = int(((await get_setting('LIGHTBOX_VERSION', '1')) or '1') or '1')
+        await db.settings.update_one(
+            {'key': 'LIGHTBOX_VERSION'},
+            {'$set': {'key': 'LIGHTBOX_VERSION', 'value': str(cur + 1), 'category': 'lightbox', 'updated_at': now}},
+            upsert=True,
+        )
+    return await admin_get_lightbox(user)
 
 
 # ================= CATALOGUE (PDF) =================

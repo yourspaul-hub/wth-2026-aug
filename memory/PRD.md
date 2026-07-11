@@ -54,6 +54,20 @@ Full-featured, dynamic e-commerce clone of www.wearthehope.com with a comprehens
   - Applied to: Hero, ProductCard, InstagramFeed, ReviewsSection, Blog list, BlogPost, review avatars/photos
 
 ## Backlog / Roadmap
+### Phase P — Desktop Lightbox + Music First-Click Fix ✅ (2026-07-11)
+- **Homepage lightbox** module — full admin editor at `/admin/lightbox`:
+  - Enable/disable toggle
+  - Image upload (via ImageFieldEditor → GridFS/S3 pipeline, auto-optimized WebP)
+  - Heading + subtitle + CTA label + CTA link (internal `/path` or external `https://…`)
+  - "Show once per version" toggle — auto-bumps a `LIGHTBOX_VERSION` counter when content changes, so previously-dismissed visitors see the refreshed lightbox once
+  - Live preview panel in the admin
+- **Backend endpoints**: `/api/settings/public.lightbox` (public read), `GET/PUT /api/admin/lightbox` (admin CRUD)
+- **Frontend `<Lightbox>`** mounted in `Home.jsx` — desktop-only (viewport ≥ 1024 px), fades in 900 ms after page load, dismiss via close button, backdrop click, or Escape key. Body scroll locked while open. CTA and close both styled in navy palette (`#213a60`) matching the site.
+- **Music first-click bug fixed** (`MusicWidget.jsx`):
+  - After successful muted autoplay, `setPlaying(true)` was never called → widget UI showed a stale "paused" state → first click hit the wrong branch of `toggle()`, which used `a.muted = muted` (still `true` from bootstrap) and kept the audio muted.
+  - Fix: (a) call `setPlaying(true)` after autoplay `.then()`; (b) in the "start playback" branch of `toggle()`, force `a.muted = false` since a user click is an explicit unmute signal.
+  - Verified via automation: after first click on the widget, `audio.paused=false, audio.muted=false, audio.volume=0.3, currentTime > 0`. Widget UI correctly transitions to "NOW PLAYING" with the pause icon and un-slashed speaker.
+
 ### Phase O — Homepage Review QR + Duplicate Slide + Admin Nav ✅ (2026-07-11)
 - **Homepage review QR card** added inside `ReviewsSection.jsx` — sits above the reviews grid with the auto-generated `/api/reviews/generic-qr.png` image, "Scan & share your story" eyebrow, headline, description, and a "Leave a review" CTA linking to `/review`. Verified: image loads (410×410 native), CTA href correct.
 - **Duplicate slide** button on `/admin/hero-slides` — clones an existing slide with `active: false` (hidden by default so the admin can tweak before publishing) and auto-opens the new record in the editor. `data-testid="hero-slide-duplicate-{id}"`.
