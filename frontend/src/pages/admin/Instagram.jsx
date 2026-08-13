@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { adminListInstagram, adminCreateInstagram, adminUpdateInstagram, adminDeleteInstagram, adminListProducts } from '../../lib/api';
 import { toast } from 'sonner';
 import { Instagram, Plus, Trash2, Edit3, X, Heart, MessageCircle } from 'lucide-react';
+import ImageFieldEditor from './ImageFieldEditor';
 
 const empty = { caption: '', image: '', permalink: '', likes: 0, comments: 0, product_ids: [], active: true, order: 0 };
 
@@ -91,8 +92,7 @@ const AdminInstagram = () => {
               <button onClick={close}><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={save} className="px-6 py-5 space-y-4 text-sm">
-              <Field label="Image URL"><input required value={form.image} onChange={e => setForm({ ...form, image: e.target.value })} className="input" placeholder="https://..." /></Field>
-              {form.image && <img src={form.image} alt="" className="w-full aspect-square object-cover rounded-lg" />}
+              <Field label="Image"><ImageFieldEditor value={form.image || ''} onChange={(v) => setForm({ ...form, image: v })} testKey="instagram-image" /></Field>
               <Field label="Caption"><textarea rows="3" value={form.caption} onChange={e => setForm({ ...form, caption: e.target.value })} className="input !rounded-lg" /></Field>
               <Field label="Instagram permalink (optional)"><input value={form.permalink || ''} onChange={e => setForm({ ...form, permalink: e.target.value })} className="input" placeholder="https://www.instagram.com/p/..." /></Field>
               <div className="grid grid-cols-3 gap-3">

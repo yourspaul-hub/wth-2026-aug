@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { adminListProducts, adminCreateProduct, adminUpdateProduct, adminDeleteProduct, adminListCategories, productTemplateUrl, adminBulkUploadProducts, adminImportFromSheet } from '../../lib/api';
 import { toast } from 'sonner';
 import { Plus, Edit3, Trash2, X, Search, Layers, Image as ImageIcon, Sparkles, Info, Tag as TagIcon, Upload, Download, FileSpreadsheet } from 'lucide-react';
+import ImageFieldEditor from './ImageFieldEditor';
 
 const empty = {
   name: '', slug: '', category: '', collections: [], price: 0, original_price: 0,
@@ -226,19 +227,39 @@ const AdminProducts = () => {
 
               {tab === 'media' && (
                 <>
-                  <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Primary Image URL</span><input value={editing.image || ''} onChange={e => setEditing({ ...editing, image: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" />{editing.image && <img src={editing.image} alt="" className="mt-2 h-32 rounded-lg object-cover" />}</label>
-                  <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Hover Image URL</span><input value={editing.hover_image || ''} onChange={e => setEditing({ ...editing, hover_image: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
+                  <div>
+                    <div className="text-[11px] uppercase tracking-widest text-neutral-600 mb-2">Primary Image <span className="text-rose-600">*</span></div>
+                    <ImageFieldEditor
+                      value={editing.image || ''}
+                      onChange={(v) => setEditing({ ...editing, image: v })}
+                      testKey="product-primary-image"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-[11px] uppercase tracking-widest text-neutral-600 mb-2">Hover Image <span className="text-neutral-400">(optional — shown on card hover)</span></div>
+                    <ImageFieldEditor
+                      value={editing.hover_image || ''}
+                      onChange={(v) => setEditing({ ...editing, hover_image: v })}
+                      testKey="product-hover-image"
+                    />
+                  </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[11px] uppercase tracking-widest text-neutral-600">Gallery Images</span>
                       <button onClick={() => setListField('gallery', [...(editing.gallery || []), ''])} className="text-xs text-[#B4593F] inline-flex items-center gap-1"><Plus className="w-3 h-3" /> Add</button>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                       {(editing.gallery || []).map((g, i) => (
-                        <div key={i} className="flex gap-2">
-                          <input value={g} onChange={e => { const arr = [...editing.gallery]; arr[i] = e.target.value; setListField('gallery', arr); }} placeholder="Image URL" className="flex-1 bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2 text-sm outline-none focus:border-[#B4593F]" />
-                          <button onClick={() => setListField('gallery', editing.gallery.filter((_, k) => k !== i))} className="px-3 border border-[#EBD9CE] rounded-full text-neutral-500 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                        <div key={i} className="flex gap-3 items-start bg-white/50 border border-[#EBD9CE] rounded-xl p-3">
+                          <div className="flex-1 min-w-0">
+                            <ImageFieldEditor
+                              value={g}
+                              onChange={(v) => { const arr = [...(editing.gallery || [])]; arr[i] = v; setListField('gallery', arr); }}
+                              testKey={`product-gallery-${i}`}
+                            />
+                          </div>
+                          <button onClick={() => setListField('gallery', editing.gallery.filter((_, k) => k !== i))} title="Remove" className="w-9 h-9 flex items-center justify-center rounded-full text-neutral-500 hover:text-red-500 hover:bg-rose-50 transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       ))}
                     </div>

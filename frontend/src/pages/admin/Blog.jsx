@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { adminListBlog, adminCreateBlog, adminUpdateBlog, adminDeleteBlog } from '../../lib/api';
 import { toast } from 'sonner';
 import { FileText, Plus, Trash2, Edit3, X, Eye, EyeOff, Star } from 'lucide-react';
+import ImageFieldEditor from './ImageFieldEditor';
 
 const empty = {
   slug: '', title: '', excerpt: '', content: '', cover_image: '', author: 'Wear The Hope',
@@ -110,7 +111,7 @@ const AdminBlog = () => {
               </div>
               <Field label="Excerpt (short description)"><textarea rows="2" value={form.excerpt || ''} onChange={e => setForm({ ...form, excerpt: e.target.value })} className="input !rounded-lg" /></Field>
               <Field label="Content (HTML)"><textarea rows="10" value={form.content} onChange={e => setForm({ ...form, content: e.target.value })} className="input !rounded-lg font-mono text-xs" placeholder="<p>Your post content...</p>" /></Field>
-              <Field label="Cover image URL"><input value={form.cover_image || ''} onChange={e => setForm({ ...form, cover_image: e.target.value })} className="input" /></Field>
+              <Field label="Cover image"><ImageFieldEditor value={form.cover_image || ''} onChange={(v) => setForm({ ...form, cover_image: v })} testKey="blog-cover-image" /></Field>
               {form.cover_image && <img src={form.cover_image} alt="" className="w-full aspect-[16/9] object-cover rounded-lg" />}
               <div className="grid grid-cols-3 gap-3">
                 <Field label="Author"><input value={form.author} onChange={e => setForm({ ...form, author: e.target.value })} className="input" /></Field>

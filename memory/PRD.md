@@ -54,6 +54,16 @@ Full-featured, dynamic e-commerce clone of www.wearthehope.com with a comprehens
   - Applied to: Hero, ProductCard, InstagramFeed, ReviewsSection, Blog list, BlogPost, review avatars/photos
 
 ## Backlog / Roadmap
+### Phase T — Direct File Upload Across All Admin Forms ✅ (2026-07-11)
+Swapped plain "paste URL" inputs for the `ImageFieldEditor` widget (upload file **or** paste URL — both go through the same auto-WebP resize + GridFS/S3 pipeline) in every remaining admin form:
+- **Products** — Primary image, Hover image, and each Gallery image slot
+- **Categories** — Category tile image
+- **Blog** — Cover image
+- **Collections** — Collection image
+- **Instagram** — Post image
+
+All 5 forms now offer the same UX as Hero Slides / Lightbox / Partnerships: click **Upload file** to pick from local disk, or click **Use URL** to paste any public image URL (Google Drive share links included — the backend fetches, re-hosts, and optimizes). Uploaded files are auto-converted to WebP, resized to ≤1600×1600, and stored via S3 (if configured) or GridFS.
+
 ### Phase S — Partnerships CRUD + Image Swap + Homepage Story Rewrite ✅ (2026-07-11)
 - **New Partnerships module** — full admin CRUD at `/admin/partnerships`:
   - Fields: name (required), location, description, image (via ImageFieldEditor → auto-WebP pipeline), website URL, active toggle, order

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { listAllCategories, adminCreateCategory, adminUpdateCategory, adminDeleteCategory } from '../../lib/api';
 import { toast } from 'sonner';
 import { Plus, Trash2, Edit3, X, FolderOpen } from 'lucide-react';
+import ImageFieldEditor from './ImageFieldEditor';
 
 const empty = { name: '', slug: '', description: '', image: '', order: 0 };
 
@@ -82,7 +83,7 @@ const AdminCategories = () => {
             <form onSubmit={save} className="px-6 py-5 space-y-4 text-sm">
               <F label="Name *"><input required value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value, slug: editing.id ? editing.slug : e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-') })} className="input" /></F>
               <F label="Slug * (URL segment)"><input required value={editing.slug} onChange={e => setEditing({ ...editing, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-') })} className="input font-mono" placeholder="drinkware" /></F>
-              <F label="Image URL"><input value={editing.image || ''} onChange={e => setEditing({ ...editing, image: e.target.value })} className="input" /></F>
+              <F label="Image"><ImageFieldEditor value={editing.image || ''} onChange={(v) => setEditing({ ...editing, image: v })} testKey="category-image" /></F>
               {editing.image && <img src={editing.image} alt="" className="w-full aspect-[16/9] object-cover rounded-lg" />}
               <F label="Description"><textarea rows="3" value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} className="input !rounded-lg" /></F>
               <F label="Order"><input type="number" value={editing.order || 0} onChange={e => setEditing({ ...editing, order: e.target.value })} className="input w-32" /></F>

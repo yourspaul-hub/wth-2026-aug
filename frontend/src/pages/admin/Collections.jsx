@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { adminListCollections, adminCreateCollection, adminUpdateCollection, adminDeleteCollection, adminListProducts } from '../../lib/api';
 import { toast } from 'sonner';
 import { Plus, Edit3, Trash2, X, Star } from 'lucide-react';
+import ImageFieldEditor from './ImageFieldEditor';
 
 const empty = { name: '', slug: '', tagline: '', description: '', image: '', product_ids: [], featured: false, active: true, order: 0, seo_title: '', seo_description: '' };
 
@@ -78,7 +79,7 @@ const AdminCollections = () => {
               </div>
               <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Tagline</span><input value={editing.tagline || ''} onChange={e => setEditing({ ...editing, tagline: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
               <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Description</span><textarea rows="3" value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
-              <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Image URL</span><input value={editing.image || ''} onChange={e => setEditing({ ...editing, image: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
+              <div><div className="text-[11px] uppercase tracking-widest text-neutral-600 mb-2">Image</div><ImageFieldEditor value={editing.image || ''} onChange={(v) => setEditing({ ...editing, image: v })} testKey="collection-image" /></div>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Order</span><input type="number" value={editing.order || 0} onChange={e => setEditing({ ...editing, order: +e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
                 <div className="pt-6 space-y-2">
