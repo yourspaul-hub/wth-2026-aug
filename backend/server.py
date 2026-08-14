@@ -37,6 +37,7 @@ api = APIRouter(prefix='/api')
 
 from models import (
     AdminUser, Category, CategoryCreate,
+    Subcategory, SubcategoryCreate,
     Product, ProductCreate, ProductUpdate,
     Collection, CollectionCreate,
     Review, ReviewCreate, ReviewUpdate,
@@ -195,7 +196,120 @@ async def delete_category(cid: str, user: dict = Depends(require_store)):
     linked = await db.products.count_documents({'category': cid})
     if linked > 0:
         raise HTTPException(status_code=400, detail=f'{linked} product(s) are still assigned to this category. Reassign them first.')
+    # Guard: block deletion if subcategories exist
+    sub_count = await db.subcategories.count_documents({'category_id': cid})
+    if sub_count > 0:
+        raise HTTPException(status_code=400, detail=f'{sub_count} subcategor{"y" if sub_count == 1 else "ies"} still under this category. Delete them first.')
     await db.categories.delete_one({'id': cid})
+    return {'ok': True}
+
+
+# ================= SUBCATEGORIES =================
+async def _resolve_category_id(cat_ref: str) -> Optional[dict]:
+    """Look up a category by id OR slug; returns the full doc or None."""
+    doc = await db.categories.find_one({'id': cat_ref}, {'_id': 0})
+    if not doc:
+        doc = await db.categories.find_one({'slug': cat_ref}, {'_id': 0})
+    return doc
+
+
+@api.get('/subcategories')
+async def list_subcategories(category: Optional[str] = None):
+    """Public: list active subcategories. If `category` (slug or id) is given, scope to that parent."""
+    filt: dict = {'active': True}
+    if category:
+        cat = await _resolve_category_id(category)
+        if not cat:
+            return []
+        filt['category_id'] = cat['id']
+    docs = await db.subcategories.find(filt, {'_id': 0}).sort([('order', 1), ('name', 1)]).to_list(500)
+    # attach product counts
+    if docs:
+        ids = [d['id'] for d in docs]
+        pipe = [
+            {'$match': {'active': True, 'subcategory': {'$in': ids}}},
+            {'$group': {'_id': '$subcategory', 'count': {'$sum': 1}}},
+        ]
+        counts = {row['_id']: row['count'] async for row in db.products.aggregate(pipe)}
+        for d in docs:
+            d['product_count'] = counts.get(d['id'], 0)
+    return docs
+
+
+@api.get('/subcategories/{sub_slug}')
+async def get_subcategory(sub_slug: str, category: Optional[str] = None):
+    """Fetch one subcategory. If `category` is given, restricts lookup to that parent."""
+    filt: dict = {'slug': sub_slug, 'active': True}
+    if category:
+        cat = await _resolve_category_id(category)
+        if not cat:
+            raise HTTPException(status_code=404, detail='Category not found')
+        filt['category_id'] = cat['id']
+    doc = await db.subcategories.find_one(filt, {'_id': 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail='Subcategory not found')
+    doc['product_count'] = await db.products.count_documents({'active': True, 'subcategory': doc['id']})
+    parent = await db.categories.find_one({'id': doc['category_id']}, {'_id': 0})
+    doc['category'] = parent
+    return doc
+
+
+@api.get('/admin/categories/{cid}/subcategories')
+async def admin_list_subcategories(cid: str, user: dict = Depends(require_store)):
+    docs = await db.subcategories.find({'category_id': cid}, {'_id': 0}).sort([('order', 1), ('name', 1)]).to_list(500)
+    if docs:
+        ids = [d['id'] for d in docs]
+        pipe = [
+            {'$match': {'subcategory': {'$in': ids}}},
+            {'$group': {'_id': '$subcategory', 'count': {'$sum': 1}}},
+        ]
+        counts = {row['_id']: row['count'] async for row in db.products.aggregate(pipe)}
+        for d in docs:
+            d['product_count'] = counts.get(d['id'], 0)
+    return docs
+
+
+@api.post('/admin/categories/{cid}/subcategories')
+async def create_subcategory(cid: str, payload: SubcategoryCreate, user: dict = Depends(require_store)):
+    if not await db.categories.find_one({'id': cid}, {'_id': 0, 'id': 1}):
+        raise HTTPException(status_code=404, detail='Parent category not found')
+    if await db.subcategories.find_one({'category_id': cid, 'slug': payload.slug}):
+        raise HTTPException(status_code=400, detail='A subcategory with that slug already exists under this category')
+    doc = Subcategory(category_id=cid, **payload.model_dump()).model_dump()
+    await db.subcategories.insert_one(doc)
+    doc.pop('_id', None)
+    doc['product_count'] = 0
+    return doc
+
+
+@api.patch('/admin/subcategories/{sid}')
+async def update_subcategory(sid: str, payload: dict, user: dict = Depends(require_store)):
+    payload.pop('id', None)
+    payload.pop('_id', None)
+    payload.pop('category_id', None)  # cannot reparent
+    current = await db.subcategories.find_one({'id': sid}, {'_id': 0})
+    if not current:
+        raise HTTPException(status_code=404, detail='Subcategory not found')
+    if 'slug' in payload and payload['slug'] != current['slug']:
+        clash = await db.subcategories.find_one({
+            'category_id': current['category_id'],
+            'slug': payload['slug'],
+            'id': {'$ne': sid},
+        })
+        if clash:
+            raise HTTPException(status_code=400, detail='Another subcategory already uses that slug in this category')
+    await db.subcategories.update_one({'id': sid}, {'$set': payload})
+    doc = await db.subcategories.find_one({'id': sid}, {'_id': 0})
+    doc['product_count'] = await db.products.count_documents({'subcategory': sid})
+    return doc
+
+
+@api.delete('/admin/subcategories/{sid}')
+async def delete_subcategory(sid: str, user: dict = Depends(require_store)):
+    linked = await db.products.count_documents({'subcategory': sid})
+    if linked > 0:
+        raise HTTPException(status_code=400, detail=f'{linked} product(s) are still assigned to this subcategory. Reassign them first.')
+    await db.subcategories.delete_one({'id': sid})
     return {'ok': True}
 
 
@@ -203,6 +317,7 @@ async def delete_category(cid: str, user: dict = Depends(require_store)):
 @api.get('/products')
 async def list_products(
     category: Optional[str] = None,
+    subcategory: Optional[str] = None,
     q: Optional[str] = None,
     sort: str = 'featured',
     limit: int = 50,
@@ -214,6 +329,16 @@ async def list_products(
         cat = await db.categories.find_one({'slug': category}, {'_id': 0, 'id': 1})
         if cat:
             filt['category'] = cat['id']
+    if subcategory:
+        sub_filt: dict = {'slug': subcategory, 'active': True}
+        if filt.get('category'):
+            sub_filt['category_id'] = filt['category']
+        sub = await db.subcategories.find_one(sub_filt, {'_id': 0, 'id': 1})
+        if sub:
+            filt['subcategory'] = sub['id']
+        else:
+            # Requested subcategory not found — return empty
+            return {'items': [], 'total': 0}
     if q:
         filt['$or'] = [
             {'name': {'$regex': q, '$options': 'i'}},
@@ -237,10 +362,17 @@ async def list_products(
     cat_ids = list({p['category'] for p in items if p.get('category')})
     cat_docs = await db.categories.find({'id': {'$in': cat_ids}}, {'_id': 0, 'id': 1, 'slug': 1, 'name': 1}).to_list(200)
     cat_by_id = {c['id']: c for c in cat_docs}
+    # Attach subcategory slug/name
+    sub_ids = list({p['subcategory'] for p in items if p.get('subcategory')})
+    sub_docs = await db.subcategories.find({'id': {'$in': sub_ids}}, {'_id': 0, 'id': 1, 'slug': 1, 'name': 1}).to_list(500) if sub_ids else []
+    sub_by_id = {s['id']: s for s in sub_docs}
     for p in items:
         c = cat_by_id.get(p.get('category'))
         p['category_slug'] = c['slug'] if c else None
         p['category_name'] = c['name'] if c else None
+        s = sub_by_id.get(p.get('subcategory'))
+        p['subcategory_slug'] = s['slug'] if s else None
+        p['subcategory_name'] = s['name'] if s else None
 
     total = await db.products.count_documents(filt)
     return {'items': items, 'total': total}

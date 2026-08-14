@@ -148,6 +148,15 @@ All 5 forms now offer the same UX as Hero Slides / Lightbox / Partnerships: clic
 - About page pulls a featured quote from `/api/reviews` (was hardcoded to `testimonials[1]`).
 - Contact page reads phone/email/instagram/hours from CMS keys (was hardcoded `brandInfo`).
 
+### Phase N — Subcategories ✅ (2026-02-10)
+- Added Subcategory data model (`subcategories` collection) with fields: name, slug, image, title, description, order, active, category_id (FK). Product model gains optional `subcategory` FK.
+- Public API: `GET /api/subcategories?category=<slug>` (with product_count), `GET /api/subcategories/{sub_slug}?category=<cat_slug>`. Products endpoint accepts `?subcategory=<slug>` and returns `subcategory_slug`/`subcategory_name` in every item.
+- Admin API: `GET/POST /api/admin/categories/{cid}/subcategories`, `PATCH/DELETE /api/admin/subcategories/{sid}`. Slug uniqueness within parent enforced; cannot reparent.
+- Delete guards: cannot delete a category with subcategories; cannot delete a subcategory with linked products.
+- Admin UI: `/admin/categories/:cid/subcategories` page with right-side drawer (Name, Slug, Image, Title, Description, Order, Active). "N subcategories · Manage →" link on each category card. Products form now has a Subcategory dropdown that repopulates when the Category changes.
+- Storefront: `/shop/:catSlug` renders a "Browse by type" strip with subcategory tiles when subcategories exist. `/shop/:catSlug/:subSlug` shows the subcategory hero (image + title + description), breadcrumb, and only the products under that subcategory. Categories without subcategories are unaffected.
+- **Verified** by bug_testing_agent iteration 16 — 100% pass on backend (20/20) and frontend (7/7).
+
 ### Phase M — Personalization Cost End-to-End ✅ (2026-02-10)
 - Bug fix: personalization surcharge is now correctly reflected across cart drawer, checkout summary, order creation, invoice, and order-success page. Backend `POST /api/orders` already applied `personalization_cost` per unit; frontend now bakes it into the cart line price when the customer types in the customization field so the previewed subtotal matches the final invoice.
 - **CartContext**: cart identity key now includes `customization` so personalized and non-personalized instances of the same product remain separate lines (and don't lose the surcharge on merge).

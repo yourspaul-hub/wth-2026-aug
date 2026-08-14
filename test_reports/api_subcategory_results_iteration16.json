@@ -1,0 +1,437 @@
+{
+  "base": "https://wear-interactive.preview.emergentagent.com",
+  "passed": 20,
+  "total": 20,
+  "results": [
+    {
+      "name": "admin bearer token is accepted",
+      "passed": true,
+      "detail": {
+        "user_id": "user_test_1786690077689",
+        "email": "testfix+user_test_1786690077689@wearthehope.io",
+        "name": "Test Admin",
+        "picture": "",
+        "role": "admin"
+      }
+    },
+    {
+      "name": "seed category drinkware exists",
+      "passed": true,
+      "detail": {
+        "id": "cat_01",
+        "name": "Drinkware",
+        "slug": "drinkware",
+        "tagline": "Sip scripture, hold hope",
+        "image": "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDN8MHwxfHNlYXJjaHwzfHxtdWd8ZW58MHx8fHwxNzgzMzI2MTEwfDA&ixlib=rb-4.1.0&q=85",
+        "count": 3,
+        "coming_soon": false,
+        "order": 1,
+        "created_at": "2026-07-06T08:53:58.149000"
+      }
+    },
+    {
+      "name": "public /subcategories?category=drinkware includes active Mugs with product_count",
+      "passed": true,
+      "detail": {
+        "id": "sc_6796560e4376",
+        "category_id": "cat_01",
+        "name": "Mugs",
+        "slug": "mugs",
+        "image": "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d",
+        "title": "Ceramic Mugs",
+        "description": "Hand-painted verses.",
+        "order": 1,
+        "active": true,
+        "created_at": "2026-08-14T21:11:51.757000",
+        "product_count": 1
+      }
+    },
+    {
+      "name": "public /subcategories/mugs embeds Drinkware parent",
+      "passed": true,
+      "detail": {
+        "id": "sc_6796560e4376",
+        "category_id": "cat_01",
+        "name": "Mugs",
+        "slug": "mugs",
+        "image": "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d",
+        "title": "Ceramic Mugs",
+        "description": "Hand-painted verses.",
+        "order": 1,
+        "active": true,
+        "created_at": "2026-08-14T21:11:51.757000",
+        "product_count": 1,
+        "category": {
+          "id": "cat_01",
+          "name": "Drinkware",
+          "slug": "drinkware",
+          "tagline": "Sip scripture, hold hope",
+          "image": "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDN8MHwxfHNlYXJjaHwzfHxtdWd8ZW58MHx8fHwxNzgzMzI2MTEwfDA&ixlib=rb-4.1.0&q=85",
+          "count": 3,
+          "coming_soon": false,
+          "order": 1,
+          "created_at": "2026-07-06T08:53:58.149000"
+        }
+      }
+    },
+    {
+      "name": "public /products?category=drinkware&subcategory=mugs returns only Mugs products with enrichment",
+      "passed": true,
+      "detail": {
+        "total": 1,
+        "items": [
+          {
+            "id": "p_49658ec9cbf8",
+            "sub": "mugs"
+          }
+        ]
+      }
+    },
+    {
+      "name": "created isolated parent category",
+      "passed": true,
+      "detail": {
+        "id": "c_e60084528753",
+        "name": "QA Subcategory Parent 1786742340",
+        "slug": "qa-subcat-parent-1786742340",
+        "tagline": "QA parent",
+        "image": "",
+        "count": 0,
+        "coming_soon": false,
+        "order": 9000,
+        "created_at": "2026-08-14T21:19:01.229713+00:00"
+      }
+    },
+    {
+      "name": "POST creates subcategory with fields and product_count=0",
+      "passed": true,
+      "detail": {
+        "id": "sc_c0ef22b1e292",
+        "category_id": "c_e60084528753",
+        "name": "QA Mugs",
+        "slug": "qa-mugs-1786742340",
+        "image": "https://images.unsplash.com/photo-1514228742587-6b1558fcf93a?w=800",
+        "title": "QA Ceramic Mugs",
+        "description": "QA description for mugs",
+        "order": 1,
+        "active": true,
+        "created_at": "2026-08-14T21:19:01.504628+00:00",
+        "product_count": 0
+      }
+    },
+    {
+      "name": "POST subcategory requires admin auth",
+      "passed": true,
+      "detail": {
+        "status": 401,
+        "body": {
+          "detail": "Not authenticated"
+        }
+      }
+    },
+    {
+      "name": "POST duplicate slug under same parent returns 400",
+      "passed": true,
+      "detail": {
+        "detail": "A subcategory with that slug already exists under this category"
+      }
+    },
+    {
+      "name": "GET /subcategories?category returns only active children",
+      "passed": true,
+      "detail": [
+        {
+          "id": "sc_c0ef22b1e292",
+          "category_id": "c_e60084528753",
+          "name": "QA Mugs",
+          "slug": "qa-mugs-1786742340",
+          "image": "https://images.unsplash.com/photo-1514228742587-6b1558fcf93a?w=800",
+          "title": "QA Ceramic Mugs",
+          "description": "QA description for mugs",
+          "order": 1,
+          "active": true,
+          "created_at": "2026-08-14T21:19:01.504000",
+          "product_count": 0
+        },
+        {
+          "id": "sc_13efd72d0e31",
+          "category_id": "c_e60084528753",
+          "name": "QA Tumblers",
+          "slug": "qa-tumblers-1786742340",
+          "image": "",
+          "title": "QA Tumblers",
+          "description": "Second sub",
+          "order": 2,
+          "active": true,
+          "created_at": "2026-08-14T21:19:01.984000",
+          "product_count": 0
+        }
+      ]
+    },
+    {
+      "name": "GET /subcategories/{slug}?category embeds parent and product_count",
+      "passed": true,
+      "detail": {
+        "id": "sc_c0ef22b1e292",
+        "category_id": "c_e60084528753",
+        "name": "QA Mugs",
+        "slug": "qa-mugs-1786742340",
+        "image": "https://images.unsplash.com/photo-1514228742587-6b1558fcf93a?w=800",
+        "title": "QA Ceramic Mugs",
+        "description": "QA description for mugs",
+        "order": 1,
+        "active": true,
+        "created_at": "2026-08-14T21:19:01.504000",
+        "product_count": 0,
+        "category": {
+          "id": "c_e60084528753",
+          "name": "QA Subcategory Parent 1786742340",
+          "slug": "qa-subcat-parent-1786742340",
+          "tagline": "QA parent",
+          "image": "",
+          "count": 0,
+          "coming_soon": false,
+          "order": 9000,
+          "created_at": "2026-08-14T21:19:01.229000"
+        }
+      }
+    },
+    {
+      "name": "PATCH duplicate slug in same parent returns 400",
+      "passed": true,
+      "detail": {
+        "detail": "Another subcategory already uses that slug in this category"
+      }
+    },
+    {
+      "name": "PATCH updates fields but cannot reparent",
+      "passed": true,
+      "detail": {
+        "id": "sc_c0ef22b1e292",
+        "category_id": "c_e60084528753",
+        "name": "QA Mugs Updated",
+        "slug": "qa-mugs-updated-1786742340",
+        "image": "https://images.unsplash.com/photo-1514228742587-6b1558fcf93a?w=800",
+        "title": "Updated headline",
+        "description": "Updated body",
+        "order": 4,
+        "active": true,
+        "created_at": "2026-08-14T21:19:01.504000",
+        "product_count": 0
+      }
+    },
+    {
+      "name": "admin product can be created with subcategory",
+      "passed": true,
+      "detail": {
+        "id": "p_fa2c1cb02077",
+        "name": "QA Subcategory Product 1786742340",
+        "slug": "qa-subcategory-product-1786742340",
+        "category": "c_e60084528753",
+        "subcategory": "sc_c0ef22b1e292",
+        "collections": [],
+        "price": 999,
+        "original_price": 1299,
+        "image": "https://images.unsplash.com/photo-1514228742587-6b1558fcf93a?w=800",
+        "hover_image": "",
+        "gallery": [],
+        "videos": [],
+        "verse": "QA",
+        "tag": "",
+        "ribbon": "",
+        "rating": 4.8,
+        "reviews": 0,
+        "colors": [],
+        "description": "QA product assigned to subcategory",
+        "stock": 5,
+        "sku": "QA-SUB-1786742340",
+        "active": true,
+        "product_type": "physical",
+        "digital_file_url": "",
+        "weight_grams": 500,
+        "personalization_enabled": false,
+        "personalization_label": "Personalize (optional)",
+        "personalization_cost": 0,
+        "personalization_max_length": 40,
+        "variant_options": [],
+        "variants": [],
+        "seo_title": "",
+        "seo_description": "",
+        "seo_keywords": "",
+        "created_at": "2026-08-14T21:19:02.702899+00:00"
+      }
+    },
+    {
+      "name": "GET /products category+subcategory filters and enriches product",
+      "passed": true,
+      "detail": {
+        "items": [
+          {
+            "id": "p_fa2c1cb02077",
+            "name": "QA Subcategory Product 1786742340",
+            "slug": "qa-subcategory-product-1786742340",
+            "category": "c_e60084528753",
+            "subcategory": "sc_c0ef22b1e292",
+            "collections": [],
+            "price": 999,
+            "original_price": 1299,
+            "image": "https://images.unsplash.com/photo-1514228742587-6b1558fcf93a?w=800",
+            "hover_image": "",
+            "gallery": [],
+            "videos": [],
+            "verse": "QA",
+            "tag": "",
+            "ribbon": "",
+            "rating": 4.8,
+            "reviews": 0,
+            "colors": [],
+            "description": "QA product assigned to subcategory",
+            "stock": 5,
+            "sku": "QA-SUB-1786742340",
+            "active": true,
+            "product_type": "physical",
+            "digital_file_url": "",
+            "weight_grams": 500,
+            "personalization_enabled": false,
+            "personalization_label": "Personalize (optional)",
+            "personalization_cost": 0,
+            "personalization_max_length": 40,
+            "variant_options": [],
+            "variants": [],
+            "seo_title": "",
+            "seo_description": "",
+            "seo_keywords": "",
+            "created_at": "2026-08-14T21:19:02.702000",
+            "category_slug": "qa-subcat-parent-1786742340",
+            "category_name": "QA Subcategory Parent 1786742340",
+            "subcategory_slug": "qa-mugs-updated-1786742340",
+            "subcategory_name": "QA Mugs Updated"
+          }
+        ],
+        "total": 1
+      }
+    },
+    {
+      "name": "PATCH /admin/products/{pid} persists subcategory id",
+      "passed": true,
+      "detail": {
+        "id": "p_fa2c1cb02077",
+        "name": "QA Subcategory Product 1786742340",
+        "slug": "qa-subcategory-product-1786742340",
+        "category": "c_e60084528753",
+        "subcategory": "sc_13efd72d0e31",
+        "collections": [],
+        "price": 999,
+        "original_price": 1299,
+        "image": "https://images.unsplash.com/photo-1514228742587-6b1558fcf93a?w=800",
+        "hover_image": "",
+        "gallery": [],
+        "videos": [],
+        "verse": "QA",
+        "tag": "",
+        "ribbon": "",
+        "rating": 4.8,
+        "reviews": 0,
+        "colors": [],
+        "description": "QA product assigned to subcategory",
+        "stock": 5,
+        "sku": "QA-SUB-1786742340",
+        "active": true,
+        "product_type": "physical",
+        "digital_file_url": "",
+        "weight_grams": 500,
+        "personalization_enabled": false,
+        "personalization_label": "Personalize (optional)",
+        "personalization_cost": 0,
+        "personalization_max_length": 40,
+        "variant_options": [],
+        "variants": [],
+        "seo_title": "",
+        "seo_description": "",
+        "seo_keywords": "",
+        "created_at": "2026-08-14T21:19:02.702000"
+      }
+    },
+    {
+      "name": "product moved to second subcategory is reflected in public filter",
+      "passed": true,
+      "detail": {
+        "items": [
+          {
+            "id": "p_fa2c1cb02077",
+            "name": "QA Subcategory Product 1786742340",
+            "slug": "qa-subcategory-product-1786742340",
+            "category": "c_e60084528753",
+            "subcategory": "sc_13efd72d0e31",
+            "collections": [],
+            "price": 999,
+            "original_price": 1299,
+            "image": "https://images.unsplash.com/photo-1514228742587-6b1558fcf93a?w=800",
+            "hover_image": "",
+            "gallery": [],
+            "videos": [],
+            "verse": "QA",
+            "tag": "",
+            "ribbon": "",
+            "rating": 4.8,
+            "reviews": 0,
+            "colors": [],
+            "description": "QA product assigned to subcategory",
+            "stock": 5,
+            "sku": "QA-SUB-1786742340",
+            "active": true,
+            "product_type": "physical",
+            "digital_file_url": "",
+            "weight_grams": 500,
+            "personalization_enabled": false,
+            "personalization_label": "Personalize (optional)",
+            "personalization_cost": 0,
+            "personalization_max_length": 40,
+            "variant_options": [],
+            "variants": [],
+            "seo_title": "",
+            "seo_description": "",
+            "seo_keywords": "",
+            "created_at": "2026-08-14T21:19:02.702000",
+            "category_slug": "qa-subcat-parent-1786742340",
+            "category_name": "QA Subcategory Parent 1786742340",
+            "subcategory_slug": "qa-tumblers-1786742340",
+            "subcategory_name": "QA Tumblers"
+          }
+        ],
+        "total": 1
+      }
+    },
+    {
+      "name": "public subcategory product_count reflects linked active product",
+      "passed": true,
+      "detail": {
+        "id": "sc_13efd72d0e31",
+        "category_id": "c_e60084528753",
+        "name": "QA Tumblers",
+        "slug": "qa-tumblers-1786742340",
+        "image": "",
+        "title": "QA Tumblers",
+        "description": "Second sub",
+        "order": 2,
+        "active": true,
+        "created_at": "2026-08-14T21:19:01.984000",
+        "product_count": 1
+      }
+    },
+    {
+      "name": "DELETE linked subcategory returns 400",
+      "passed": true,
+      "detail": {
+        "detail": "1 product(s) are still assigned to this subcategory. Reassign them first."
+      }
+    },
+    {
+      "name": "DELETE category with subcategories and no products returns 400",
+      "passed": true,
+      "detail": {
+        "detail": "1 subcategory still under this category. Delete them first."
+      }
+    }
+  ]
+}

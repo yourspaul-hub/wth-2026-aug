@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
-import { fetchProducts } from '../lib/api';
-import { SlidersHorizontal, ChevronDown, X } from 'lucide-react';
+import { fetchProducts, fetchSubcategories, fetchSubcategory } from '../lib/api';
+import { SlidersHorizontal, ChevronDown, X, ArrowLeft } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useContentText } from '../context/ContentContext';
 import { useCategories } from '../hooks/useCategories';
@@ -10,7 +10,7 @@ import { useCategories } from '../hooks/useCategories';
 const normalize = (p) => ({ ...p, originalPrice: p.original_price ?? p.originalPrice, hoverImage: p.hover_image ?? p.hoverImage });
 
 const Shop = () => {
-  const { categorySlug } = useParams();
+  const { categorySlug, subSlug } = useParams();
   const [searchParams] = useSearchParams();
   const q = (searchParams.get('q') || '').toLowerCase();
   const wishlistView = searchParams.get('wishlist') === '1';
@@ -19,6 +19,8 @@ const Shop = () => {
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [products, setProducts] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  const [subDetail, setSubDetail] = useState(null);   // hydrated when subSlug is present
   const { items: cats } = useCategories();
   const shopTitle = useContentText('shop.title');
   const shopSubtitle = useContentText('shop.subtitle');
@@ -27,10 +29,22 @@ const Shop = () => {
   const emptyBody = useContentText('shop.empty.body');
 
   useEffect(() => {
-    fetchProducts({ category: categorySlug || undefined, q: q || undefined, sort, limit: 100 })
+    fetchProducts({ category: categorySlug || undefined, subcategory: subSlug || undefined, q: q || undefined, sort, limit: 100 })
       .then(res => setProducts((res.items || []).map(normalize)))
       .catch(() => setProducts([]));
-  }, [categorySlug, q, sort]);
+  }, [categorySlug, subSlug, q, sort]);
+
+  // Load subcategories for the current parent category (used both to render the strip on the category page and for nav on the subcategory page)
+  useEffect(() => {
+    if (!categorySlug) { setSubcategories([]); return; }
+    fetchSubcategories(categorySlug).then(setSubcategories).catch(() => setSubcategories([]));
+  }, [categorySlug]);
+
+  // Load subcategory detail when we're on a subcategory page
+  useEffect(() => {
+    if (!subSlug || !categorySlug) { setSubDetail(null); return; }
+    fetchSubcategory(subSlug, categorySlug).then(setSubDetail).catch(() => setSubDetail(null));
+  }, [subSlug, categorySlug]);
 
   const currentCategory = cats.find(c => c.slug === categorySlug);
 
@@ -40,10 +54,20 @@ const Shop = () => {
     return arr;
   }, [products, priceRange, wishlist, wishlistView]);
 
-  useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [categorySlug]);
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [categorySlug, subSlug]);
 
-  const title = wishlistView ? 'Your Wishlist' : currentCategory ? currentCategory.name : q ? `Search: "${q}"` : shopTitle;
-  const subtitle = wishlistView ? 'Saved items just for you' : currentCategory?.tagline || shopSubtitle;
+  const title = wishlistView
+    ? 'Your Wishlist'
+    : subDetail
+      ? (subDetail.title || subDetail.name)
+      : currentCategory
+        ? currentCategory.name
+        : q ? `Search: "${q}"` : shopTitle;
+  const subtitle = wishlistView
+    ? 'Saved items just for you'
+    : subDetail
+      ? (subDetail.description || '')
+      : currentCategory?.tagline || shopSubtitle;
 
   return (
     <main className="pt-6 pb-24">
@@ -53,18 +77,83 @@ const Shop = () => {
             <Link to="/" className="hover:text-[#B4593F]">Home</Link>
             <span className="mx-2">/</span>
             <Link to="/shop" className="hover:text-[#B4593F]">Shop</Link>
-            {currentCategory && <><span className="mx-2">/</span><span className="text-[#B4593F]">{currentCategory.name}</span></>}
+            {currentCategory && (
+              <>
+                <span className="mx-2">/</span>
+                {subDetail ? (
+                  <Link to={`/shop/${currentCategory.slug}`} className="hover:text-[#B4593F]">{currentCategory.name}</Link>
+                ) : (
+                  <span className="text-[#B4593F]">{currentCategory.name}</span>
+                )}
+              </>
+            )}
+            {subDetail && (<><span className="mx-2">/</span><span className="text-[#B4593F]">{subDetail.name}</span></>)}
           </nav>
-          <h1 className="font-serif-display text-5xl md:text-6xl text-[#213a60]">{title}</h1>
-          <p className="text-neutral-600 mt-3">{subtitle}</p>
+          <div className="flex items-start gap-6 flex-wrap">
+            {subDetail?.image && (
+              <img src={subDetail.image} alt={subDetail.name} className="w-32 h-40 md:w-40 md:h-48 rounded-2xl object-cover border border-[#EBD9CE] shrink-0" data-testid="subcategory-hero-image" />
+            )}
+            <div className="min-w-0">
+              <h1 className="font-serif-display text-5xl md:text-6xl text-[#213a60]" data-testid="shop-title">{title}</h1>
+              {subtitle && <p className="text-neutral-600 mt-3 max-w-2xl">{subtitle}</p>}
+              {subDetail && (
+                <Link to={`/shop/${currentCategory.slug}`} className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-[#B4593F] hover:text-[#213a60] mt-4">
+                  <ArrowLeft className="w-3.5 h-3.5" /> Back to {currentCategory.name}
+                </Link>
+              )}
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Subcategory strip — shown on the category landing when subcategories exist */}
+      {!wishlistView && !subDetail && currentCategory && subcategories.length > 0 && (
+        <section className="max-w-[1400px] mx-auto px-6 lg:px-10 py-10">
+          <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-4" data-testid="subcategory-strip-eyebrow">Browse by type</div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            {subcategories.map(s => (
+              <Link
+                key={s.id}
+                to={`/shop/${currentCategory.slug}/${s.slug}`}
+                data-testid={`subcategory-tile-${s.slug}`}
+                className="group relative block overflow-hidden rounded-2xl border border-[#EBD9CE]/60 bg-[#F5D0CE]/30"
+              >
+                <div className="aspect-[4/5] relative">
+                  {s.image && (
+                    <img src={s.image} alt={s.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4 text-white">
+                    <div className="font-serif-display text-2xl leading-tight">{s.name}</div>
+                    <div className="text-[10px] uppercase tracking-[0.15em] opacity-90 mt-1">{s.product_count || 0} item{s.product_count === 1 ? '' : 's'}</div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {!wishlistView && (
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-6 flex flex-wrap gap-2 overflow-x-auto">
           <Link to="/shop" className={`text-xs uppercase tracking-[0.15em] px-5 py-2.5 rounded-full transition-colors ${!currentCategory ? 'bg-[#213a60] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}>All</Link>
           {cats.filter(c => !c.comingSoon).map(c => (
-            <Link key={c.id} to={`/shop/${c.slug}`} className={`text-xs uppercase tracking-[0.15em] px-5 py-2.5 rounded-full transition-colors whitespace-nowrap ${currentCategory?.slug === c.slug ? 'bg-[#213a60] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}>{c.name}</Link>
+            <Link key={c.id} to={`/shop/${c.slug}`} className={`text-xs uppercase tracking-[0.15em] px-5 py-2.5 rounded-full transition-colors whitespace-nowrap ${currentCategory?.slug === c.slug && !subDetail ? 'bg-[#213a60] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}>{c.name}</Link>
+          ))}
+        </div>
+      )}
+
+      {/* Subcategory quick-nav on a subcategory page */}
+      {subDetail && subcategories.length > 0 && (
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 pb-2 flex flex-wrap gap-2 overflow-x-auto">
+          {subcategories.map(s => (
+            <Link
+              key={s.id}
+              to={`/shop/${currentCategory.slug}/${s.slug}`}
+              className={`text-xs uppercase tracking-[0.15em] px-4 py-2 rounded-full transition-colors whitespace-nowrap ${subDetail.slug === s.slug ? 'bg-[#B4593F] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}
+            >
+              {s.name}
+            </Link>
           ))}
         </div>
       )}

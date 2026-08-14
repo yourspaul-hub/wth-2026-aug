@@ -227,6 +227,14 @@ export const adminUpdateCategory = (id, p) => api.patch(`/admin/categories/${id}
 export const adminDeleteCategory = (id) => api.delete(`/admin/categories/${id}`).then(r => r.data);
 export const listAllCategories = () => api.get('/categories').then(r => r.data);
 
+// Subcategories
+export const fetchSubcategories = (categorySlug) => api.get('/subcategories', { params: categorySlug ? { category: categorySlug } : {} }).then(r => r.data);
+export const fetchSubcategory = (slug, categorySlug) => api.get(`/subcategories/${slug}`, { params: categorySlug ? { category: categorySlug } : {} }).then(r => r.data);
+export const adminListSubcategories = (cid) => api.get(`/admin/categories/${cid}/subcategories`).then(r => r.data);
+export const adminCreateSubcategory = (cid, p) => api.post(`/admin/categories/${cid}/subcategories`, p).then(r => r.data);
+export const adminUpdateSubcategory = (sid, p) => api.patch(`/admin/subcategories/${sid}`, p).then(r => r.data);
+export const adminDeleteSubcategory = (sid) => api.delete(`/admin/subcategories/${sid}`).then(r => r.data);
+
 // Admin users (RBAC)
 export const adminListUsers = () => api.get('/admin/users').then(r => r.data);
 export const adminInviteUser = (p) => api.post('/admin/users', p).then(r => r.data);

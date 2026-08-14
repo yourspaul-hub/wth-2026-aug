@@ -1,0 +1,66 @@
+{
+  "base": "https://wear-interactive.preview.emergentagent.com",
+  "passed": 7,
+  "total": 7,
+  "results": [
+    {
+      "name": "/shop/drinkware shows Browse by type strip and Mugs tile above product grid",
+      "passed": true,
+      "detail": {
+        "strip": "BROWSE BY TYPE",
+        "tile_visible": true
+      }
+    },
+    {
+      "name": "/shop/drinkware/mugs shows hero, breadcrumb, description, and filtered product",
+      "passed": true,
+      "detail": {
+        "url": "https://wear-interactive.preview.emergentagent.com/shop/drinkware/mugs",
+        "title": "Ceramic Mugs"
+      }
+    },
+    {
+      "name": "category with no subcategories does not render the strip",
+      "passed": true,
+      "detail": {
+        "title": "Clothing",
+        "strip_count": 0
+      }
+    },
+    {
+      "name": "admin Categories Manage link opens subcategory page and Add drawer creates item",
+      "passed": true,
+      "detail": {
+        "created": "QA UI Type 1786742486",
+        "manage_text": "1 SUBCATEGORY\nMANAGE"
+      }
+    },
+    {
+      "name": "admin subcategory edit preserves fields and unlinked delete works",
+      "passed": true,
+      "detail": {
+        "edited_title": "QA UI Headline Edited",
+        "deleted_unlinked": true
+      }
+    },
+    {
+      "name": "admin deleting linked Mugs subcategory shows error and does not delete",
+      "passed": true,
+      "detail": {
+        "error_visible": true,
+        "mugs_still_present": true
+      }
+    },
+    {
+      "name": "admin product form subcategory dropdown populates and persists Mugs selection",
+      "passed": true,
+      "detail": {
+        "options": [
+          "\u2014 None \u2014",
+          "Mugs"
+        ],
+        "selected_after_reopen": "Mugs"
+      }
+    }
+  ]
+}

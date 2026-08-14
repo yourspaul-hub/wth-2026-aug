@@ -1,17 +1,32 @@
 import React, { useEffect, useState } from 'react';
-import { listAllCategories, adminCreateCategory, adminUpdateCategory, adminDeleteCategory } from '../../lib/api';
+import { Link } from 'react-router-dom';
+import { listAllCategories, adminCreateCategory, adminUpdateCategory, adminDeleteCategory, adminListSubcategories } from '../../lib/api';
 import { invalidateCategories } from '../../hooks/useCategories';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit3, X, FolderOpen } from 'lucide-react';
+import { Plus, Trash2, Edit3, X, FolderOpen, FolderTree, ChevronRight } from 'lucide-react';
 import ImageFieldEditor from './ImageFieldEditor';
 
 const empty = { name: '', slug: '', description: '', image: '', order: 0, coming_soon: false };
 
 const AdminCategories = () => {
   const [items, setItems] = useState([]);
+  const [subCounts, setSubCounts] = useState({});
   const [editing, setEditing] = useState(null);
 
-  const load = () => listAllCategories().then(setItems).catch(() => setItems([]));
+  const load = async () => {
+    try {
+      const list = await listAllCategories();
+      setItems(list);
+      // Load subcategory counts for each category in parallel
+      const counts = await Promise.all(
+        list.map(c => adminListSubcategories(c.id).then(arr => [c.id, arr.length]).catch(() => [c.id, 0]))
+      );
+      setSubCounts(Object.fromEntries(counts));
+    } catch {
+      setItems([]);
+      setSubCounts({});
+    }
+  };
   useEffect(() => { load(); }, []);
 
   const start = (c) => setEditing(c ? { ...empty, ...c } : { ...empty });
@@ -72,6 +87,17 @@ const AdminCategories = () => {
                   <button onClick={() => del(c)} className="p-2 rounded-full hover:bg-rose-50"><Trash2 className="w-4 h-4 text-rose-600" /></button>
                 </div>
               </div>
+              <Link
+                to={`/admin/categories/${c.id}/subcategories`}
+                data-testid={`manage-subcategories-${c.id}`}
+                className="mt-4 flex items-center justify-between gap-2 text-xs uppercase tracking-widest text-[#213a60] hover:text-[#B4593F] border-t border-[#EBD9CE] pt-3"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <FolderTree className="w-3.5 h-3.5" />
+                  {subCounts[c.id] || 0} subcategor{subCounts[c.id] === 1 ? 'y' : 'ies'}
+                </span>
+                <span className="inline-flex items-center gap-1">Manage <ChevronRight className="w-3.5 h-3.5" /></span>
+              </Link>
             </div>
           </div>
         ))}

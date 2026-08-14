@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { adminListProducts, adminCreateProduct, adminUpdateProduct, adminDeleteProduct, adminListCategories, productTemplateUrl, adminBulkUploadProducts, adminImportFromSheet } from '../../lib/api';
+import { adminListProducts, adminCreateProduct, adminUpdateProduct, adminDeleteProduct, adminListCategories, productTemplateUrl, adminBulkUploadProducts, adminImportFromSheet, adminListSubcategories } from '../../lib/api';
 import { toast } from 'sonner';
 import { Plus, Edit3, Trash2, X, Search, Layers, Image as ImageIcon, Sparkles, Info, Tag as TagIcon, Upload, Download, FileSpreadsheet } from 'lucide-react';
 import ImageFieldEditor from './ImageFieldEditor';
 
 const empty = {
-  name: '', slug: '', category: '', collections: [], price: 0, original_price: 0,
+  name: '', slug: '', category: '', subcategory: '', collections: [], price: 0, original_price: 0,
   image: '', hover_image: '', gallery: [], videos: [], verse: '',
   tag: '', ribbon: '', colors: [], description: '', stock: 100, sku: '',
   active: true, product_type: 'physical', digital_file_url: '',
@@ -20,6 +20,7 @@ const cartesian = (arrs) => arrs.reduce((acc, arr) => acc.flatMap(a => arr.map(v
 const AdminProducts = () => {
   const [items, setItems] = useState([]);
   const [cats, setCats] = useState([]);
+  const [subs, setSubs] = useState([]);  // subcategories for the currently-edited product's category
   const [q, setQ] = useState('');
   const [editing, setEditing] = useState(null);
   const [tab, setTab] = useState('basic');
@@ -31,6 +32,12 @@ const AdminProducts = () => {
 
   const load = () => adminListProducts().then(setItems).catch(() => setItems([]));
   useEffect(() => { load(); adminListCategories().then(setCats); }, []);
+
+  // Load subcategories whenever the editing product's category changes
+  useEffect(() => {
+    if (!editing?.category) { setSubs([]); return; }
+    adminListSubcategories(editing.category).then(setSubs).catch(() => setSubs([]));
+  }, [editing?.category]);
 
   const doBulk = async (file) => {
     if (!file) return;
@@ -82,6 +89,7 @@ const AdminProducts = () => {
       colors: typeof editing.colors === 'string' ? editing.colors.split(',').map(s => s.trim()).filter(Boolean) : (editing.colors || []),
       personalization_max_length: +editing.personalization_max_length,
       personalization_cost: Math.max(0, +(editing.personalization_cost || 0)),
+      subcategory: editing.subcategory || null,
     };
     try {
       if (editing.id) await adminUpdateProduct(editing.id, payload); else await adminCreateProduct(payload);
@@ -211,7 +219,8 @@ const AdminProducts = () => {
                   <div className="grid grid-cols-2 gap-3">
                     <label className="block col-span-2"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Name</span><input value={editing.name || ''} onChange={e => setEditing({ ...editing, name: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
                     <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Slug</span><input value={editing.slug || ''} onChange={e => setEditing({ ...editing, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F] font-mono" /></label>
-                    <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Category</span><select value={editing.category || ''} onChange={e => setEditing({ ...editing, category: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]"><option value="">Select</option>{cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+                    <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Category</span><select value={editing.category || ''} onChange={e => setEditing({ ...editing, category: e.target.value, subcategory: '' })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]"><option value="">Select</option>{cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+                    <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Subcategory <span className="text-neutral-400 normal-case">(optional)</span></span><select disabled={!editing.category || subs.length === 0} value={editing.subcategory || ''} onChange={e => setEditing({ ...editing, subcategory: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F] disabled:opacity-60" data-testid="product-subcategory-select"><option value="">— None —</option>{subs.map(s => <option key={s.id} value={s.id}>{s.name}{!s.active ? ' (hidden)' : ''}</option>)}</select></label>
                   </div>
                   <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Verse / Subtitle</span><input value={editing.verse || ''} onChange={e => setEditing({ ...editing, verse: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
                   <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Description</span><textarea rows="4" value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>

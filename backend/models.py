@@ -51,11 +51,35 @@ class CategoryCreate(BaseModel):
     order: int = 0
 
 
+class Subcategory(BaseModel):
+    id: str = Field(default_factory=lambda: _uid('sc_'))
+    category_id: str  # FK -> categories.id
+    name: str
+    slug: str
+    image: str = ''
+    title: str = ''
+    description: str = ''
+    order: int = 0
+    active: bool = True
+    created_at: datetime = Field(default_factory=_now)
+
+
+class SubcategoryCreate(BaseModel):
+    name: str
+    slug: str
+    image: str = ''
+    title: str = ''
+    description: str = ''
+    order: int = 0
+    active: bool = True
+
+
 class Product(BaseModel):
     id: str = Field(default_factory=lambda: _uid('p_'))
     name: str
     slug: str
     category: str  # category id
+    subcategory: Optional[str] = None  # subcategory id (optional)
     collections: List[str] = []  # list of collection ids
     price: int
     original_price: int
@@ -92,6 +116,7 @@ class ProductCreate(BaseModel):
     name: str
     slug: str
     category: str
+    subcategory: Optional[str] = None
     collections: List[str] = []
     price: int
     original_price: int
@@ -125,6 +150,7 @@ class ProductUpdate(BaseModel):
     name: Optional[str] = None
     slug: Optional[str] = None
     category: Optional[str] = None
+    subcategory: Optional[str] = None
     collections: Optional[List[str]] = None
     price: Optional[int] = None
     original_price: Optional[int] = None

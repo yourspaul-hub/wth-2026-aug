@@ -46,6 +46,7 @@ import BlogPost from './pages/BlogPost';
 import QrReviewSubmit from './pages/QrReviewSubmit';
 import PublicReviewSubmit from './pages/PublicReviewSubmit';
 import AdminCategories from './pages/admin/Categories';
+import AdminSubcategories from './pages/admin/Subcategories';
 import AdminUsers from './pages/admin/Users';
 import AdminIntegrations from './pages/admin/Integrations';
 import AdminDesign from './pages/admin/Design';
@@ -84,6 +85,7 @@ function AppRouter() {
         <Route path="/" element={<Home />} />
         <Route path="/shop" element={<Shop />} />
         <Route path="/shop/:categorySlug" element={<Shop />} />
+        <Route path="/shop/:categorySlug/:subSlug" element={<Shop />} />
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
@@ -117,6 +119,7 @@ function AppRouter() {
           <Route path="instagram" element={<AdminInstagram />} />
           <Route path="analytics" element={<AdminAnalytics />} />
           <Route path="categories" element={<AdminCategories />} />
+          <Route path="categories/:cid/subcategories" element={<AdminSubcategories />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="integrations" element={<AdminIntegrations />} />
           <Route path="design" element={<AdminDesign />} />
