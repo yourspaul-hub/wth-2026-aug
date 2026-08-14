@@ -81,7 +81,7 @@ const OrderSuccess = () => {
             {order.items.map((it, i) => (
               <div key={i} className="flex gap-3 items-center">
                 <img src={it.image} alt="" className="w-14 h-16 rounded object-cover" />
-                <div className="flex-1 text-sm"><div className="font-medium">{it.name}</div><div className="text-xs text-neutral-500">Qty {it.qty} · ₹{it.price}</div></div>
+                <div className="flex-1 text-sm"><div className="font-medium">{it.name}</div><div className="text-xs text-neutral-500">Qty {it.qty} · ₹{it.price}</div>{it.customization && <div className="text-[11px] italic text-[#B4593F] mt-0.5" data-testid="order-item-customization">✎ {it.customization}</div>}</div>
                 <div className="font-semibold">₹{(it.price * it.qty).toLocaleString('en-IN')}</div>
               </div>
             ))}

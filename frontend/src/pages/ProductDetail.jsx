@@ -94,13 +94,17 @@ const ProductDetail = () => {
     if (product.variants?.length && !activeVariant) { toast.error('Please select all options'); return; }
     if (!inStock) { toast.error('Out of stock'); return; }
     const variantLabel = activeVariant ? Object.entries(activeVariant.attrs || {}).map(([k,v]) => `${k}: ${v}`).join(', ') : null;
+    const trimmedCustom = (customName || '').trim();
+    const persCost = (trimmedCustom && product.personalization_enabled) ? Math.max(0, +(product.personalization_cost || 0)) : 0;
     addToCart({
       ...product,
       variant_id: activeVariant?.id,
       variant_label: variantLabel,
-      price: displayPrice,
+      price: displayPrice + persCost,
+      base_price: displayPrice,
+      personalization_cost: persCost,
       image: activeVariant?.image || product.image,
-      customization: customName || undefined,
+      customization: trimmedCustom || undefined,
     }, qty);
     toast.success(`Added ${qty} × ${product.name}${variantLabel ? ' (' + variantLabel + ')' : ''} to bag`);
   };

@@ -14,17 +14,21 @@ export const CartProvider = ({ children }) => {
   useEffect(() => { localStorage.setItem('wth_cart', JSON.stringify(items)); }, [items]);
   useEffect(() => { localStorage.setItem('wth_wish', JSON.stringify(wishlist)); }, [wishlist]);
 
+  const _keyOf = (p) => {
+    const base = p.variant_id ? `${p.id}::${p.variant_id}` : p.id;
+    return p.customization ? `${base}##${p.customization}` : base;
+  };
+
   const addToCart = (product, qty = 1) => {
     setItems(prev => {
-      const key = product.variant_id ? `${product.id}::${product.variant_id}` : product.id;
-      const found = prev.find(p => (p.variant_id ? `${p.id}::${p.variant_id}` : p.id) === key);
-      if (found) return prev.map(p => (p.variant_id ? `${p.id}::${p.variant_id}` : p.id) === key ? { ...p, qty: p.qty + qty } : p);
+      const key = _keyOf(product);
+      const found = prev.find(p => _keyOf(p) === key);
+      if (found) return prev.map(p => _keyOf(p) === key ? { ...p, qty: p.qty + qty } : p);
       return [...prev, { ...product, qty }];
     });
     setCartOpen(true);
   };
 
-  const _keyOf = (p) => p.variant_id ? `${p.id}::${p.variant_id}` : p.id;
   const removeItem = (key) => setItems(prev => prev.filter(p => _keyOf(p) !== key));
   const updateQty = (key, qty) => setItems(prev => prev.map(p => _keyOf(p) === key ? { ...p, qty: Math.max(1, qty) } : p));
   const clearCart = () => setItems([]);

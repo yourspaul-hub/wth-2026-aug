@@ -41,7 +41,8 @@ const CartDrawer = () => {
             ) : (
               <div className="space-y-5">
                 {items.map(it => {
-                  const key = it.variant_id ? `${it.id}::${it.variant_id}` : it.id;
+                  const base = it.variant_id ? `${it.id}::${it.variant_id}` : it.id;
+                  const key = it.customization ? `${base}##${it.customization}` : base;
                   return (
                   <div key={key} className="flex gap-4 bg-white p-3 rounded-xl border border-[#EBD9CE]">
                     <img src={it.image} alt={it.name} className="w-20 h-24 object-cover rounded-lg" />
@@ -51,7 +52,7 @@ const CartDrawer = () => {
                           <div className="text-sm font-medium line-clamp-2 leading-snug">{it.name}</div>
                           {it.variant_label && <div className="text-[11px] text-neutral-500 mt-0.5">{it.variant_label}</div>}
                           <div className="text-[11px] italic text-neutral-500 mt-0.5">{it.verse}</div>
-                          {it.customization && <div className="text-[10px] italic text-[#B4593F] mt-0.5">✎ {it.customization}</div>}
+                          {it.customization && <div className="text-[10px] italic text-[#B4593F] mt-0.5" data-testid="cart-item-customization">✎ {it.customization}{it.personalization_cost ? <span className="not-italic text-neutral-600"> · +{format(it.personalization_cost)}/unit</span> : null}</div>}
                         </div>
                         <button onClick={() => removeItem(key)} aria-label="Remove" className="text-neutral-400 hover:text-[#B4593F] transition-colors"><Trash2 className="w-4 h-4" /></button>
                       </div>

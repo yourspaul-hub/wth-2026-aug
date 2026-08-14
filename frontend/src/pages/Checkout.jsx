@@ -26,10 +26,11 @@ const Checkout = () => {
   const [shippingOptions, setShippingOptions] = useState([]);
   const [selectedShip, setSelectedShip] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [orderPlaced, setOrderPlaced] = useState(false);
   const [paymentProvider, setPaymentProvider] = useState('razorpay');
   const nav = useNavigate();
 
-  useEffect(() => { if (items.length === 0) nav('/shop'); }, [items.length, nav]);
+  useEffect(() => { if (!orderPlaced && items.length === 0) nav('/shop'); }, [items.length, nav, orderPlaced]);
 
   // Fetch shipping options when address changes enough
   useEffect(() => {
@@ -84,9 +85,10 @@ const Checkout = () => {
       const verified = await verifyPayment(verifyBody);
       toast.dismiss('pay');
       if (verified.ok) {
+        setOrderPlaced(true);
+        nav(`/order/${res.order.order_number}`);
         clearCart();
         toast.success(`Payment successful via ${paymentProvider.toUpperCase()}!`);
-        nav(`/order/${res.order.order_number}`);
       } else toast.error('Payment failed');
     } catch (e) {
       toast.dismiss('pay');
@@ -176,17 +178,21 @@ const Checkout = () => {
             <div className="sticky top-24 bg-white rounded-2xl border border-[#EBD9CE] p-6">
               <h2 className="font-serif-display text-2xl mb-4">Order Summary</h2>
               <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
-                {items.map(it => (
-                  <div key={(it.variant_id ? `${it.id}::${it.variant_id}` : it.id)} className="flex gap-3">
+                {items.map(it => {
+                  const base = it.variant_id ? `${it.id}::${it.variant_id}` : it.id;
+                  const key = it.customization ? `${base}##${it.customization}` : base;
+                  return (
+                  <div key={key} className="flex gap-3">
                     <img src={it.image} alt="" className="w-14 h-16 rounded object-cover" />
                     <div className="flex-1 text-sm">
                       <div className="font-medium line-clamp-2">{it.name}</div>
                       {it.variant_label && <div className="text-[11px] text-neutral-500">{it.variant_label}</div>}
+                      {it.customization && <div className="text-[11px] italic text-[#B4593F]" data-testid="checkout-item-customization">✎ {it.customization}{it.personalization_cost ? <span className="not-italic text-neutral-600"> · +{format(it.personalization_cost)}/unit</span> : null}</div>}
                       <div className="text-xs text-neutral-500">Qty: {it.qty}</div>
                     </div>
                     <div className="text-sm font-semibold">{format(it.price * it.qty)}</div>
                   </div>
-                ))}
+                );})}
               </div>
 
               <div className="mt-5 flex items-center gap-2">

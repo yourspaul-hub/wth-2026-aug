@@ -148,6 +148,13 @@ All 5 forms now offer the same UX as Hero Slides / Lightbox / Partnerships: clic
 - About page pulls a featured quote from `/api/reviews` (was hardcoded to `testimonials[1]`).
 - Contact page reads phone/email/instagram/hours from CMS keys (was hardcoded `brandInfo`).
 
+### Phase M — Personalization Cost End-to-End ✅ (2026-02-10)
+- Bug fix: personalization surcharge is now correctly reflected across cart drawer, checkout summary, order creation, invoice, and order-success page. Backend `POST /api/orders` already applied `personalization_cost` per unit; frontend now bakes it into the cart line price when the customer types in the customization field so the previewed subtotal matches the final invoice.
+- **CartContext**: cart identity key now includes `customization` so personalized and non-personalized instances of the same product remain separate lines (and don't lose the surcharge on merge).
+- **Checkout**: navigation to `/order/<order_number>` now happens before `clearCart`, guarded by an `orderPlaced` flag that suppresses the empty-cart redirect after a successful payment.
+- **UI**: customization chip on cart, checkout, and order-success shows the "+ ₹X/unit" hint. Data-testids: `cart-item-customization`, `checkout-item-customization`, `order-item-customization`.
+- **Verified** by bug_testing_agent iteration 13 — 100% pass (backend + frontend). Mixed cart, single personalized, plain, and end-to-end COD checkout all produce correct totals.
+
 ### Phase L — Admin Order Fulfilment + Data Reset + Import + Reviews cleanup ✅ (2026-07-08)
 - **Fulfil Order flow** in admin Orders drawer: modal with 4 methods (Courier / Hand delivery / Door delivery / Store pickup). Courier collects courier from India + international dropdown (`GET /api/admin/couriers`, 27 couriers), AWB (required), tracking URL (optional). `POST /api/admin/orders/{on}/fulfill` sets status='shipped' for courier or 'delivered' for hand/door/store, sends `order_shipped` or `order_delivered` email automatically.
 - **New email template**: `order_delivered` (for hand/door/store closure).
