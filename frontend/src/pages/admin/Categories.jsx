@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { listAllCategories, adminCreateCategory, adminUpdateCategory, adminDeleteCategory, adminListSubcategories } from '../../lib/api';
+import { listAllCategories, adminCreateCategory, adminUpdateCategory, adminDeleteCategory, adminListSubcategories, adminReorderCategories } from '../../lib/api';
 import { invalidateCategories } from '../../hooks/useCategories';
+import { useDragReorder } from '../../hooks/useDragReorder';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit3, X, FolderOpen, FolderTree, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Edit3, X, FolderOpen, FolderTree, ChevronRight, GripVertical } from 'lucide-react';
 import ImageFieldEditor from './ImageFieldEditor';
 
 const empty = { name: '', slug: '', description: '', image: '', order: 0, coming_soon: false };
@@ -29,12 +30,24 @@ const AdminCategories = () => {
   };
   useEffect(() => { load(); }, []);
 
+  const persistOrder = async (ids) => {
+    // optimistic UI
+    setItems(prev => {
+      const map = Object.fromEntries(prev.map(c => [c.id, c]));
+      return ids.map((id, i) => ({ ...map[id], order: i }));
+    });
+    try { await adminReorderCategories(ids); invalidateCategories(); toast.success('Order saved'); }
+    catch (er) { toast.error(er?.response?.data?.detail || 'Reorder failed'); load(); }
+  };
+  const { dragProps, draggingId, overId } = useDragReorder(items, persistOrder);
+
   const start = (c) => setEditing(c ? { ...empty, ...c } : { ...empty });
   const close = () => setEditing(null);
 
   const save = async (e) => {
     e.preventDefault();
-    const p = { ...editing, order: parseInt(editing.order || 0, 10), coming_soon: !!editing.coming_soon };
+    const p = { ...editing, coming_soon: !!editing.coming_soon };
+    delete p.order; // order is now managed by drag-and-drop
     try {
       if (editing.id) await adminUpdateCategory(editing.id, p);
       else await adminCreateCategory(p);
@@ -53,7 +66,7 @@ const AdminCategories = () => {
       <div className="flex items-end justify-between mb-8">
         <div>
           <h1 className="font-serif-display text-4xl">Categories</h1>
-          <p className="text-sm text-neutral-600 mt-1">{items.length} categor{items.length === 1 ? 'y' : 'ies'} · shown in Shop nav & filters</p>
+          <p className="text-sm text-neutral-600 mt-1">{items.length} categor{items.length === 1 ? 'y' : 'ies'} · drag cards to reorder · shown in Shop nav & filters</p>
         </div>
         <button onClick={() => start(null)} data-testid="add-category-btn" className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-5 py-2.5 rounded-full">
           <Plus className="w-3.5 h-3.5" /> Add Category
@@ -67,18 +80,25 @@ const AdminCategories = () => {
             No categories yet.
           </div>
         ) : items.map(c => (
-          <div key={c.id} data-testid={`category-${c.id}`} className="bg-white rounded-xl border border-[#EBD9CE] overflow-hidden">
+          <div
+            key={c.id}
+            data-testid={`category-${c.id}`}
+            {...dragProps(c.id)}
+            className={`bg-white rounded-xl border overflow-hidden transition-all ${draggingId === c.id ? 'opacity-40' : ''} ${overId === c.id && draggingId !== c.id ? 'border-[#B4593F] ring-2 ring-[#B4593F]/30' : 'border-[#EBD9CE]'}`}
+          >
             <div className="aspect-[16/9] bg-neutral-100 relative">
               {c.image && <img src={c.image} alt={c.name} className="w-full h-full object-cover" />}
               {c.coming_soon && (
                 <div className="absolute top-3 left-3 bg-white/95 text-[10px] uppercase tracking-[0.2em] px-3 py-1.5 rounded-full text-[#213a60]" data-testid={`coming-soon-badge-${c.id}`}>Coming Soon</div>
               )}
+              <div className="absolute top-3 right-3 bg-white/95 rounded-full p-1.5 shadow-sm cursor-grab active:cursor-grabbing" title="Drag to reorder">
+                <GripVertical className="w-4 h-4 text-neutral-500" />
+              </div>
             </div>
             <div className="p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-[10px] uppercase tracking-widest text-[#B4593F]">Order {c.order || 0}</div>
-                  <div className="font-serif-display text-2xl mt-0.5">{c.name}</div>
+                  <div className="font-serif-display text-2xl">{c.name}</div>
                   <div className="text-[11px] text-neutral-500 mt-1 font-mono">/{c.slug}</div>
                   {c.description && <p className="text-xs text-neutral-600 mt-2 line-clamp-2">{c.description}</p>}
                 </div>
@@ -117,7 +137,6 @@ const AdminCategories = () => {
               <F label="Image"><ImageFieldEditor value={editing.image || ''} onChange={(v) => setEditing({ ...editing, image: v })} testKey="category-image" /></F>
               {editing.image && <img src={editing.image} alt="" className="w-full aspect-[16/9] object-cover rounded-lg" />}
               <F label="Description"><textarea rows="3" value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} className="input !rounded-lg" /></F>
-              <F label="Order"><input type="number" value={editing.order || 0} onChange={e => setEditing({ ...editing, order: e.target.value })} className="input w-32" /></F>
               <label className="flex items-start gap-3 bg-[#FDF3EB] border border-[#EBD9CE] rounded-xl px-4 py-3 cursor-pointer">
                 <input
                   type="checkbox"

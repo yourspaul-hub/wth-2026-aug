@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { adminListProducts, adminCreateProduct, adminUpdateProduct, adminDeleteProduct, adminListCategories, productTemplateUrl, adminBulkUploadProducts, adminImportFromSheet, adminListSubcategories } from '../../lib/api';
+import { adminListProducts, adminCreateProduct, adminUpdateProduct, adminDeleteProduct, adminListCategories, productTemplateUrl, adminBulkUploadProducts, adminImportFromSheet, adminListSubcategories, adminReorderProducts } from '../../lib/api';
 import { toast } from 'sonner';
-import { Plus, Edit3, Trash2, X, Search, Layers, Image as ImageIcon, Sparkles, Info, Tag as TagIcon, Upload, Download, FileSpreadsheet } from 'lucide-react';
+import { Plus, Edit3, Trash2, X, Search, Layers, Image as ImageIcon, Sparkles, Info, Tag as TagIcon, Upload, Download, FileSpreadsheet, GripVertical } from 'lucide-react';
 import ImageFieldEditor from './ImageFieldEditor';
+import { useDragReorder } from '../../hooks/useDragReorder';
 
 const empty = {
   name: '', slug: '', category: '', subcategory: '', collections: [], price: 0, original_price: 0,
@@ -71,6 +72,18 @@ const AdminProducts = () => {
   };
 
   const filtered = useMemo(() => items.filter(p => !q || p.name.toLowerCase().includes(q.toLowerCase()) || (p.sku || '').toLowerCase().includes(q.toLowerCase())), [items, q]);
+
+  const persistOrder = async (ids) => {
+    // Optimistic reorder — only meaningful when search is empty
+    setItems(prev => {
+      const map = Object.fromEntries(prev.map(p => [p.id, p]));
+      return ids.map(id => map[id]).filter(Boolean);
+    });
+    try { await adminReorderProducts(ids); toast.success('Order saved'); }
+    catch (er) { toast.error(er?.response?.data?.detail || 'Reorder failed'); load(); }
+  };
+  const dragEnabled = !q.trim();
+  const { dragProps, draggingId, overId } = useDragReorder(items, persistOrder);
 
   const startEdit = (p) => {
     setTab('basic');
@@ -145,7 +158,7 @@ const AdminProducts = () => {
       <div className="flex items-end justify-between mb-8 gap-4">
         <div>
           <h1 className="font-serif-display text-4xl">Products</h1>
-          <p className="text-sm text-neutral-600 mt-1">{items.length} total</p>
+          <p className="text-sm text-neutral-600 mt-1">{items.length} total{dragEnabled ? ' · drag cards to reorder' : ' · clear search to reorder'}</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -165,11 +178,20 @@ const AdminProducts = () => {
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {filtered.map(p => (
-          <div key={p.id} className="bg-white rounded-xl border border-[#EBD9CE] overflow-hidden">
+          <div
+            key={p.id}
+            {...(dragEnabled ? dragProps(p.id) : {})}
+            className={`bg-white rounded-xl border overflow-hidden transition-all ${draggingId === p.id ? 'opacity-40' : ''} ${overId === p.id && draggingId !== p.id ? 'border-[#B4593F] ring-2 ring-[#B4593F]/30' : 'border-[#EBD9CE]'}`}
+          >
             <div className="aspect-square overflow-hidden bg-neutral-100 relative">
               <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
               {p.ribbon && <span className="absolute top-2 left-2 shimmer-badge text-white text-[9px] uppercase tracking-widest px-2 py-0.5 rounded">{p.ribbon}</span>}
               {p.variants?.length > 0 && <span className="absolute bottom-2 left-2 bg-white/90 text-[10px] uppercase tracking-widest px-2 py-0.5 rounded">{p.variants.length} variants</span>}
+              {dragEnabled && (
+                <div className="absolute top-2 right-2 bg-white/95 rounded-full p-1.5 shadow-sm cursor-grab active:cursor-grabbing" title="Drag to reorder">
+                  <GripVertical className="w-3.5 h-3.5 text-neutral-500" />
+                </div>
+              )}
             </div>
             <div className="p-4">
               <div className="text-sm font-medium line-clamp-1">{p.name}</div>

@@ -148,6 +148,12 @@ All 5 forms now offer the same UX as Hero Slides / Lightbox / Partnerships: clic
 - About page pulls a featured quote from `/api/reviews` (was hardcoded to `testimonials[1]`).
 - Contact page reads phone/email/instagram/hours from CMS keys (was hardcoded `brandInfo`).
 
+### Phase O — Drag-and-Drop Reorder + Shop pill strip removal ✅ (2026-02-10)
+- Backend: `POST /api/admin/categories/reorder`, `POST /api/admin/categories/{cid}/subcategories/reorder`, `POST /api/admin/products/reorder` all accept `{ ids: [] }` and persist positional order. Product model gains `display_order:int`. Default 'featured' sort in `/api/products` now `display_order asc, created_at desc`.
+- Frontend: new `useDragReorder` hook wraps native HTML5 drag; Admin → Categories, Subcategories, Products all draggable with a grip handle overlay + optimistic UI + toast on persist. Manual "Order" number field removed from Category and Subcategory drawers. Product drag is disabled while a search query is active.
+- Storefront: horizontal category pill strip removed from `/shop` and `/shop/<cat>` (subcategory "Browse by type" strip and Filters drawer preserved).
+- **Verified** by bug_testing_agent iteration 17 — 100% pass on both backend and frontend.
+
 ### Phase N — Subcategories ✅ (2026-02-10)
 - Added Subcategory data model (`subcategories` collection) with fields: name, slug, image, title, description, order, active, category_id (FK). Product model gains optional `subcategory` FK.
 - Public API: `GET /api/subcategories?category=<slug>` (with product_count), `GET /api/subcategories/{sub_slug}?category=<cat_slug>`. Products endpoint accepts `?subcategory=<slug>` and returns `subcategory_slug`/`subcategory_name` in every item.

@@ -135,12 +135,7 @@ const Shop = () => {
       )}
 
       {!wishlistView && (
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-6 flex flex-wrap gap-2 overflow-x-auto">
-          <Link to="/shop" className={`text-xs uppercase tracking-[0.15em] px-5 py-2.5 rounded-full transition-colors ${!currentCategory ? 'bg-[#213a60] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}>All</Link>
-          {cats.filter(c => !c.comingSoon).map(c => (
-            <Link key={c.id} to={`/shop/${c.slug}`} className={`text-xs uppercase tracking-[0.15em] px-5 py-2.5 rounded-full transition-colors whitespace-nowrap ${currentCategory?.slug === c.slug && !subDetail ? 'bg-[#213a60] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}>{c.name}</Link>
-          ))}
-        </div>
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-2" />
       )}
 
       {/* Subcategory quick-nav on a subcategory page */}

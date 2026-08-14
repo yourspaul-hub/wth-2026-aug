@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit3, X, ArrowLeft, FolderTree } from 'lucide-react';
+import { Plus, Trash2, Edit3, X, ArrowLeft, FolderTree, GripVertical } from 'lucide-react';
 import {
   listAllCategories,
   adminListSubcategories,
   adminCreateSubcategory,
   adminUpdateSubcategory,
   adminDeleteSubcategory,
+  adminReorderSubcategories,
 } from '../../lib/api';
+import { useDragReorder } from '../../hooks/useDragReorder';
 import ImageFieldEditor from './ImageFieldEditor';
 
 const empty = { name: '', slug: '', image: '', title: '', description: '', order: 0, active: true };
@@ -27,6 +29,16 @@ const AdminSubcategories = () => {
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [cid]);
 
+  const persistOrder = async (ids) => {
+    setItems(prev => {
+      const map = Object.fromEntries(prev.map(s => [s.id, s]));
+      return ids.map((id, i) => ({ ...map[id], order: i }));
+    });
+    try { await adminReorderSubcategories(cid, ids); toast.success('Order saved'); }
+    catch (er) { toast.error(er?.response?.data?.detail || 'Reorder failed'); load(); }
+  };
+  const { dragProps, draggingId, overId } = useDragReorder(items, persistOrder);
+
   const start = (s) => setEditing(s ? { ...empty, ...s } : { ...empty });
   const close = () => setEditing(null);
 
@@ -34,9 +46,9 @@ const AdminSubcategories = () => {
     e.preventDefault();
     const payload = {
       ...editing,
-      order: parseInt(editing.order || 0, 10),
       active: editing.active !== false,
     };
+    delete payload.order; // managed by drag-and-drop
     try {
       if (editing.id) await adminUpdateSubcategory(editing.id, payload);
       else await adminCreateSubcategory(cid, payload);
@@ -59,7 +71,7 @@ const AdminSubcategories = () => {
           <div className="text-[11px] uppercase tracking-widest text-[#B4593F]">{parent?.name || '—'}</div>
           <h1 className="font-serif-display text-4xl mt-1">Subcategories</h1>
           <p className="text-sm text-neutral-600 mt-1">
-            {items.length} subcategor{items.length === 1 ? 'y' : 'ies'} · shown on the {parent?.slug ? `/shop/${parent.slug}` : 'category'} page
+            {items.length} subcategor{items.length === 1 ? 'y' : 'ies'} · drag cards to reorder · shown on the {parent?.slug ? `/shop/${parent.slug}` : 'category'} page
           </p>
         </div>
         <button
@@ -79,7 +91,15 @@ const AdminSubcategories = () => {
       ) : (
         <div className="space-y-3">
           {items.map(s => (
-            <div key={s.id} data-testid={`subcategory-${s.id}`} className={`bg-white rounded-xl border overflow-hidden flex gap-4 p-4 ${s.active ? 'border-[#EBD9CE]' : 'border-neutral-200 opacity-60'}`}>
+            <div
+              key={s.id}
+              data-testid={`subcategory-${s.id}`}
+              {...dragProps(s.id)}
+              className={`bg-white rounded-xl border overflow-hidden flex gap-4 p-4 transition-all ${!s.active ? 'opacity-60' : ''} ${draggingId === s.id ? 'opacity-40' : ''} ${overId === s.id && draggingId !== s.id ? 'border-[#B4593F] ring-2 ring-[#B4593F]/30' : 'border-[#EBD9CE]'}`}
+            >
+              <div className="flex items-center pr-1 -my-4 -ml-4 pl-3 border-r border-[#EBD9CE]/60 cursor-grab active:cursor-grabbing" title="Drag to reorder">
+                <GripVertical className="w-4 h-4 text-neutral-400" />
+              </div>
               <div className="w-24 h-24 rounded-lg bg-neutral-100 shrink-0 overflow-hidden">
                 {s.image && <img src={s.image} alt={s.name} className="w-full h-full object-cover" />}
               </div>
@@ -87,7 +107,6 @@ const AdminSubcategories = () => {
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="font-serif-display text-xl">{s.name}</div>
                   {!s.active && <span className="text-[9px] uppercase tracking-widest bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded">Hidden</span>}
-                  <span className="text-[10px] uppercase tracking-widest bg-[#FDF3EB] text-[#B4593F] px-2 py-0.5 rounded">Order {s.order || 0}</span>
                   <span className="text-[10px] uppercase tracking-widest bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded">{s.product_count || 0} products</span>
                 </div>
                 <div className="text-[11px] text-neutral-500 mt-1 font-mono">/{parent?.slug || '…'}/{s.slug}</div>
@@ -144,9 +163,6 @@ const AdminSubcategories = () => {
               </F>
               <F label="Description">
                 <textarea rows="4" value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} className="input !rounded-lg" placeholder="One or two lines shown under the title on the landing page." />
-              </F>
-              <F label="Order">
-                <input type="number" value={editing.order || 0} onChange={e => setEditing({ ...editing, order: e.target.value })} className="input w-32" />
               </F>
               <label className="flex items-start gap-3 bg-[#FDF3EB] border border-[#EBD9CE] rounded-xl px-4 py-3 cursor-pointer">
                 <input

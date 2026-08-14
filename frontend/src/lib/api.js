@@ -235,6 +235,11 @@ export const adminCreateSubcategory = (cid, p) => api.post(`/admin/categories/${
 export const adminUpdateSubcategory = (sid, p) => api.patch(`/admin/subcategories/${sid}`, p).then(r => r.data);
 export const adminDeleteSubcategory = (sid) => api.delete(`/admin/subcategories/${sid}`).then(r => r.data);
 
+// Reorder (drag-and-drop persistence)
+export const adminReorderCategories = (ids) => api.post('/admin/categories/reorder', { ids }).then(r => r.data);
+export const adminReorderSubcategories = (cid, ids) => api.post(`/admin/categories/${cid}/subcategories/reorder`, { ids }).then(r => r.data);
+export const adminReorderProducts = (ids) => api.post('/admin/products/reorder', { ids }).then(r => r.data);
+
 // Admin users (RBAC)
 export const adminListUsers = () => api.get('/admin/users').then(r => r.data);
 export const adminInviteUser = (p) => api.post('/admin/users', p).then(r => r.data);

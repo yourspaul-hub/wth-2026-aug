@@ -109,6 +109,7 @@ class Product(BaseModel):
     seo_title: Optional[str] = None
     seo_description: Optional[str] = None
     seo_keywords: Optional[str] = None
+    display_order: int = 0
     created_at: datetime = Field(default_factory=_now)
 
 

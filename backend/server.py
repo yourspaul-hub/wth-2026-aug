@@ -164,8 +164,18 @@ async def logout(request: Request, response: Response):
 # ================= CATEGORIES =================
 @api.get('/categories')
 async def list_categories():
-    docs = await db.categories.find({}, {'_id': 0}).sort('order', 1).to_list(200)
+    docs = await db.categories.find({}, {'_id': 0}).sort([('order', 1), ('name', 1)]).to_list(200)
     return docs
+
+
+@api.post('/admin/categories/reorder')
+async def reorder_categories(payload: dict, user: dict = Depends(require_store)):
+    ids = payload.get('ids') or []
+    if not isinstance(ids, list):
+        raise HTTPException(status_code=400, detail='ids must be a list')
+    for idx, cid in enumerate(ids):
+        await db.categories.update_one({'id': cid}, {'$set': {'order': idx}})
+    return {'ok': True, 'count': len(ids)}
 
 
 @api.post('/admin/categories')
@@ -313,6 +323,16 @@ async def delete_subcategory(sid: str, user: dict = Depends(require_store)):
     return {'ok': True}
 
 
+@api.post('/admin/categories/{cid}/subcategories/reorder')
+async def reorder_subcategories(cid: str, payload: dict, user: dict = Depends(require_store)):
+    ids = payload.get('ids') or []
+    if not isinstance(ids, list):
+        raise HTTPException(status_code=400, detail='ids must be a list')
+    for idx, sid in enumerate(ids):
+        await db.subcategories.update_one({'id': sid, 'category_id': cid}, {'$set': {'order': idx}})
+    return {'ok': True, 'count': len(ids)}
+
+
 # ================= PRODUCTS =================
 @api.get('/products')
 async def list_products(
@@ -353,7 +373,7 @@ async def list_products(
         'price-desc': [('price', -1)],
         'rating': [('rating', -1)],
         'newest': [('created_at', -1)],
-        'featured': [('created_at', -1)],
+        'featured': [('display_order', 1), ('created_at', -1)],
     }
     cursor = db.products.find(filt, {'_id': 0}).sort(sort_map.get(sort, sort_map['featured'])).skip(skip).limit(limit)
     items = await cursor.to_list(limit)
@@ -470,6 +490,16 @@ async def update_product(pid: str, payload: ProductUpdate, user: dict = Depends(
 async def delete_product(pid: str, user: dict = Depends(require_store)):
     await db.products.delete_one({'id': pid})
     return {'ok': True}
+
+
+@api.post('/admin/products/reorder')
+async def reorder_products(payload: dict, user: dict = Depends(require_store)):
+    ids = payload.get('ids') or []
+    if not isinstance(ids, list):
+        raise HTTPException(status_code=400, detail='ids must be a list')
+    for idx, pid in enumerate(ids):
+        await db.products.update_one({'id': pid}, {'$set': {'display_order': idx}})
+    return {'ok': True, 'count': len(ids)}
 
 
 # ================= COLLECTIONS =================
