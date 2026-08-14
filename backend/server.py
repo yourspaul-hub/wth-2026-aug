@@ -595,6 +595,13 @@ async def create_order(payload: OrderCreate):
         if avail < it.qty:
             raise HTTPException(status_code=400, detail=f'Insufficient stock for {p["name"]}{" (" + variant_label + ")" if variant_label else ""}')
 
+        # Personalization surcharge — applied per-unit when customer entered a customization
+        pers_cost = 0
+        if it.customization and (it.customization or '').strip() and p.get('personalization_enabled'):
+            pers_cost = int(p.get('personalization_cost') or 0)
+        if pers_cost:
+            line_price = line_price + pers_cost
+
         subtotal += line_price * it.qty
         fresh_items.append({
             'product_id': p['id'],
@@ -1963,14 +1970,14 @@ import io
 PRODUCT_TEMPLATE_COLUMNS = [
     'sku', 'slug', 'name', 'category_slug', 'price', 'original_price',
     'stock', 'description', 'image', 'tag', 'product_type', 'active',
-    'personalization_enabled', 'personalization_label',
+    'personalization_enabled', 'personalization_label', 'personalization_cost',
     'image_1', 'image_2', 'image_3', 'image_4',
 ]
 
 _SAMPLE_ROWS = [
-    ['WTH-CAP-001', 'faith-cap-blessed', 'Faith Cap — Blessed', 'head-gear', '899', '1199', '25', 'Embroidered faith cap in soft cotton twill.', '', 'bestseller', 'physical', 'true', 'false', '', 'https://drive.google.com/file/d/EXAMPLE_ID_1/view?usp=sharing', 'https://drive.google.com/file/d/EXAMPLE_ID_2/view?usp=sharing', '', ''],
-    ['WTH-TEE-001', 'psalm-46-tee', 'Psalm 46 Tee', 'clothing', '699', '899', '40', '100% cotton, unisex fit.', 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800', 'trending', 'physical', 'true', 'false', '', '', '', '', ''],
-    ['WTH-MUG-001', 'grace-mug', 'Grace Ceramic Mug', 'drinkware', '449', '', '60', 'Microwave & dishwasher safe.', 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=800', 'new', 'physical', 'true', 'true', 'Engrave name (max 12 chars)', '', '', '', ''],
+    ['WTH-CAP-001', 'faith-cap-blessed', 'Faith Cap — Blessed', 'head-gear', '899', '1199', '25', 'Embroidered faith cap in soft cotton twill.', '', 'bestseller', 'physical', 'true', 'false', '', '0', 'https://drive.google.com/file/d/EXAMPLE_ID_1/view?usp=sharing', 'https://drive.google.com/file/d/EXAMPLE_ID_2/view?usp=sharing', '', ''],
+    ['WTH-TEE-001', 'psalm-46-tee', 'Psalm 46 Tee', 'clothing', '699', '899', '40', '100% cotton, unisex fit.', 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800', 'trending', 'physical', 'true', 'false', '', '0', '', '', '', ''],
+    ['WTH-MUG-001', 'grace-mug', 'Grace Ceramic Mug', 'drinkware', '449', '', '60', 'Microwave & dishwasher safe.', 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=800', 'new', 'physical', 'true', 'true', 'Engrave name (max 12 chars)', '99', '', '', '', ''],
 ]
 
 
@@ -2161,6 +2168,12 @@ async def bulk_upload_products(file: UploadFile = File(...), user: dict = Depend
         pl = (row.get('personalization_label') or '').strip()
         if pl:
             payload['personalization_label'] = pl
+        pc_raw = (str(row.get('personalization_cost') or '')).strip()
+        if pc_raw:
+            try:
+                payload['personalization_cost'] = max(0, int(float(pc_raw.replace(',', ''))))
+            except (TypeError, ValueError):
+                pass
         if sku:
             payload['sku'] = sku
 
@@ -3369,6 +3382,10 @@ async def get_public_settings():
 
     lb_enabled = ((await get_setting('LIGHTBOX_ENABLED', '')) or '').strip().lower() in ('true', '1', 'yes', 'on')
     lb_image = (await get_setting('LIGHTBOX_IMAGE', '')) or ''
+
+    ig_provider = ((await get_setting('INSTAGRAM_PROVIDER', 'curated')) or 'curated').strip().lower()
+    if ig_provider not in ('curated', 'behold', 'elfsight'):
+        ig_provider = 'curated'
     return {
         'music': {
             'enabled': bool(music_enabled and music_url),
@@ -3391,6 +3408,13 @@ async def get_public_settings():
             # Increment this in admin to force re-display for previously-dismissed visitors
             'version': (await get_setting('LIGHTBOX_VERSION', '1')) or '1',
         },
+        'instagram': {
+            'provider': ig_provider,
+            'behold_feed_id': (await get_setting('INSTAGRAM_BEHOLD_FEED_ID', '')) or '',
+            'elfsight_widget_id': (await get_setting('INSTAGRAM_ELFSIGHT_WIDGET_ID', '')) or '',
+            'profile_url': (await get_setting('INSTAGRAM_PROFILE_URL', 'https://www.instagram.com/wearthehope.co/')) or '',
+            'handle': (await get_setting('INSTAGRAM_HANDLE', '@wearthehope')) or '@wearthehope',
+        },
     }
 
 
@@ -3402,6 +3426,14 @@ class LightboxUpdate(BaseModel):
     cta_label: Optional[str] = None
     cta_href: Optional[str] = None
     show_once: Optional[bool] = None
+
+
+class InstagramSettingsUpdate(BaseModel):
+    provider: Optional[str] = None  # 'curated' | 'behold' | 'elfsight'
+    behold_feed_id: Optional[str] = None
+    elfsight_widget_id: Optional[str] = None
+    profile_url: Optional[str] = None
+    handle: Optional[str] = None
 
 
 @api.get('/admin/lightbox')
@@ -3452,6 +3484,48 @@ async def admin_update_lightbox(payload: LightboxUpdate, user: dict = Depends(re
             upsert=True,
         )
     return await admin_get_lightbox(user)
+
+
+# --- Instagram provider settings (admin-curated / Behold / Elfsight) ---
+@api.get('/admin/instagram-settings')
+async def admin_get_instagram_settings(user: dict = Depends(require_admin)):
+    provider = ((await get_setting('INSTAGRAM_PROVIDER', 'curated')) or 'curated').strip().lower()
+    if provider not in ('curated', 'behold', 'elfsight'):
+        provider = 'curated'
+    return {
+        'provider': provider,
+        'behold_feed_id': (await get_setting('INSTAGRAM_BEHOLD_FEED_ID', '')) or '',
+        'elfsight_widget_id': (await get_setting('INSTAGRAM_ELFSIGHT_WIDGET_ID', '')) or '',
+        'profile_url': (await get_setting('INSTAGRAM_PROFILE_URL', 'https://www.instagram.com/wearthehope.co/')) or '',
+        'handle': (await get_setting('INSTAGRAM_HANDLE', '@wearthehope')) or '@wearthehope',
+    }
+
+
+@api.put('/admin/instagram-settings')
+async def admin_update_instagram_settings(payload: InstagramSettingsUpdate, user: dict = Depends(require_admin)):
+    mapping = {
+        'provider': 'INSTAGRAM_PROVIDER',
+        'behold_feed_id': 'INSTAGRAM_BEHOLD_FEED_ID',
+        'elfsight_widget_id': 'INSTAGRAM_ELFSIGHT_WIDGET_ID',
+        'profile_url': 'INSTAGRAM_PROFILE_URL',
+        'handle': 'INSTAGRAM_HANDLE',
+    }
+    now = datetime.now(timezone.utc)
+    data = payload.model_dump()
+    for field, key in mapping.items():
+        v = data.get(field)
+        if v is None:
+            continue
+        if field == 'provider':
+            v = (v or 'curated').strip().lower()
+            if v not in ('curated', 'behold', 'elfsight'):
+                raise HTTPException(status_code=400, detail="provider must be one of: curated, behold, elfsight")
+        await db.settings.update_one(
+            {'key': key},
+            {'$set': {'key': key, 'value': v or '', 'category': 'instagram', 'updated_at': now}},
+            upsert=True,
+        )
+    return await admin_get_instagram_settings(user)
 
 
 # ================= CATALOGUE (PDF) =================

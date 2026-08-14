@@ -78,6 +78,7 @@ class Product(BaseModel):
     weight_grams: int = 500
     personalization_enabled: bool = False
     personalization_label: str = 'Personalize (optional)'
+    personalization_cost: int = 0  # extra INR added to line total when customer enters a personalization
     personalization_max_length: int = 40
     variant_options: List[dict] = []  # [{name:'Size', values:['S','M','L']}]
     variants: List[dict] = []  # [{id, attrs:{Size:'M',Color:'Black'}, price, original_price, stock, sku, image}]
@@ -111,6 +112,7 @@ class ProductCreate(BaseModel):
     weight_grams: int = 500
     personalization_enabled: bool = False
     personalization_label: str = 'Personalize (optional)'
+    personalization_cost: int = 0  # extra INR added to line total when customer enters a personalization
     personalization_max_length: int = 40
     variant_options: List[dict] = []
     variants: List[dict] = []
@@ -143,6 +145,7 @@ class ProductUpdate(BaseModel):
     weight_grams: Optional[int] = None
     personalization_enabled: Optional[bool] = None
     personalization_label: Optional[str] = None
+    personalization_cost: Optional[int] = None
     personalization_max_length: Optional[int] = None
     variant_options: Optional[List[dict]] = None
     variants: Optional[List[dict]] = None

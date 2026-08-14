@@ -17,7 +17,7 @@ export const PAGES = [
   { id: 'shop', label: 'Shop / Collections' },
   { id: 'product', label: 'Product detail' },
   { id: 'about', label: 'About page' },
-  { id: 'blog', label: 'Journal / Blog' },
+  { id: 'blog', label: 'Blog' },
   { id: 'contact', label: 'Contact page' },
 ];
 
@@ -207,9 +207,9 @@ export const CONTENT_SECTIONS = [
   // ================= BLOG =================
   {
     id: 'blog', page: 'blog',
-    label: 'Journal (Blog) — Index page',
+    label: 'Blog — Index page',
     items: [
-      { key: 'blog.eyebrow', default: 'The journal' },
+      { key: 'blog.eyebrow', default: 'The blog' },
       { key: 'blog.title', default: 'Stories of', hint: 'Main heading' },
       { key: 'blog.title_accent', default: 'hope', hint: 'Italic accent word' },
       { key: 'blog.subtitle', default: 'Craft notes, gifting guides and stories behind the pieces we make.' },

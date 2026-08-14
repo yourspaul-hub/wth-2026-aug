@@ -61,7 +61,7 @@ const Navbar = () => {
             </div>
             <Link to="/shop" className="link-underline">{t('nav.collections')}</Link>
             <Link to="/about" className="link-underline">{t('nav.about')}</Link>
-            <Link to="/blog" className="link-underline">{t('nav.journal')}</Link>
+            <Link to="/blog" className="link-underline">{t('nav.blog')}</Link>
             <Link to="/contact" className="link-underline">{t('nav.contact')}</Link>
           </nav>
           <div className="flex items-center gap-2 justify-self-end shrink-0">
@@ -141,8 +141,8 @@ const Navbar = () => {
               <Search className="w-4 h-4 text-neutral-500" />
               <input value={query} onChange={e => setQuery(e.target.value)} placeholder={t('nav.search_placeholder')} className="flex-1 bg-transparent outline-none text-sm" />
             </form>
-            {['Home','SHOP','About','Journal','Contact'].map(l => (
-              <Link key={l} to={l === 'Home' ? '/' : l === 'Journal' ? '/blog' : l === 'SHOP' ? '/shop' : `/${l.toLowerCase()}`} className="py-3 border-b border-[#EBD9CE] uppercase text-sm tracking-[0.15em]">{l}</Link>
+            {['Home','SHOP','About','Blog','Contact'].map(l => (
+              <Link key={l} to={l === 'Home' ? '/' : l === 'Blog' ? '/blog' : l === 'SHOP' ? '/shop' : `/${l.toLowerCase()}`} className="py-3 border-b border-[#EBD9CE] uppercase text-sm tracking-[0.15em]">{l}</Link>
             ))}
             <Link to="/wishlist" data-testid="mobile-wishlist-link" className="py-3 border-b border-[#EBD9CE] uppercase text-sm tracking-[0.15em] flex items-center justify-between">
               <span className="inline-flex items-center gap-2"><Heart className="w-4 h-4" /> {t('nav.wishlist')}</span>

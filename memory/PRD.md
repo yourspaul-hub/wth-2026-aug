@@ -54,6 +54,19 @@ Full-featured, dynamic e-commerce clone of www.wearthehope.com with a comprehens
   - Applied to: Hero, ProductCard, InstagramFeed, ReviewsSection, Blog list, BlogPost, review avatars/photos
 
 ## Backlog / Roadmap
+### Phase U — Bulk Products + Personalization Cost + Journal→Blog + Instagram Provider Switcher ✅ (2026-07-11)
+- **(a) Bulk products** — download template + upload endpoints already existed; UI buttons already surfaced in the Products admin header. Template extended with a new `personalization_cost` column.
+- **(b) Personalization cost** — new `personalization_cost: int = 0` on the Product model + admin edit field. Backend `create_order` applies it per-unit whenever the customer types a personalization on a product that has it enabled + a non-zero cost. Storefront PDP now shows "+ ₹X per unit" beside the personalization label so shoppers see the surcharge upfront. Bulk template + import path handle the new column.
+- **(c) Journal → Blog rename** — updated in `Navbar.jsx` (mobile drawer + desktop link's i18n key), `i18n.js` (English + Hindi labels), `contentRegistry.js` section labels + blog page eyebrow default.
+- **(d) Instagram provider switcher** — new admin page `/admin/instagram-settings` (sidebar: **Instagram Feed**) with 3 provider cards + a **Save** action. Providers:
+  - **curated** (default) — existing manual admin posts
+  - **behold** — paste a Behold.so feed id, storefront lazy-loads their widget script
+  - **elfsight** — paste an Elfsight widget id, storefront lazy-loads their platform script
+  - Also captures profile URL + handle in one place (used across the site).
+- The existing admin Instagram page (manual post entry) is renamed **Instagram Posts** in the sidebar to distinguish from the new **Instagram Feed** settings.
+- Backend endpoints: `GET/PUT /api/admin/instagram-settings` (auth-gated) and `GET /api/settings/public.instagram` exposes the config safely to the storefront.
+- **Frontend `InstagramFeed`** picks the render path based on `settings.provider` — no page reload required. Existing curated posts still work unchanged.
+
 ### Phase T — Direct File Upload Across All Admin Forms ✅ (2026-07-11)
 Swapped plain "paste URL" inputs for the `ImageFieldEditor` widget (upload file **or** paste URL — both go through the same auto-WebP resize + GridFS/S3 pipeline) in every remaining admin form:
 - **Products** — Primary image, Hover image, and each Gallery image slot

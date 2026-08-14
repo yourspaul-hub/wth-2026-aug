@@ -235,6 +235,9 @@ const ProductDetail = () => {
               <div className="mt-6 bg-[#FDF3EB] border border-[#EBD9CE] rounded-xl p-5">
                 <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-[#B4593F] mb-3">
                   <Sparkles className="w-3.5 h-3.5" /> {product.personalization_label || 'Personalize (optional)'}
+                  {product.personalization_cost > 0 && (
+                    <span className="ml-auto text-[10px] normal-case tracking-normal text-neutral-600" data-testid="pd-personalization-cost">+ ₹{product.personalization_cost} per unit</span>
+                  )}
                 </div>
                 <input
                   value={customName}
@@ -243,7 +246,7 @@ const ProductDetail = () => {
                   className="w-full bg-white border border-[#EBD9CE] rounded-full px-5 py-3 text-sm outline-none focus:border-[#B4593F] transition-colors"
                 />
                 <div className="text-[11px] text-neutral-500 mt-2 flex justify-between">
-                  <span>Free customization · Adds 2-3 days to delivery</span>
+                  <span>{product.personalization_cost > 0 ? `+ ₹${product.personalization_cost} per unit` : 'Free customization'} · Adds 2-3 days to delivery</span>
                   <span>{customName.length}/{product.personalization_max_length || 40}</span>
                 </div>
               </div>

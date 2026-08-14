@@ -10,7 +10,7 @@ const empty = {
   tag: '', ribbon: '', colors: [], description: '', stock: 100, sku: '',
   active: true, product_type: 'physical', digital_file_url: '',
   weight_grams: 500,
-  personalization_enabled: false, personalization_label: 'Personalize (optional)', personalization_max_length: 40,
+  personalization_enabled: false, personalization_label: 'Personalize (optional)', personalization_cost: 0, personalization_max_length: 40,
   variant_options: [], variants: [],
   seo_title: '', seo_description: '', seo_keywords: '',
 };
@@ -81,6 +81,7 @@ const AdminProducts = () => {
       weight_grams: +editing.weight_grams,
       colors: typeof editing.colors === 'string' ? editing.colors.split(',').map(s => s.trim()).filter(Boolean) : (editing.colors || []),
       personalization_max_length: +editing.personalization_max_length,
+      personalization_cost: Math.max(0, +(editing.personalization_cost || 0)),
     };
     try {
       if (editing.id) await adminUpdateProduct(editing.id, payload); else await adminCreateProduct(payload);
@@ -353,6 +354,7 @@ const AdminProducts = () => {
                     <>
                       <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Field label</span><input value={editing.personalization_label || ''} onChange={e => setEditing({ ...editing, personalization_label: e.target.value })} placeholder="e.g. Engrave a name or verse" className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
                       <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Max length</span><input type="number" value={editing.personalization_max_length || 40} onChange={e => setEditing({ ...editing, personalization_max_length: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
+                      <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Extra cost (₹) — added per unit when the customer personalizes</span><input type="number" min="0" value={editing.personalization_cost ?? 0} onChange={e => setEditing({ ...editing, personalization_cost: e.target.value })} placeholder="0 = no surcharge" className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" data-testid="product-personalization-cost" /></label>
                     </>
                   )}
                 </>

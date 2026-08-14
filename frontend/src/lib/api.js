@@ -96,6 +96,10 @@ export const adminUpdatePartnership = (id, patch) => api.patch(`/admin/partnersh
 export const adminDeletePartnership = (id) => api.delete(`/admin/partnerships/${id}`).then(r => r.data);
 export const adminReorderPartnerships = (ids) => api.post('/admin/partnerships/reorder', { ids }).then(r => r.data);
 
+// --- Instagram provider settings ---
+export const adminGetInstagramSettings = () => api.get('/admin/instagram-settings').then(r => r.data);
+export const adminUpdateInstagramSettings = (patch) => api.put('/admin/instagram-settings', patch).then(r => r.data);
+
 export const adminListProducts = () => api.get('/products', { params: { limit: 500 } }).then(r => r.data.items);
 export const adminCreateProduct = (payload) => api.post('/admin/products', payload).then(r => r.data);
 export const adminUpdateProduct = (id, patch) => api.patch(`/admin/products/${id}`, patch).then(r => r.data);

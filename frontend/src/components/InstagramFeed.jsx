@@ -1,22 +1,64 @@
-import React, { useEffect, useState } from 'react';
-import { listInstagram } from '../lib/api';
+import React, { useEffect, useRef, useState } from 'react';
+import { listInstagram, api } from '../lib/api';
 import { imgProps } from '../lib/imgSrc';
 import { Instagram, Heart, MessageCircle, ExternalLink, ShoppingBag } from 'lucide-react';
 import { useContentText } from '../context/ContentContext';
 
+/**
+ * Storefront Instagram section — three provider modes controlled from admin
+ * (Admin → Instagram Settings → Provider):
+ *   - 'behold'    : embed a Behold.so widget by feed id
+ *   - 'elfsight'  : embed an Elfsight widget by widget id
+ *   - 'curated'   : (default) render manually-added posts from the admin
+ */
+const BeholdEmbed = ({ feedId }) => {
+  useEffect(() => {
+    if (document.querySelector('script[src*="behold.so"]')) return;
+    const s = document.createElement('script');
+    s.src = 'https://w.behold.so/widget.js';
+    s.type = 'module';
+    document.head.appendChild(s);
+  }, []);
+  if (!feedId) return null;
+  return React.createElement('behold-widget', { 'feed-id': feedId, 'data-testid': 'instagram-behold' });
+};
+
+const ElfsightEmbed = ({ widgetId }) => {
+  useEffect(() => {
+    if (document.querySelector('script[src*="elfsight.com/platform"]')) return;
+    const s = document.createElement('script');
+    s.src = 'https://elfsightcdn.com/platform.js';
+    s.async = true;
+    document.head.appendChild(s);
+  }, []);
+  if (!widgetId) return null;
+  return <div className={`elfsight-app-${widgetId}`} data-elfsight-app-lazy data-testid="instagram-elfsight" />;
+};
+
 const InstagramFeed = ({ limit = 6, showHeader = true }) => {
   const [posts, setPosts] = useState([]);
+  const [settings, setSettings] = useState({ provider: 'curated', behold_feed_id: '', elfsight_widget_id: '' });
   const eyebrow = useContentText('home.instagram.eyebrow');
   const titleMain = useContentText('home.instagram.title_main', '@');
   const titleAccent = useContentText('home.instagram.title_accent', 'wearthehope');
   const body = useContentText('home.instagram.body', 'Tag us in your Wear The Hope moments and get featured — over 10K+ believers spreading love and hope.');
   const igUrl = useContentText('home.instagram.url', 'https://www.instagram.com/wearthehope');
+  const loaded = useRef(false);
 
   useEffect(() => {
-    listInstagram(limit).then(setPosts).catch(() => setPosts([]));
-  }, [limit]);
+    api.get('/settings/public').then(r => setSettings(r.data?.instagram || {})).catch(() => {});
+  }, []);
 
-  if (posts.length === 0) return null;
+  useEffect(() => {
+    if (settings.provider !== 'curated' || loaded.current) return;
+    loaded.current = true;
+    listInstagram(limit).then(setPosts).catch(() => setPosts([]));
+  }, [settings.provider, limit]);
+
+  const provider = settings.provider || 'curated';
+  const hasWidget = (provider === 'behold' && settings.behold_feed_id) || (provider === 'elfsight' && settings.elfsight_widget_id);
+  if (provider === 'curated' && posts.length === 0) return null;
+  if (provider !== 'curated' && !hasWidget) return null;
 
   return (
     <section className="py-20 bg-white" data-testid="instagram-feed">
@@ -35,6 +77,13 @@ const InstagramFeed = ({ limit = 6, showHeader = true }) => {
           </div>
         )}
 
+        {provider === 'behold' && (
+          <div className="w-full" data-testid="instagram-widget-behold"><BeholdEmbed feedId={settings.behold_feed_id} /></div>
+        )}
+        {provider === 'elfsight' && (
+          <div className="w-full" data-testid="instagram-widget-elfsight"><ElfsightEmbed widgetId={settings.elfsight_widget_id} /></div>
+        )}
+        {provider === 'curated' && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {posts.map(p => (
             <a
@@ -60,6 +109,7 @@ const InstagramFeed = ({ limit = 6, showHeader = true }) => {
             </a>
           ))}
         </div>
+        )}
       </div>
     </section>
   );

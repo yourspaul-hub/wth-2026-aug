@@ -52,6 +52,7 @@ import AdminDesign from './pages/admin/Design';
 import AdminHeroSlides from './pages/admin/HeroSlides';
 import AdminLightbox from './pages/admin/Lightbox';
 import AdminPartnerships from './pages/admin/Partnerships';
+import AdminInstagramSettings from './pages/admin/InstagramSettings';
 import AdminResetData from './pages/admin/ResetData';
 import Wishlist from './pages/Wishlist';
 import MusicWidget from './components/MusicWidget';
@@ -122,6 +123,7 @@ function AppRouter() {
           <Route path="hero-slides" element={<AdminHeroSlides />} />
           <Route path="lightbox" element={<AdminLightbox />} />
           <Route path="partnerships" element={<AdminPartnerships />} />
+          <Route path="instagram-settings" element={<AdminInstagramSettings />} />
           <Route path="reset-data" element={<AdminResetData />} />
         </Route>
       </Routes>
