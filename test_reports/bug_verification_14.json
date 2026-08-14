@@ -1,0 +1,68 @@
+{
+  "verdict": "not_fixed",
+  "user_reported_bug": "Even after changing the Product Coming Soon tag of the two categories, still it shows up as coming soon in the website. Secondly, bestseller section in homepage should show only the products which are having the bestseller ribbon and The new arrival space in the homepage should show only the products which are having the new ribbon. Your section should be right above the Instagram section.",
+  "summary": "No relevant testing skill found. Focused API + storefront UI verification found the ribbon filtering and section ordering fixed, but the category Coming Soon symptom still reproduces: Jewellery and Wall Frames have coming_soon=false after PATCH/reload, yet the homepage tiles still visibly show 'Coming Soon' because their tagline remains 'Coming Soon'.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "GET /api/categories",
+        "issue": "After toggling Jewellery and Wall Frames coming_soon=false, the API still returns tagline='Coming Soon' for both records. Since the storefront renders tagline text, the website still visibly says Coming Soon even though the boolean flag is false."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Homepage Categories section",
+        "issue": "Jewellery and Wall Frames still visibly show 'Coming Soon' text on their homepage tiles after coming_soon=false. Top-left Coming Soon pill is absent and links are active, but the bottom tagline remains 'Coming Soon', so the user-visible complaint remains.",
+        "selector": "#categories a:has(img[alt='Jewellery']), #categories a:has(img[alt='Wall Frames'])",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Admin/API category coming_soon=false -> GET /api/categories -> fresh homepage load",
+        "issue": "PATCH persistence works, but storefront still displays Coming Soon because Categories.jsx always renders c.tagline and the category records still have tagline='Coming Soon'.",
+        "affected_selectors": [
+          "#categories"
+        ]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/bug_verification_homepage_api.py",
+    "/app/test_reports/bug_verification_homepage_ui.py",
+    "/app/test_reports/homepage_api_evidence.json",
+    "/app/test_reports/homepage_ui_evidence.json",
+    "/app/test_reports/bug_verification_14.json",
+    "/app/test_reports/iteration_14.json"
+  ],
+  "action_items": [
+    "Fix the category Coming Soon user-visible text: either clear/update the Jewellery and Wall Frames tagline when coming_soon is turned off, add tagline editing/sync in Admin Categories, or change Categories.jsx so 'Coming Soon' taglines are not shown when c.comingSoon is false.",
+    "Retest fresh homepage after toggling Jewellery and Wall Frames off; expected: no visible 'Coming Soon' anywhere in those tiles, not just no pill."
+  ],
+  "critical_code_review_comments": [
+    "Home.jsx now filters Bestsellers by p.ribbon === 'Best Seller' and New Arrivals by p.ribbon === 'New'; UI evidence confirms the two expected products in each section only.",
+    "Home.jsx order is correct in runtime evidence: Hero -> FeatureStrip -> Categories -> Bestsellers -> AboutStory -> USBanner -> ReviewsSection -> New Arrivals -> InstagramFeed.",
+    "Categories.jsx gates the pill/href with c.comingSoon, but always renders c.tagline. Because the Jewellery and Wall Frames records still have tagline='Coming Soon', the visible homepage tile still appears as coming soon after the boolean is toggled off."
+  ],
+  "updated_files": [
+    "/app/test_reports/bug_verification_homepage_api.py",
+    "/app/test_reports/bug_verification_homepage_ui.py",
+    "/app/test_reports/homepage_api_evidence.json",
+    "/app/test_reports/homepage_ui_evidence.json",
+    "/app/test_reports/bug_verification_14.json",
+    "/app/test_reports/iteration_14.json"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "75%"
+  },
+  "seed_data_creation": "No new seed data created. Test temporarily toggled Jewellery (cat_09) and Wall Frames (cat_10) coming_soon true then false via PATCH; final state is coming_soon=false for both.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Start from /app/test_reports/homepage_api_evidence.json and /app/test_reports/homepage_ui_evidence.json. Verify no relevant testing skill found remains true or load a new skill if one exists. Current failing proof: API after_targets have coming_soon=false but tagline='Coming Soon'; UI targetCategories have text 'JewelleryComing Soon' and 'Wall FramesComing Soon'. Ribbons/order currently pass.",
+  "rca_of_the_issue": "Partial fix: the coming_soon boolean/href/pill behavior was fixed, but the visible homepage category subtitle is sourced from the category tagline. The two affected records still use tagline='Coming Soon', and Categories.jsx renders c.tagline unconditionally, so users still see Coming Soon after turning off the Coming Soon flag."
+}

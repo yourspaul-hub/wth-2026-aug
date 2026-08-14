@@ -1,0 +1,296 @@
+{
+  "timestamp": "2026-08-14T20:59:26.133885+00:00",
+  "url": "https://wear-interactive.preview.emergentagent.com/",
+  "checks": [
+    {
+      "name": "bestsellers_only_best_seller_ribbon_products",
+      "status": "pass",
+      "expected": [
+        "Faith Cap \u2014 Blessed Edition",
+        "Psalm 46 Statement Tee"
+      ],
+      "actual": [
+        "Faith Cap \u2014 Blessed Edition",
+        "Psalm 46 Statement Tee"
+      ]
+    },
+    {
+      "name": "new_arrivals_only_new_ribbon_products",
+      "status": "pass",
+      "expected": [
+        "Jehovah Jireh Wall Canvas",
+        "YHWH Minimalist Canvas Frame"
+      ],
+      "actual": [
+        "Jehovah Jireh Wall Canvas",
+        "YHWH Minimalist Canvas Frame"
+      ]
+    },
+    {
+      "name": "homepage_section_order",
+      "status": "pass",
+      "expected": [
+        "Hero",
+        "FeatureStrip",
+        "Categories",
+        "Bestsellers",
+        "AboutStory",
+        "USBanner",
+        "ReviewsSection",
+        "New Arrivals",
+        "InstagramFeed"
+      ],
+      "actual_labels": [
+        "Hero",
+        "FeatureStrip",
+        "Categories",
+        "Bestsellers",
+        "AboutStory",
+        "USBanner",
+        "ReviewsSection",
+        "New Arrivals",
+        "InstagramFeed"
+      ],
+      "actual_filtered": [
+        "Hero",
+        "FeatureStrip",
+        "Categories",
+        "Bestsellers",
+        "AboutStory",
+        "USBanner",
+        "ReviewsSection",
+        "New Arrivals",
+        "InstagramFeed"
+      ]
+    },
+    {
+      "name": "toggled_off_categories_no_visible_coming_soon_text",
+      "status": "fail",
+      "visible_coming_soon_text_present": [
+        {
+          "href": "/shop/jewellery",
+          "text": "JewelleryComing Soon",
+          "imgAlt": "Jewellery",
+          "hasVisibleComingSoonText": true,
+          "likelyTopLeftPillCount": 0
+        },
+        {
+          "href": "/shop/wall-frames",
+          "text": "Wall FramesComing Soon",
+          "imgAlt": "Wall Frames",
+          "hasVisibleComingSoonText": true,
+          "likelyTopLeftPillCount": 0
+        }
+      ],
+      "top_left_pill_present": []
+    }
+  ],
+  "evidence": {
+    "url": "https://wear-interactive.preview.emergentagent.com/",
+    "sections": [
+      {
+        "index": 0,
+        "id": "",
+        "testid": "hero-section",
+        "h2": "",
+        "textSample": "Since December 2018Share the Message ofLove & HopeFaith-driven products, crafted to impact livesShop The CollectionOur Story10K+Happy Customers180+Unique Designs4.9\u2605Google RatingFeaturedLove & HopeFeaturedNew CollectionF",
+        "top": 117
+      },
+      {
+        "index": 1,
+        "id": "",
+        "testid": "",
+        "h2": "",
+        "textSample": "Ships WorldwideFree over \u20b9999 in IndiaFully CustomizableLaser engraving on requestHandcrafted QualityEvery item checked twiceEasy Returns7-day hassle-free returns",
+        "top": 869
+      },
+      {
+        "index": 2,
+        "id": "categories",
+        "testid": "",
+        "h2": "Shop by purpose",
+        "textSample": "Curated CategoriesShop by purposeView All CollectionsDrinkwareSip scripture, hold hopeClothingWear your declarationBagsCarry the messageBoardsKitchen with scriptureTagsTravel with purposeBadges & MagnetsSmall tokens, big",
+        "top": 995
+      },
+      {
+        "index": 3,
+        "id": "",
+        "testid": "",
+        "h2": "Bestsellers",
+        "textSample": "Handpicked for youBestsellersShop All Best Seller-25% Add to BagFaith Cap \u2014 Blessed Edition4.9You are chosen, loved and favored\u20b9899\u20b91,199Best Seller-27% Add to BagPsalm 46 Statement Tee4.9God is my refuge\u20b9799\u20b91,099",
+        "top": 1956
+      },
+      {
+        "index": 4,
+        "id": "",
+        "testid": "home-about",
+        "h2": "A vision at midnight. A mission for a lifetime.",
+        "textSample": "Since 2018A vision that became a movementOur StoryA vision at midnight. A mission for a lifetime.In late 2018, God awakened us in the middle of the night with a vivid vision \u2014 a kiosk filled with products carrying His me",
+        "top": 2767
+      },
+      {
+        "index": 5,
+        "id": "",
+        "testid": "",
+        "h2": "",
+        "textSample": "Explore our US partner websiteClick Here",
+        "top": 3624
+      },
+      {
+        "index": 6,
+        "id": "",
+        "testid": "reviews-section",
+        "h2": "What our community says",
+        "textSample": "Loved by 1000+ believersWhat our community saysReal words from customers around the world \u2014 pulled live from Google Business, verified purchase submissions, and reviews shared by our community.All reviewsGoogleVerified p",
+        "top": 3712
+      },
+      {
+        "index": 7,
+        "id": "",
+        "testid": "",
+        "h2": "New Arrivals",
+        "textSample": "Fresh in this monthNew ArrivalsShop All New-21% Add to BagYHWH Minimalist Canvas Frame4.8The Most Holy Name\u20b92,199\u20b92,799New-21% Add to BagJehovah Jireh Wall Canvas4.8The Lord Will Provide\u20b91,899\u20b92,399",
+        "top": 4883
+      },
+      {
+        "index": 8,
+        "id": "",
+        "testid": "instagram-feed",
+        "h2": "@wearthehope",
+        "textSample": "Follow along@wearthehope Tag us in your Wear The Hope moments and get featured \u2014 over 10K+ believers spreading love and hope. 342 24 Shop 512 41 Shop 289 18 Shop 428 32 Shop 356 22 Shop 231 15 Shop",
+        "top": 5694
+      }
+    ],
+    "bestsellers": {
+      "found": true,
+      "sectionTop": 1956,
+      "products": [
+        {
+          "href": "/product/p_001",
+          "name": "Faith Cap \u2014 Blessed Edition",
+          "visibleText": "Best Seller-25% Add to BagFaith Cap \u2014 Blessed Edition4.9You are chosen, loved and favored\u20b9899\u20b91,199",
+          "addTestid": "product-card-add-p_001"
+        },
+        {
+          "href": "/product/p_009",
+          "name": "Psalm 46 Statement Tee",
+          "visibleText": "Best Seller-27% Add to BagPsalm 46 Statement Tee4.9God is my refuge\u20b9799\u20b91,099",
+          "addTestid": "product-card-add-p_009"
+        }
+      ]
+    },
+    "newArrivals": {
+      "found": true,
+      "sectionTop": 4883,
+      "products": [
+        {
+          "href": "/product/p_003",
+          "name": "YHWH Minimalist Canvas Frame",
+          "visibleText": "New-21% Add to BagYHWH Minimalist Canvas Frame4.8The Most Holy Name\u20b92,199\u20b92,799",
+          "addTestid": "product-card-add-p_003"
+        },
+        {
+          "href": "/product/p_012",
+          "name": "Jehovah Jireh Wall Canvas",
+          "visibleText": "New-21% Add to BagJehovah Jireh Wall Canvas4.8The Lord Will Provide\u20b91,899\u20b92,399",
+          "addTestid": "product-card-add-p_012"
+        }
+      ]
+    },
+    "categoryTiles": [
+      {
+        "href": "/shop",
+        "text": "View All Collections",
+        "imgAlt": "",
+        "hasVisibleComingSoonText": false,
+        "likelyTopLeftPillCount": 0
+      },
+      {
+        "href": "/shop/drinkware",
+        "text": "DrinkwareSip scripture, hold hope",
+        "imgAlt": "Drinkware",
+        "hasVisibleComingSoonText": false,
+        "likelyTopLeftPillCount": 0
+      },
+      {
+        "href": "/shop/clothing",
+        "text": "ClothingWear your declaration",
+        "imgAlt": "Clothing",
+        "hasVisibleComingSoonText": false,
+        "likelyTopLeftPillCount": 0
+      },
+      {
+        "href": "/shop/bags",
+        "text": "BagsCarry the message",
+        "imgAlt": "Bags",
+        "hasVisibleComingSoonText": false,
+        "likelyTopLeftPillCount": 0
+      },
+      {
+        "href": "/shop/boards",
+        "text": "BoardsKitchen with scripture",
+        "imgAlt": "Boards",
+        "hasVisibleComingSoonText": false,
+        "likelyTopLeftPillCount": 0
+      },
+      {
+        "href": "/shop/tags",
+        "text": "TagsTravel with purpose",
+        "imgAlt": "Tags",
+        "hasVisibleComingSoonText": false,
+        "likelyTopLeftPillCount": 0
+      },
+      {
+        "href": "/shop/badges-magnets",
+        "text": "Badges & MagnetsSmall tokens, big faith",
+        "imgAlt": "Badges & Magnets",
+        "hasVisibleComingSoonText": false,
+        "likelyTopLeftPillCount": 0
+      },
+      {
+        "href": "/shop/head-gear",
+        "text": "Head GearCrown of confidence",
+        "imgAlt": "Head Gear",
+        "hasVisibleComingSoonText": false,
+        "likelyTopLeftPillCount": 0
+      },
+      {
+        "href": "/shop/stickers",
+        "text": "StickersStick the word everywhere",
+        "imgAlt": "Stickers",
+        "hasVisibleComingSoonText": false,
+        "likelyTopLeftPillCount": 0
+      },
+      {
+        "href": "/shop/jewellery",
+        "text": "JewelleryComing Soon",
+        "imgAlt": "Jewellery",
+        "hasVisibleComingSoonText": true,
+        "likelyTopLeftPillCount": 0
+      },
+      {
+        "href": "/shop/wall-frames",
+        "text": "Wall FramesComing Soon",
+        "imgAlt": "Wall Frames",
+        "hasVisibleComingSoonText": true,
+        "likelyTopLeftPillCount": 0
+      }
+    ],
+    "targetCategories": [
+      {
+        "href": "/shop/jewellery",
+        "text": "JewelleryComing Soon",
+        "imgAlt": "Jewellery",
+        "hasVisibleComingSoonText": true,
+        "likelyTopLeftPillCount": 0
+      },
+      {
+        "href": "/shop/wall-frames",
+        "text": "Wall FramesComing Soon",
+        "imgAlt": "Wall Frames",
+        "hasVisibleComingSoonText": true,
+        "likelyTopLeftPillCount": 0
+      }
+    ]
+  }
+}

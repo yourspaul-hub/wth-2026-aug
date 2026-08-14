@@ -1,0 +1,40 @@
+{
+  "verdict": "fixed",
+  "user_reported_bug": "Even after changing the Product Coming Soon tag of the two categories, still it shows up as coming soon in the website. Secondly, bestseller section in homepage should show only the products which are having the bestseller ribbon and The new arrival space in the homepage should show only the products which are having the new ribbon. Your section should be right above the Instagram section.",
+  "summary": "No relevant testing skill found. Focused API and browser tests verified the homepage category Coming Soon visibility toggle, Bestsellers/New Arrivals ribbon filtering, and requested homepage section order end-to-end.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/bug_verification_homepage_iter15_api.py",
+    "/app/test_reports/bug_verification_homepage_iter15_ui_snippet.py",
+    "/app/test_reports/bug_verification_15.json",
+    "/app/test_reports/iteration_15.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Categories.jsx conditionally hides a literal 'coming soon' tagline, so cat_09/cat_10 with coming_soon=false render only the category names despite API tagline='Coming Soon'.",
+    "Home.jsx now places New Arrivals immediately before InstagramFeed and FeaturedProducts filters by exact ribbon before slicing."
+  ],
+  "updated_files": [
+    "/app/test_reports/bug_verification_homepage_iter15_api.py",
+    "/app/test_reports/bug_verification_homepage_iter15_ui_snippet.py",
+    "/app/test_reports/bug_verification_15.json",
+    "/app/test_reports/iteration_15.json"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  "seed_data_creation": "No seed data created. Test temporarily toggled cat_09 and cat_10 to true/false through admin PATCH and restored both to coming_soon=false.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "API check passed against localhost backend: cat_09/cat_10 persisted coming_soon=false while keeping tagline='Coming Soon'; product API has Best Seller IDs p_001,p_009 and New IDs p_003,p_012. Browser check passed on preview: false state tile texts were {'Jewellery':'Jewellery','Wall Frames':'Wall Frames'}, true state showed {'Jewellery':'COMING SOON Jewellery','Wall Frames':'COMING SOON Wall Frames'}, final restored false state was clean. DOM order under main was Hero, FeatureStrip, Categories, Bestsellers, AboutStory, USBanner, ReviewsSection, New Arrivals, InstagramFeed.",
+  "rca_of_the_issue": "Previous visible failure was caused by the literal category tagline 'Coming Soon' rendering even after coming_soon was set false. The current fix hides that tagline phrase while preserving the true-state Coming Soon pill."
+}

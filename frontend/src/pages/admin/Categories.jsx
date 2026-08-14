@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { listAllCategories, adminCreateCategory, adminUpdateCategory, adminDeleteCategory } from '../../lib/api';
+import { invalidateCategories } from '../../hooks/useCategories';
 import { toast } from 'sonner';
 import { Plus, Trash2, Edit3, X, FolderOpen } from 'lucide-react';
 import ImageFieldEditor from './ImageFieldEditor';
@@ -22,12 +23,13 @@ const AdminCategories = () => {
     try {
       if (editing.id) await adminUpdateCategory(editing.id, p);
       else await adminCreateCategory(p);
+      invalidateCategories();
       toast.success('Saved'); close(); load();
     } catch (er) { toast.error(er?.response?.data?.detail || 'Failed'); }
   };
   const del = async (c) => {
     if (!window.confirm(`Delete "${c.name}"?`)) return;
-    try { await adminDeleteCategory(c.id); toast.success('Deleted'); load(); }
+    try { await adminDeleteCategory(c.id); invalidateCategories(); toast.success('Deleted'); load(); }
     catch (er) { toast.error(er?.response?.data?.detail || 'Failed'); }
   };
 

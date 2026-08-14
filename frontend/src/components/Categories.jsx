@@ -57,7 +57,9 @@ const Categories = () => {
                 )}
                 <div className="absolute bottom-4 left-4 right-4 text-white">
                   <div className="font-serif-display text-2xl leading-tight">{c.name}</div>
-                  <div className="text-[11px] uppercase tracking-[0.15em] opacity-90 mt-1">{c.tagline}</div>
+                  {c.tagline && c.tagline.trim().toLowerCase() !== 'coming soon' && (
+                    <div className="text-[11px] uppercase tracking-[0.15em] opacity-90 mt-1">{c.tagline}</div>
+                  )}
                 </div>
               </div>
             </Link>

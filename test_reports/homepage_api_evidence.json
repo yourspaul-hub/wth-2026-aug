@@ -1,0 +1,84 @@
+{
+  "base": "https://wear-interactive.preview.emergentagent.com",
+  "timestamp": "2026-08-14T20:59:00.804235+00:00",
+  "checks": [
+    {
+      "name": "public_products_ribbon_counts",
+      "status": "pass",
+      "active_product_count": 17,
+      "best_seller_count": 2,
+      "new_count": 2
+    },
+    {
+      "name": "target_categories_can_be_toggled_off_and_persist",
+      "status": "pass",
+      "patched": [
+        {
+          "id": "cat_09",
+          "name": "Jewellery",
+          "transition_setup_status": 200,
+          "transition_setup_coming_soon": true
+        },
+        {
+          "id": "cat_09",
+          "name": "Jewellery",
+          "off_patch_status": 200,
+          "off_patch_coming_soon": false
+        },
+        {
+          "id": "cat_10",
+          "name": "Wall Frames",
+          "transition_setup_status": 200,
+          "transition_setup_coming_soon": true
+        },
+        {
+          "id": "cat_10",
+          "name": "Wall Frames",
+          "off_patch_status": 200,
+          "off_patch_coming_soon": false
+        }
+      ],
+      "after_targets": [
+        {
+          "id": "cat_09",
+          "name": "Jewellery",
+          "tagline": "Coming Soon",
+          "coming_soon": false
+        },
+        {
+          "id": "cat_10",
+          "name": "Wall Frames",
+          "tagline": "Coming Soon",
+          "coming_soon": false
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "best_seller_products": [
+      {
+        "id": "p_001",
+        "name": "Faith Cap \u2014 Blessed Edition",
+        "ribbon": "Best Seller"
+      },
+      {
+        "id": "p_009",
+        "name": "Psalm 46 Statement Tee",
+        "ribbon": "Best Seller"
+      }
+    ],
+    "new_products": [
+      {
+        "id": "p_003",
+        "name": "YHWH Minimalist Canvas Frame",
+        "ribbon": "New"
+      },
+      {
+        "id": "p_012",
+        "name": "Jehovah Jireh Wall Canvas",
+        "ribbon": "New"
+      }
+    ]
+  },
+  "errors": []
+}

@@ -47,12 +47,12 @@ const Home = () => {
       <Hero />
       <FeatureStrip />
       <Categories />
-      <FeaturedProducts title="Bestsellers" subtitle="Handpicked for you" limit={8} />
+      <FeaturedProducts title="Bestsellers" subtitle="Handpicked for you" filter={(p) => p.ribbon === 'Best Seller'} limit={8} />
       <AboutStory />
-      <InstagramFeed />
       <USBanner />
       <ReviewsSection />
-      <FeaturedProducts title="New Arrivals" subtitle="Fresh in this month" filter={(p) => p.tag === 'New' || p.tag === 'Trending' || p.tag === 'Signature'} limit={4} viewAllHref="/shop" />
+      <FeaturedProducts title="New Arrivals" subtitle="Fresh in this month" filter={(p) => p.ribbon === 'New'} limit={8} viewAllHref="/shop" />
+      <InstagramFeed />
     </main>
   );
 };
