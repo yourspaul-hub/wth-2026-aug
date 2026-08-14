@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Edit3, X, FolderOpen } from 'lucide-react';
 import ImageFieldEditor from './ImageFieldEditor';
 
-const empty = { name: '', slug: '', description: '', image: '', order: 0 };
+const empty = { name: '', slug: '', description: '', image: '', order: 0, coming_soon: false };
 
 const AdminCategories = () => {
   const [items, setItems] = useState([]);
@@ -18,7 +18,7 @@ const AdminCategories = () => {
 
   const save = async (e) => {
     e.preventDefault();
-    const p = { ...editing, order: parseInt(editing.order || 0, 10) };
+    const p = { ...editing, order: parseInt(editing.order || 0, 10), coming_soon: !!editing.coming_soon };
     try {
       if (editing.id) await adminUpdateCategory(editing.id, p);
       else await adminCreateCategory(p);
@@ -51,8 +51,11 @@ const AdminCategories = () => {
           </div>
         ) : items.map(c => (
           <div key={c.id} data-testid={`category-${c.id}`} className="bg-white rounded-xl border border-[#EBD9CE] overflow-hidden">
-            <div className="aspect-[16/9] bg-neutral-100">
+            <div className="aspect-[16/9] bg-neutral-100 relative">
               {c.image && <img src={c.image} alt={c.name} className="w-full h-full object-cover" />}
+              {c.coming_soon && (
+                <div className="absolute top-3 left-3 bg-white/95 text-[10px] uppercase tracking-[0.2em] px-3 py-1.5 rounded-full text-[#213a60]" data-testid={`coming-soon-badge-${c.id}`}>Coming Soon</div>
+              )}
             </div>
             <div className="p-5">
               <div className="flex items-start justify-between gap-3">
@@ -87,6 +90,19 @@ const AdminCategories = () => {
               {editing.image && <img src={editing.image} alt="" className="w-full aspect-[16/9] object-cover rounded-lg" />}
               <F label="Description"><textarea rows="3" value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} className="input !rounded-lg" /></F>
               <F label="Order"><input type="number" value={editing.order || 0} onChange={e => setEditing({ ...editing, order: e.target.value })} className="input w-32" /></F>
+              <label className="flex items-start gap-3 bg-[#FDF3EB] border border-[#EBD9CE] rounded-xl px-4 py-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!editing.coming_soon}
+                  onChange={e => setEditing({ ...editing, coming_soon: e.target.checked })}
+                  className="mt-0.5 accent-[#B4593F]"
+                  data-testid="category-coming-soon-toggle"
+                />
+                <span className="flex-1">
+                  <span className="block text-sm font-medium text-[#213a60]">Mark as "Coming Soon"</span>
+                  <span className="block text-[11px] text-neutral-600 mt-0.5">Shows a "Coming Soon" pill on the homepage tile and hides this category from Shop filters until you turn it off.</span>
+                </span>
+              </label>
               <div className="pt-2 flex gap-3">
                 <button type="submit" data-testid="save-category-btn" className="flex-1 bg-[#213a60] hover:bg-[#B4593F] text-white text-xs uppercase tracking-widest px-6 py-2.5 rounded-full">Save</button>
                 <button type="button" onClick={close} className="px-6 py-2.5 border border-[#EBD9CE] rounded-full text-xs uppercase tracking-widest">Cancel</button>
