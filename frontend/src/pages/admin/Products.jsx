@@ -138,8 +138,36 @@ const AdminProducts = () => {
 
   // Variant helpers
   const addOption = () => setEditing(e => ({ ...e, variant_options: [...(e.variant_options || []), { name: '', values: [] }] }));
-  const updateOption = (idx, patch) => setEditing(e => { const o = [...e.variant_options]; o[idx] = { ...o[idx], ...patch }; return { ...e, variant_options: o }; });
-  const removeOption = (idx) => setEditing(e => { const o = e.variant_options.filter((_, i) => i !== idx); return { ...e, variant_options: o }; });
+  const updateOption = (idx, patch) => setEditing(e => {
+    const opts = [...(e.variant_options || [])];
+    const before = { ...opts[idx] };
+    opts[idx] = { ...opts[idx], ...patch };
+    const after = opts[idx];
+    // If values list shrank, prune combinations whose attr value is no longer allowed.
+    let variants = e.variants || [];
+    if ('values' in patch && before.name) {
+      const allowed = new Set((after.values || []));
+      variants = variants.filter(v => !v.attrs || !(before.name in v.attrs) || allowed.has(v.attrs[before.name]));
+    }
+    // If option name changed, rename the attr key across all combinations.
+    if ('name' in patch && before.name && before.name !== after.name && after.name) {
+      variants = variants.map(v => {
+        if (!v.attrs || !(before.name in v.attrs)) return v;
+        const { [before.name]: val, ...rest } = v.attrs;
+        return { ...v, attrs: { ...rest, [after.name]: val } };
+      });
+    }
+    return { ...e, variant_options: opts, variants };
+  });
+  const removeOption = (idx) => setEditing(e => {
+    const removed = (e.variant_options || [])[idx];
+    const opts = (e.variant_options || []).filter((_, i) => i !== idx);
+    // Drop every combination that referenced this option.
+    const variants = removed?.name
+      ? (e.variants || []).filter(v => !v.attrs || !(removed.name in v.attrs))
+      : (e.variants || []);
+    return { ...e, variant_options: opts, variants };
+  });
 
   const generateVariants = () => {
     const opts = (editing.variant_options || []).filter(o => o.name && o.values?.length);
@@ -161,6 +189,7 @@ const AdminProducts = () => {
   };
 
   const updateVariant = (idx, patch) => setEditing(e => { const v = [...e.variants]; v[idx] = { ...v[idx], ...patch }; return { ...e, variants: v }; });
+  const removeVariant = (idx) => setEditing(e => ({ ...e, variants: (e.variants || []).filter((_, i) => i !== idx) }));
 
   const setListField = (field, arr) => setEditing(e => ({ ...e, [field]: arr }));
 
@@ -380,15 +409,26 @@ const AdminProducts = () => {
                       <div className="border border-[#EBD9CE] rounded-xl overflow-hidden">
                         <table className="w-full text-xs">
                           <thead className="bg-[#FDF3EB] text-neutral-600">
-                            <tr><th className="text-left px-3 py-2">Options</th><th className="text-left px-3 py-2">Price</th><th className="text-left px-3 py-2">Stock</th><th className="text-left px-3 py-2">SKU</th></tr>
+                            <tr><th className="text-left px-3 py-2">Options</th><th className="text-left px-3 py-2">Price</th><th className="text-left px-3 py-2">Stock</th><th className="text-left px-3 py-2">SKU</th><th className="w-10"></th></tr>
                           </thead>
                           <tbody className="divide-y divide-[#EBD9CE]">
                             {editing.variants.map((v, i) => (
-                              <tr key={v.id || i}>
+                              <tr key={v.id || i} data-testid={`variant-row-${i}`}>
                                 <td className="px-3 py-2">{Object.entries(v.attrs || {}).map(([k, val]) => `${k}: ${val}`).join(', ')}</td>
                                 <td className="px-3 py-2"><input type="number" value={v.price} onChange={e => updateVariant(i, { price: +e.target.value })} className="w-20 bg-transparent border border-[#EBD9CE] rounded px-2 py-1" /></td>
                                 <td className="px-3 py-2"><input type="number" value={v.stock} onChange={e => updateVariant(i, { stock: +e.target.value })} className="w-20 bg-transparent border border-[#EBD9CE] rounded px-2 py-1" /></td>
                                 <td className="px-3 py-2"><input value={v.sku || ''} onChange={e => updateVariant(i, { sku: e.target.value })} className="w-40 bg-transparent border border-[#EBD9CE] rounded px-2 py-1 font-mono" /></td>
+                                <td className="px-2 py-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => removeVariant(i)}
+                                    data-testid={`delete-variant-${i}`}
+                                    title="Delete this combination"
+                                    className="p-1.5 rounded-full text-neutral-400 hover:bg-rose-50 hover:text-rose-600"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </td>
                               </tr>
                             ))}
                           </tbody>
