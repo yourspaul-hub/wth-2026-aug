@@ -20,7 +20,6 @@ const Lightbox = () => {
   useEffect(() => {
     let mounted = true;
     if (typeof window === 'undefined') return undefined;
-    if (window.innerWidth < 1024) return undefined; // desktop only
 
     api.get('/settings/public').then(r => {
       if (!mounted) return;
