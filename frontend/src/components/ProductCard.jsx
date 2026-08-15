@@ -39,7 +39,7 @@ const ProductCard = ({ product }) => {
 
         {/* Ribbon */}
         {(product.ribbon || product.tag) && (
-          <span className={`absolute top-3 left-3 text-white text-[10px] uppercase tracking-[0.15em] px-3 py-1 rounded-full ${(product.ribbon === 'Sale' || product.ribbon === 'Best Seller' || product.tag?.toLowerCase().includes('bestseller')) ? 'shimmer-badge' : product.ribbon === 'New' ? 'bg-emerald-600' : product.ribbon === 'Trending' ? 'bg-[#B4593F]' : 'shimmer-badge'}`}>
+          <span className={`absolute top-3 left-3 text-white text-[10px] uppercase tracking-[0.15em] px-3 py-1 rounded-full ${(product.ribbon === 'Sale' || product.ribbon === 'Best Seller' || product.tag?.toLowerCase().includes('bestseller')) ? 'shimmer-badge' : product.ribbon === 'New' ? 'bg-emerald-600' : product.ribbon === 'Trending' ? 'bg-[#B4593F]' : product.ribbon === 'Personalise' ? 'bg-[#213a60]' : 'shimmer-badge'}`}>
             {product.ribbon || product.tag}
           </span>
         )}
