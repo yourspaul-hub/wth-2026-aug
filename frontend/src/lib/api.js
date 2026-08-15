@@ -240,6 +240,11 @@ export const adminReorderCategories = (ids) => api.post('/admin/categories/reord
 export const adminReorderSubcategories = (cid, ids) => api.post(`/admin/categories/${cid}/subcategories/reorder`, { ids }).then(r => r.data);
 export const adminReorderProducts = (ids) => api.post('/admin/products/reorder', { ids }).then(r => r.data);
 
+// Payment methods + checkout settings
+export const fetchPaymentMethods = () => api.get('/payment-methods').then(r => r.data);
+export const adminGetCheckoutSettings = () => api.get('/admin/checkout-settings').then(r => r.data);
+export const adminUpdateCheckoutSettings = (p) => api.put('/admin/checkout-settings', p).then(r => r.data);
+
 // Newsletter enable/disable
 export const adminGetNewsletterSettings = () => api.get('/admin/newsletter-settings').then(r => r.data);
 export const adminUpdateNewsletterSettings = (p) => api.put('/admin/newsletter-settings', p).then(r => r.data);

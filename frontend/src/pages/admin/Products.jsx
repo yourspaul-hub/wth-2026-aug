@@ -11,7 +11,7 @@ const empty = {
   tag: '', ribbon: '', colors: [], description: '', stock: 100, sku: '',
   active: true, product_type: 'physical', digital_file_url: '',
   weight_grams: 500,
-  personalization_enabled: false, personalization_label: 'Personalize (optional)', personalization_cost: 0, personalization_max_length: 40,
+  personalization_enabled: false, personalization_label: 'Personalize (optional)', personalization_cost: 0, personalization_max_length: 40, cod_disabled: false,
   variant_options: [], variants: [],
   seo_title: '', seo_description: '', seo_keywords: '',
 };
@@ -303,6 +303,19 @@ const AdminProducts = () => {
                   <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Size Chart <span className="text-neutral-400 normal-case">(shown on the product page)</span></span><select value={editing.size_chart_id || ''} onChange={e => setEditing({ ...editing, size_chart_id: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" data-testid="product-size-chart-select"><option value="">— None —</option>{Object.entries(sizeCharts.reduce((acc, c) => { const k = c.section || 'Other'; (acc[k] = acc[k] || []).push(c); return acc; }, {})).map(([sec, arr]) => (
                     <optgroup key={sec} label={sec}>{arr.map(c => <option key={c.id} value={c.id}>{c.name}{!c.active ? ' (hidden)' : ''}</option>)}</optgroup>
                   ))}</select></label>
+                  <label className="flex items-start gap-3 bg-[#FDF3EB] border border-[#EBD9CE] rounded-xl px-4 py-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!editing.cod_disabled}
+                      onChange={e => setEditing({ ...editing, cod_disabled: e.target.checked })}
+                      className="mt-0.5 accent-[#B4593F]"
+                      data-testid="product-cod-disabled"
+                    />
+                    <span className="flex-1">
+                      <span className="block text-sm font-medium text-[#213a60]">Disable Cash on Delivery for this product</span>
+                      <span className="block text-[11px] text-neutral-600 mt-0.5">If any cart item has this on, COD won't be offered at checkout — only online payment.</span>
+                    </span>
+                  </label>
                   <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Verse / Subtitle</span><input value={editing.verse || ''} onChange={e => setEditing({ ...editing, verse: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
                   <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Description</span><textarea rows="4" value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
                   <div className="grid grid-cols-2 gap-3">

@@ -135,6 +135,7 @@ class Product(BaseModel):
     personalization_label: str = 'Personalize (optional)'
     personalization_cost: int = 0  # extra INR added to line total when customer enters a personalization
     personalization_max_length: int = 40
+    cod_disabled: bool = False  # disable Cash on Delivery for this specific product
     variant_options: List[dict] = []  # [{name:'Size', values:['S','M','L']}]
     variants: List[dict] = []  # [{id, attrs:{Size:'M',Color:'Black'}, price, original_price, stock, sku, image}]
     seo_title: Optional[str] = None
@@ -172,6 +173,7 @@ class ProductCreate(BaseModel):
     personalization_label: str = 'Personalize (optional)'
     personalization_cost: int = 0  # extra INR added to line total when customer enters a personalization
     personalization_max_length: int = 40
+    cod_disabled: bool = False
     variant_options: List[dict] = []
     variants: List[dict] = []
     seo_title: Optional[str] = None
@@ -207,6 +209,7 @@ class ProductUpdate(BaseModel):
     personalization_label: Optional[str] = None
     personalization_cost: Optional[int] = None
     personalization_max_length: Optional[int] = None
+    cod_disabled: Optional[bool] = None
     variant_options: Optional[List[dict]] = None
     variants: Optional[List[dict]] = None
     seo_title: Optional[str] = None
@@ -373,8 +376,11 @@ class TaxRate(BaseModel):
     id: str = Field(default_factory=lambda: _uid('tx_'))
     name: str  # 'GST 18%', 'GST 12%'
     percent: float = 18.0
-    scope: str = 'all'  # 'all' | 'category' | 'product'
-    category_id: Optional[str] = None
+    scope: str = 'all'  # 'all' | 'category' | 'subcategory' | 'specific' | 'product'
+    category_id: Optional[str] = None  # legacy single-category
+    subcategory_id: Optional[str] = None  # legacy single-subcategory
+    category_ids: List[str] = []       # multi-select categories (preferred)
+    subcategory_ids: List[str] = []    # multi-select subcategories (preferred)
     active: bool = True
     order: int = 0
     created_at: datetime = Field(default_factory=_now)
@@ -385,6 +391,9 @@ class TaxRateCreate(BaseModel):
     percent: float = 18.0
     scope: str = 'all'
     category_id: Optional[str] = None
+    subcategory_id: Optional[str] = None
+    category_ids: List[str] = []
+    subcategory_ids: List[str] = []
     active: bool = True
     order: int = 0
 

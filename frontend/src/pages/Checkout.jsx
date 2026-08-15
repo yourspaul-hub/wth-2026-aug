@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useCurrency } from '../context/CurrencyContext';
-import { createOrder, validateCoupon, verifyPayment, fetchShippingOptions } from '../lib/api';
+import { createOrder, validateCoupon, verifyPayment, fetchShippingOptions, fetchPublicSettings, fetchPaymentMethods } from '../lib/api';
 import { toast } from 'sonner';
 import { ArrowRight, Tag, Truck, Lock, CheckCircle2, X, Info, CreditCard, Store, Wallet } from 'lucide-react';
 import SeoHelmet from '../components/SeoHelmet';
@@ -10,12 +10,22 @@ import Logo from '../components/Logo';
 
 const emptyAddr = { full_name: '', email: '', phone: '', line1: '', line2: '', city: '', state: '', pincode: '', country: 'India' };
 
-const PAYMENT_METHODS = [
-  { id: 'razorpay', label: 'Razorpay', desc: 'UPI, Cards, Netbanking, Wallets', icon: Wallet, badge: 'MOCKED' },
-  { id: 'stripe', label: 'Stripe', desc: 'International Credit/Debit Cards', icon: CreditCard, badge: 'MOCKED' },
-  { id: 'paypal', label: 'PayPal', desc: 'PayPal Balance or Card', icon: Wallet, badge: 'MOCKED' },
-  { id: 'cod', label: 'Cash on Delivery', desc: 'Pay when you receive (India only)', icon: Store, badge: null },
+const ALL_METHODS = [
+  { id: 'razorpay', label: 'Razorpay', desc: 'UPI, Cards, Netbanking, Wallets', icon: Wallet },
+  { id: 'stripe', label: 'Stripe', desc: 'International Credit/Debit Cards', icon: CreditCard },
+  { id: 'paypal', label: 'PayPal', desc: 'PayPal Balance or Card', icon: Wallet },
+  { id: 'cod', label: 'Cash on Delivery', desc: 'Pay when you receive (India only)', icon: Store },
 ];
+
+// Dynamically load the Razorpay Checkout script the first time we need it.
+const loadRazorpayScript = () => new Promise((resolve) => {
+  if (typeof window !== 'undefined' && window.Razorpay) return resolve(true);
+  const s = document.createElement('script');
+  s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+  s.onload = () => resolve(true);
+  s.onerror = () => resolve(false);
+  document.body.appendChild(s);
+});
 
 const Checkout = () => {
   const { items, totals, clearCart } = useCart();
@@ -28,9 +38,36 @@ const Checkout = () => {
   const [processing, setProcessing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [paymentProvider, setPaymentProvider] = useState('razorpay');
+  const [pmConfig, setPmConfig] = useState(null); // {razorpay:{enabled},stripe:{},paypal:{},cod:{}}
+  const [pricesIncludeTax, setPricesIncludeTax] = useState(true);
   const nav = useNavigate();
 
   useEffect(() => { if (!orderPlaced && items.length === 0) nav('/shop'); }, [items.length, nav, orderPlaced]);
+
+  // Load payment method availability + tax mode once
+  useEffect(() => {
+    fetchPaymentMethods().then(setPmConfig).catch(() => setPmConfig(null));
+    fetchPublicSettings().then(s => setPricesIncludeTax(s?.checkout?.prices_include_tax !== false)).catch(() => {});
+  }, []);
+
+  // Determine which methods actually render on the page. When products in the cart
+  // opt out of COD, hide COD even if globally enabled.
+  const codBlockedByProduct = items.some(it => it.cod_disabled);
+  const availableMethods = useMemo(() => {
+    if (!pmConfig) return [];
+    return ALL_METHODS.filter(m => {
+      if (m.id === 'cod') return pmConfig.cod?.enabled && !codBlockedByProduct;
+      return !!pmConfig[m.id]?.enabled;
+    });
+  }, [pmConfig, codBlockedByProduct]);
+
+  // Auto-select the first available method whenever the list changes.
+  useEffect(() => {
+    if (!availableMethods.length) return;
+    if (!availableMethods.find(m => m.id === paymentProvider)) {
+      setPaymentProvider(availableMethods[0].id);
+    }
+  }, [availableMethods, paymentProvider]);
 
   // Fetch shipping options when address changes enough
   useEffect(() => {
@@ -48,10 +85,15 @@ const Checkout = () => {
 
   const discount = coupon?.discount || 0;
   const shipping_fee = selectedShip ? (selectedShip.kind === 'free' ? 0 : selectedShip.effective_price ?? selectedShip.price) : 0;
-  // Approximate tax preview @ 12% GST (server recalculates authoritatively)
+  // Tax preview @ 12% GST (server recalculates authoritatively). When prices already include GST we
+  // reverse-compute the amount from the subtotal instead of adding on top.
   const taxable = Math.max(0, totals.subtotal - discount);
-  const tax_preview = Math.round(taxable * 0.12);
-  const total = Math.max(0, totals.subtotal - discount + shipping_fee + tax_preview);
+  const tax_preview = pricesIncludeTax
+    ? Math.round(taxable * 12 / 112)
+    : Math.round(taxable * 0.12);
+  const total = pricesIncludeTax
+    ? Math.max(0, totals.subtotal - discount + shipping_fee)
+    : Math.max(0, totals.subtotal - discount + shipping_fee + tax_preview);
 
   const applyCoupon = async () => {
     if (!couponCode) return;
@@ -66,6 +108,7 @@ const Checkout = () => {
   const placeOrder = async () => {
     if (!canProceed) { toast.error('Please fill all shipping fields'); return; }
     if (!selectedShip) { toast.error('Please select a shipping method'); return; }
+    if (!availableMethods.length) { toast.error('No payment methods are configured yet. Please contact us.'); return; }
     setProcessing(true);
     try {
       const payload = {
@@ -76,9 +119,54 @@ const Checkout = () => {
         payment_provider: paymentProvider,
       };
       const res = await createOrder(payload);
-      toast.loading(`Processing ${paymentProvider.toUpperCase()} payment (mocked)...`, { id: 'pay' });
-      await new Promise(r => setTimeout(r, 1200));
-      const verifyBody = { order_number: res.order.order_number, provider: paymentProvider };
+      const orderNo = res.order.order_number;
+
+      // Real Razorpay: open the Razorpay Checkout popup and let the customer pay.
+      if (paymentProvider === 'razorpay' && !res.payment?.mocked) {
+        const scriptOk = await loadRazorpayScript();
+        if (!scriptOk) { toast.error('Could not load Razorpay Checkout. Please try again.'); return; }
+        await new Promise((resolve) => {
+          const options = {
+            key: res.payment.key_id,
+            order_id: res.payment.order_id,
+            amount: res.payment.amount,
+            currency: res.payment.currency,
+            name: res.payment.name || 'Wear The Hope',
+            description: res.payment.description || `Order ${orderNo}`,
+            prefill: res.payment.prefill || {},
+            theme: { color: '#213a60' },
+            handler: async (rzp) => {
+              try {
+                const verified = await verifyPayment({
+                  order_number: orderNo,
+                  provider: 'razorpay',
+                  razorpay_order_id: rzp.razorpay_order_id,
+                  razorpay_payment_id: rzp.razorpay_payment_id,
+                  razorpay_signature: rzp.razorpay_signature,
+                });
+                if (verified.ok) {
+                  setOrderPlaced(true);
+                  nav(`/order/${orderNo}`);
+                  clearCart();
+                  toast.success('Payment successful');
+                } else toast.error('Payment verification failed');
+              } catch (e) {
+                toast.error(e?.response?.data?.detail || 'Payment verification failed');
+              } finally { resolve(); }
+            },
+            modal: { ondismiss: () => { toast.error('Payment cancelled'); resolve(); } },
+          };
+          const rz = new window.Razorpay(options);
+          rz.on('payment.failed', () => { toast.error('Payment failed. Please try again.'); resolve(); });
+          rz.open();
+        });
+        return;
+      }
+
+      // Fallback / other providers / COD — mocked flow (existing behaviour)
+      toast.loading(`Processing ${paymentProvider.toUpperCase()}...`, { id: 'pay' });
+      await new Promise(r => setTimeout(r, 900));
+      const verifyBody = { order_number: orderNo, provider: paymentProvider };
       if (paymentProvider === 'razorpay') verifyBody.razorpay_order_id = res.payment.order_id;
       if (paymentProvider === 'stripe') verifyBody.stripe_session_id = res.payment.session_id;
       if (paymentProvider === 'paypal') verifyBody.paypal_order_id = res.payment.paypal_order_id;
@@ -86,9 +174,9 @@ const Checkout = () => {
       toast.dismiss('pay');
       if (verified.ok) {
         setOrderPlaced(true);
-        nav(`/order/${res.order.order_number}`);
+        nav(`/order/${orderNo}`);
         clearCart();
-        toast.success(`Payment successful via ${paymentProvider.toUpperCase()}!`);
+        toast.success(paymentProvider === 'cod' ? 'Order placed — pay when you receive!' : `Payment successful via ${paymentProvider.toUpperCase()}!`);
       } else toast.error('Payment failed');
     } catch (e) {
       toast.dismiss('pay');
@@ -152,17 +240,19 @@ const Checkout = () => {
             <div className="bg-white rounded-2xl border border-[#EBD9CE] p-6 md:p-8">
               <div className="flex items-center gap-2 mb-4"><Lock className="w-4 h-4 text-[#B4593F]" /><h2 className="font-serif-display text-2xl">Payment Method</h2></div>
               <div className="grid sm:grid-cols-2 gap-3">
-                {PAYMENT_METHODS.map(pm => {
+                {availableMethods.length === 0 && (
+                  <div className="sm:col-span-2 text-sm text-neutral-600 bg-[#FDF3EB] rounded-lg p-4 border border-[#EBD9CE]">
+                    No online payment method is currently available. {codBlockedByProduct && 'Some items in your cart do not support Cash on Delivery. '}Please contact us at 2wearthehope@gmail.com to place this order.
+                  </div>
+                )}
+                {availableMethods.map(pm => {
                   const I = pm.icon;
                   const active = paymentProvider === pm.id;
                   return (
-                    <button key={pm.id} onClick={() => setPaymentProvider(pm.id)} className={`flex items-center gap-3 p-4 border rounded-xl text-left transition-colors ${active ? 'border-[#B4593F] bg-[#FDF3EB]' : 'border-[#EBD9CE] hover:border-[#B4593F]'}`}>
+                    <button key={pm.id} type="button" onClick={() => setPaymentProvider(pm.id)} data-testid={`payment-${pm.id}`} className={`flex items-center gap-3 p-4 border rounded-xl text-left transition-colors ${active ? 'border-[#B4593F] bg-[#FDF3EB]' : 'border-[#EBD9CE] hover:border-[#B4593F]'}`}>
                       <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center border border-[#EBD9CE]"><I className="w-4 h-4 text-[#B4593F]" /></div>
                       <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{pm.label}</span>
-                          {pm.badge && <span className="text-[9px] uppercase tracking-widest bg-yellow-50 text-yellow-800 px-2 py-0.5 rounded">{pm.badge}</span>}
-                        </div>
+                        <div className="text-sm font-medium">{pm.label}</div>
                         <div className="text-[11px] text-neutral-500 mt-0.5">{pm.desc}</div>
                       </div>
                       {active && <CheckCircle2 className="w-4 h-4 text-[#B4593F]" />}
@@ -170,7 +260,6 @@ const Checkout = () => {
                   );
                 })}
               </div>
-              <div className="mt-4 flex items-start gap-2 text-xs text-neutral-500 bg-[#FDF3EB] rounded-lg p-3"><Info className="w-3.5 h-3.5 mt-0.5 text-[#B4593F]" /> All online payments are MOCKED. Add live API keys to backend .env to enable real transactions.</div>
             </div>
           </div>
 
@@ -211,7 +300,7 @@ const Checkout = () => {
                 <div className="flex justify-between"><span className="text-neutral-600">Subtotal</span><span>{format(totals.subtotal)}</span></div>
                 {discount > 0 && <div className="flex justify-between text-[#B4593F]"><span>Discount</span><span>-{format(discount)}</span></div>}
                 <div className="flex justify-between"><span className="text-neutral-600">Shipping</span><span>{shipping_fee === 0 ? 'Free' : format(shipping_fee)}</span></div>
-                <div className="flex justify-between text-xs text-neutral-600"><span>GST 12% (est.)</span><span>{format(tax_preview)}</span></div>
+                <div className="flex justify-between text-xs text-neutral-600"><span>{pricesIncludeTax ? 'GST 12% (included)' : 'GST 12% (est.)'}</span><span>{format(tax_preview)}</span></div>
                 <div className="flex justify-between text-lg font-serif-display pt-3 border-t border-[#EBD9CE]"><span>Total</span><span className="text-[#B4593F]" data-testid="checkout-total">{format(total)}</span></div>
                 {currencyCode !== 'INR' && (
                   <div className="text-[10px] text-neutral-500">Payment is processed in INR. Amount converted from ₹{total.toLocaleString('en-IN')}.</div>
@@ -219,8 +308,8 @@ const Checkout = () => {
                 <div className="text-[10px] text-neutral-500">Final tax computed on server</div>
               </div>
 
-              <button disabled={processing || !canProceed} onClick={placeOrder} className="mt-6 w-full bg-[#213a60] hover:bg-[#B4593F] disabled:bg-neutral-300 text-white py-4 rounded-full text-xs uppercase tracking-widest inline-flex items-center justify-center gap-2 transition-colors">
-                {processing ? 'Processing...' : (<>Pay via {PAYMENT_METHODS.find(p => p.id === paymentProvider)?.label} · {format(total)} <ArrowRight className="w-4 h-4" /></>)}
+              <button disabled={processing || !canProceed || !availableMethods.length} onClick={placeOrder} className="mt-6 w-full bg-[#213a60] hover:bg-[#B4593F] disabled:bg-neutral-300 text-white py-4 rounded-full text-xs uppercase tracking-widest inline-flex items-center justify-center gap-2 transition-colors">
+                {processing ? 'Processing...' : (<>Pay via {ALL_METHODS.find(p => p.id === paymentProvider)?.label || 'Payment'} · {format(total)} <ArrowRight className="w-4 h-4" /></>)}
               </button>
               <div className="mt-4 text-[10px] uppercase tracking-widest text-neutral-500 text-center inline-flex items-center gap-2 justify-center w-full"><Lock className="w-3 h-3" /> Secure checkout · SSL encrypted</div>
             </div>

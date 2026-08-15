@@ -900,17 +900,28 @@ async def create_order(payload: OrderCreate):
             shipping_option_name = 'Standard'
 
     # Tax calculation (per-category aware; falls back to global rate)
+    prices_include_tax = ((await get_setting('PRICES_INCLUDE_TAX', 'true')) or 'true').strip().lower() in ('true', '1', 'yes', 'on')
     tax_amount = 0
     tax_breakdown_map = {}  # {rate_id: {name, percent, amount}}
     taxable = max(0, subtotal - discount)
     if taxable > 0:
         global_rate = await db.tax_rates.find_one({'scope': 'all', 'active': True}, {'_id': 0}, sort=[('order', 1)])
         for fi in fresh_items:
-            p = await db.products.find_one({'id': fi['product_id']}, {'_id': 0, 'category': 1})
+            p = await db.products.find_one({'id': fi['product_id']}, {'_id': 0, 'category': 1, 'subcategory': 1})
             cat_id = (p or {}).get('category')
+            sub_id = (p or {}).get('subcategory')
             rate = None
-            if cat_id:
-                rate = await db.tax_rates.find_one({'scope': 'category', 'category_id': cat_id, 'active': True}, {'_id': 0})
+            # Match a rate scoped to this subcategory, then category, then global.
+            if sub_id:
+                rate = await db.tax_rates.find_one({'active': True, '$or': [
+                    {'subcategory_ids': sub_id},
+                    {'scope': 'subcategory', 'subcategory_id': sub_id},
+                ]}, {'_id': 0})
+            if not rate and cat_id:
+                rate = await db.tax_rates.find_one({'active': True, '$or': [
+                    {'category_ids': cat_id},
+                    {'scope': 'category', 'category_id': cat_id},
+                ]}, {'_id': 0})
             if not rate:
                 rate = global_rate
             if not rate:
@@ -919,7 +930,11 @@ async def create_order(payload: OrderCreate):
             line_total = fi['price'] * fi['qty']
             line_discount = int(discount * line_total / subtotal) if subtotal else 0
             line_taxable = max(0, line_total - line_discount)
-            line_tax = int(round(line_taxable * rate['percent'] / 100))
+            if prices_include_tax:
+                # Reverse-compute tax already baked into the price
+                line_tax = int(round(line_taxable * rate['percent'] / (100 + rate['percent'])))
+            else:
+                line_tax = int(round(line_taxable * rate['percent'] / 100))
             tax_amount += line_tax
             key = rate['id']
             if key not in tax_breakdown_map:
@@ -927,11 +942,46 @@ async def create_order(payload: OrderCreate):
             tax_breakdown_map[key]['amount'] += line_tax
     tax_breakdown = list(tax_breakdown_map.values())
 
-    total = max(0, subtotal - discount + shipping_fee + tax_amount)
+    if prices_include_tax:
+        # Prices already contain the tax — do not add it again to the total.
+        total = max(0, subtotal - discount + shipping_fee)
+    else:
+        total = max(0, subtotal - discount + shipping_fee + tax_amount)
 
     order_number = _gen_order_number()
     provider = (payload.payment_provider or 'razorpay').lower()
-    mock_razorpay_id = f'order_mock_{uuid.uuid4().hex[:16]}' if provider == 'razorpay' else None
+
+    # Gate Cash on Delivery — global toggle + per-product opt-out
+    pm_cfg = await _payment_methods_config()
+    if provider == 'cod':
+        if not pm_cfg['cod']['enabled']:
+            raise HTTPException(status_code=400, detail='Cash on Delivery is not accepted right now.')
+        # Reject if any line item disables COD
+        for fi in fresh_items:
+            p = await db.products.find_one({'id': fi['product_id']}, {'_id': 0, 'cod_disabled': 1, 'name': 1})
+            if p and p.get('cod_disabled'):
+                raise HTTPException(status_code=400, detail=f'"{p.get("name")}" is not available for Cash on Delivery. Please choose an online payment.')
+
+    mock_razorpay_id = None
+    real_razorpay_order = None
+    if provider == 'razorpay' and pm_cfg['razorpay']['enabled']:
+        try:
+            import razorpay as _rzp
+            key_id = (await get_setting('RAZORPAY_KEY_ID', '')) or ''
+            key_secret = (await get_setting('RAZORPAY_KEY_SECRET', '')) or ''
+            _rzp_client = _rzp.Client(auth=(key_id, key_secret))
+            real_razorpay_order = _rzp_client.order.create({
+                'amount': int(total * 100),
+                'currency': 'INR',
+                'receipt': order_number,
+                'notes': {'order_number': order_number},
+            })
+            mock_razorpay_id = real_razorpay_order['id']
+        except Exception as _e:
+            logger.warning('Razorpay live order.create failed, falling back to mock: %s', _e)
+            mock_razorpay_id = f'order_mock_{uuid.uuid4().hex[:16]}'
+    elif provider == 'razorpay':
+        mock_razorpay_id = f'order_mock_{uuid.uuid4().hex[:16]}'
     mock_stripe_id = f'cs_test_mock_{uuid.uuid4().hex[:20]}' if provider == 'stripe' else None
     mock_paypal_id = f'PAYPAL_MOCK_{uuid.uuid4().hex[:16].upper()}' if provider == 'paypal' else None
 
@@ -980,30 +1030,35 @@ async def create_order(payload: OrderCreate):
     except Exception:
         pass
 
-    # Build provider-specific mocked payment payload
+    # Build provider-specific payment payload — live where API keys are configured, mocked otherwise.
+    is_live = False
     payment = {'provider': provider, 'mocked': True, 'amount': total * 100, 'currency': 'INR', 'order_number': order_number}
     if provider == 'razorpay':
+        rzp_live = pm_cfg['razorpay']['enabled'] and real_razorpay_order is not None
         payment.update({
             'order_id': mock_razorpay_id,
-            'key_id': 'rzp_test_MOCKED_KEY',
+            'key_id': pm_cfg['razorpay']['key_id'] or 'rzp_test_MOCKED_KEY',
             'name': 'Wear The Hope',
             'description': f'Order {order_number}',
             'prefill': {'name': payload.shipping_address.full_name, 'email': payload.shipping_address.email, 'contact': payload.shipping_address.phone},
         })
+        payment['mocked'] = not rzp_live
+        is_live = rzp_live
     elif provider == 'stripe':
         payment.update({
             'session_id': mock_stripe_id,
-            'publishable_key': 'pk_test_MOCKED_KEY',
+            'publishable_key': pm_cfg['stripe']['publishable_key'] or 'pk_test_MOCKED_KEY',
             'checkout_url': f'#mock-stripe-checkout/{mock_stripe_id}',
         })
     elif provider == 'paypal':
         payment.update({
             'paypal_order_id': mock_paypal_id,
-            'client_id': 'PAYPAL_CLIENT_MOCKED',
+            'client_id': pm_cfg['paypal']['client_id'] or 'PAYPAL_CLIENT_MOCKED',
             'approve_url': f'#mock-paypal-approve/{mock_paypal_id}',
         })
     elif provider == 'cod':
-        payment.update({'cod': True, 'note': 'Cash on delivery selected'})
+        payment.update({'cod': True, 'mocked': False, 'note': 'Cash on delivery selected'})
+        is_live = True
 
     return {'order': doc, 'payment': payment, 'razorpay': payment if provider == 'razorpay' else None}
 
@@ -1031,15 +1086,33 @@ class PaymentVerify(BaseModel):
 @api.post('/payments/verify')
 @api.post('/payments/razorpay/verify')
 async def verify_payment(payload: PaymentVerify):
-    """MOCKED payment verify — accepts any provider and marks order paid."""
+    """Verifies payment. For Razorpay with configured live keys we validate the HMAC signature;
+    other providers remain mocked until their SDKs are wired up."""
     order = await db.orders.find_one({'order_number': payload.order_number}, {'_id': 0})
     if not order:
         raise HTTPException(status_code=404, detail='Order not found')
     provider = (payload.provider or order.get('payment_provider') or 'razorpay').lower()
 
+    pm_cfg = await _payment_methods_config()
+    is_mocked = True
     reference = None
     updates = {'payment_status': 'paid', 'status': 'paid', 'payment_provider': provider, 'updated_at': datetime.now(timezone.utc)}
     if provider == 'razorpay':
+        if pm_cfg['razorpay']['enabled'] and payload.razorpay_signature and payload.razorpay_payment_id and payload.razorpay_order_id:
+            try:
+                import razorpay as _rzp
+                key_id = (await get_setting('RAZORPAY_KEY_ID', '')) or ''
+                key_secret = (await get_setting('RAZORPAY_KEY_SECRET', '')) or ''
+                _client = _rzp.Client(auth=(key_id, key_secret))
+                _client.utility.verify_payment_signature({
+                    'razorpay_order_id': payload.razorpay_order_id,
+                    'razorpay_payment_id': payload.razorpay_payment_id,
+                    'razorpay_signature': payload.razorpay_signature,
+                })
+                is_mocked = False
+            except Exception as _e:
+                logger.warning('Razorpay signature verification failed: %s', _e)
+                raise HTTPException(status_code=400, detail='Invalid payment signature')
         reference = payload.razorpay_payment_id or f'pay_mock_{uuid.uuid4().hex[:16]}'
         updates['razorpay_payment_id'] = reference
     elif provider == 'stripe':
@@ -1057,7 +1130,7 @@ async def verify_payment(payload: PaymentVerify):
         await emit_order_email(order, 'order_paid')
     except Exception as _e:
         logger.warning('order_paid email failed: %s', _e)
-    return {'ok': True, 'mocked': True, 'provider': provider, 'reference': reference, 'order': order}
+    return {'ok': True, 'mocked': is_mocked, 'provider': provider, 'reference': reference, 'order': order}
 
 
 # ================= SHIPPING RULES =================
@@ -1102,6 +1175,70 @@ async def update_shipping_rule(rid: str, payload: dict, user: dict = Depends(req
 async def delete_shipping_rule(rid: str, user: dict = Depends(require_store)):
     await db.shipping_rules.delete_one({'id': rid})
     return {'ok': True}
+
+
+# ================= PAYMENT METHODS =================
+async def _payment_methods_config():
+    """Return the current availability of each payment provider based on stored API keys and admin settings."""
+    rzp_key = (await get_setting('RAZORPAY_KEY_ID', '')) or ''
+    rzp_secret = (await get_setting('RAZORPAY_KEY_SECRET', '')) or ''
+    stripe_pk = (await get_setting('STRIPE_PUBLISHABLE_KEY', '')) or ''
+    stripe_sk = (await get_setting('STRIPE_SECRET_KEY', '')) or ''
+    pp_client = (await get_setting('PAYPAL_CLIENT_ID', '')) or ''
+    pp_secret = (await get_setting('PAYPAL_SECRET', '')) or ''
+    cod_raw = (await get_setting('COD_ENABLED', 'true')) or 'true'
+    cod_enabled = cod_raw.strip().lower() in ('true', '1', 'yes', 'on')
+    # A provider is "live" when both its public key and secret are set and don't look like the mocked defaults.
+    def _live(pk: str, sk: str) -> bool:
+        pk, sk = (pk or '').strip(), (sk or '').strip()
+        if not pk or not sk:
+            return False
+        if 'MOCK' in pk.upper() or 'MOCK' in sk.upper():
+            return False
+        return True
+    return {
+        'razorpay': {'enabled': _live(rzp_key, rzp_secret), 'key_id': rzp_key if _live(rzp_key, rzp_secret) else ''},
+        'stripe':   {'enabled': _live(stripe_pk, stripe_sk), 'publishable_key': stripe_pk if _live(stripe_pk, stripe_sk) else ''},
+        'paypal':   {'enabled': _live(pp_client, pp_secret), 'client_id': pp_client if _live(pp_client, pp_secret) else ''},
+        'cod':      {'enabled': cod_enabled},
+    }
+
+
+@api.get('/payment-methods')
+async def public_payment_methods():
+    """Publicly consumable list of enabled payment providers, plus safe public identifiers (Razorpay key_id, Stripe publishable key, PayPal client_id)."""
+    return await _payment_methods_config()
+
+
+class CheckoutSettingsUpdate(BaseModel):
+    cod_enabled: Optional[bool] = None
+    prices_include_tax: Optional[bool] = None
+
+
+@api.get('/admin/checkout-settings')
+async def admin_get_checkout_settings(user: dict = Depends(require_store)):
+    return {
+        'cod_enabled': ((await get_setting('COD_ENABLED', 'true')) or 'true').strip().lower() in ('true', '1', 'yes', 'on'),
+        'prices_include_tax': ((await get_setting('PRICES_INCLUDE_TAX', 'true')) or 'true').strip().lower() in ('true', '1', 'yes', 'on'),
+    }
+
+
+@api.put('/admin/checkout-settings')
+async def admin_update_checkout_settings(payload: CheckoutSettingsUpdate, user: dict = Depends(require_store)):
+    now = datetime.now(timezone.utc)
+    if payload.cod_enabled is not None:
+        await db.settings.update_one(
+            {'key': 'COD_ENABLED'},
+            {'$set': {'key': 'COD_ENABLED', 'value': 'true' if payload.cod_enabled else 'false', 'category': 'checkout', 'updated_at': now}},
+            upsert=True,
+        )
+    if payload.prices_include_tax is not None:
+        await db.settings.update_one(
+            {'key': 'PRICES_INCLUDE_TAX'},
+            {'$set': {'key': 'PRICES_INCLUDE_TAX', 'value': 'true' if payload.prices_include_tax else 'false', 'category': 'checkout', 'updated_at': now}},
+            upsert=True,
+        )
+    return await admin_get_checkout_settings(user)
 
 
 # ================= TAX RATES =================
@@ -3663,6 +3800,10 @@ async def get_public_settings():
         'newsletter': {
             # Disabled by default — admins must explicitly enable email capture.
             'enabled': ((await get_setting('NEWSLETTER_ENABLED', 'false')) or 'false').strip().lower() in ('true', '1', 'yes', 'on'),
+        },
+        'checkout': {
+            'prices_include_tax': ((await get_setting('PRICES_INCLUDE_TAX', 'true')) or 'true').strip().lower() in ('true', '1', 'yes', 'on'),
+            'cod_enabled': ((await get_setting('COD_ENABLED', 'true')) or 'true').strip().lower() in ('true', '1', 'yes', 'on'),
         },
     }
 
