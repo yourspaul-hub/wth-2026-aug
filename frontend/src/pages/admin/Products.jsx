@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { adminListProducts, adminCreateProduct, adminUpdateProduct, adminDeleteProduct, adminListCategories, productTemplateUrl, adminBulkUploadProducts, adminImportFromSheet, adminListSubcategories, adminReorderProducts } from '../../lib/api';
 import { toast } from 'sonner';
-import { Plus, Edit3, Trash2, X, Search, Layers, Image as ImageIcon, Sparkles, Info, Tag as TagIcon, Upload, Download, FileSpreadsheet, GripVertical } from 'lucide-react';
+import { Plus, Edit3, Trash2, X, Search, Layers, Image as ImageIcon, Sparkles, Info, Tag as TagIcon, Upload, Download, FileSpreadsheet, GripVertical, Copy } from 'lucide-react';
 import ImageFieldEditor from './ImageFieldEditor';
 import { useDragReorder } from '../../hooks/useDragReorder';
 
@@ -92,6 +92,26 @@ const AdminProducts = () => {
       gallery: p.gallery || [], videos: p.videos || [], variants: p.variants || [], variant_options: p.variant_options || [],
       colors: (p.colors || []).join(', '),
     } : { ...empty });
+  };
+
+  const startClone = (p) => {
+    setTab('basic');
+    const rand = Math.random().toString(36).slice(2, 8);
+    // Strip id/timestamps/order so we create a brand new product; prefix identifying fields with "Copy of"
+    const { id, sku, created_at, display_order, seo_title, ...rest } = p; // eslint-disable-line no-unused-vars
+    setEditing({
+      ...empty, ...rest,
+      name: `Copy of ${p.name || ''}`.trim(),
+      slug: `copy-of-${p.slug || rand}-${rand}`,
+      sku: '',
+      seo_title: p.seo_title ? `Copy of ${p.seo_title}` : '',
+      gallery: [...(p.gallery || [])],
+      videos: [...(p.videos || [])],
+      variants: (p.variants || []).map(v => ({ ...v, id: undefined })),
+      variant_options: [...(p.variant_options || [])],
+      colors: (p.colors || []).join(', '),
+    });
+    toast.info('Cloned — edit and save to create the copy');
   };
 
   const onSave = async () => {
@@ -203,6 +223,7 @@ const AdminProducts = () => {
               <div className="text-[11px] text-neutral-500 mt-1">Stock: {p.stock ?? 0}</div>
               <div className="flex items-center gap-2 mt-3">
                 <button onClick={() => startEdit(p)} className="flex-1 inline-flex items-center justify-center gap-1 text-xs border border-[#EBD9CE] rounded-full py-2 hover:border-[#B4593F] hover:text-[#B4593F]"><Edit3 className="w-3 h-3" /> Edit</button>
+                <button onClick={() => startClone(p)} title="Duplicate this product" data-testid={`clone-product-${p.id}`} className="px-3 py-2 text-xs border border-[#EBD9CE] rounded-full hover:border-[#B4593F] hover:text-[#B4593F] inline-flex items-center gap-1"><Copy className="w-3 h-3" /></button>
                 <button onClick={() => onDelete(p)} className="px-3 py-2 text-xs border border-[#EBD9CE] rounded-full hover:border-red-500 hover:text-red-500"><Trash2 className="w-3 h-3" /></button>
               </div>
             </div>
@@ -216,7 +237,7 @@ const AdminProducts = () => {
           <aside className="fixed top-0 right-0 h-full w-full sm:w-[720px] bg-white z-50 overflow-y-auto shadow-2xl flex flex-col">
             <div className="px-6 py-5 border-b border-[#EBD9CE] flex items-center justify-between shrink-0">
               <div>
-                <h3 className="font-serif-display text-2xl">{editing.id ? 'Edit Product' : 'New Product'}</h3>
+                <h3 className="font-serif-display text-2xl">{editing.id ? 'Edit Product' : (editing.name && editing.name.startsWith('Copy of ') ? 'Clone Product' : 'New Product')}</h3>
                 {editing.sku && <div className="text-[11px] font-mono text-neutral-500 mt-0.5">{editing.sku}</div>}
               </div>
               <button onClick={() => setEditing(null)}><X className="w-5 h-5" /></button>

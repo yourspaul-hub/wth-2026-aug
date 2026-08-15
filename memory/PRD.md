@@ -148,6 +148,13 @@ All 5 forms now offer the same UX as Hero Slides / Lightbox / Partnerships: clic
 - About page pulls a featured quote from `/api/reviews` (was hardcoded to `testimonials[1]`).
 - Contact page reads phone/email/instagram/hours from CMS keys (was hardcoded `brandInfo`).
 
+### Phase P — Product Clone ✅ (2026-02-10)
+- Admin → Products cards get a new **Copy** icon button between Edit and Delete.
+- Clicking Copy opens the edit drawer prefilled with all fields of the source product; `name` is prefixed with "Copy of ", `slug` is auto-uniquified (`copy-of-<slug>-<rand>`), SKU is blanked so a fresh one can be entered, and `id/created_at/display_order` are stripped.
+- Drawer header reads "Clone Product" until saved; on Save it hits the existing `POST /api/admin/products` endpoint — no backend change needed.
+- Variants, gallery, videos, colors, personalization, SEO fields all carry over and remain editable.
+- Verified backend flow via curl: cloned payload accepted and creates a fresh product with a new id.
+
 ### Phase O — Drag-and-Drop Reorder + Shop pill strip removal ✅ (2026-02-10)
 - Backend: `POST /api/admin/categories/reorder`, `POST /api/admin/categories/{cid}/subcategories/reorder`, `POST /api/admin/products/reorder` all accept `{ ids: [] }` and persist positional order. Product model gains `display_order:int`. Default 'featured' sort in `/api/products` now `display_order asc, created_at desc`.
 - Frontend: new `useDragReorder` hook wraps native HTML5 drag; Admin → Categories, Subcategories, Products all draggable with a grip handle overlay + optimistic UI + toast on persist. Manual "Order" number field removed from Category and Subcategory drawers. Product drag is disabled while a search query is active.
