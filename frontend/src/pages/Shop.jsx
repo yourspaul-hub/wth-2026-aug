@@ -138,21 +138,6 @@ const Shop = () => {
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-2" />
       )}
 
-      {/* Subcategory quick-nav on a subcategory page */}
-      {subDetail && subcategories.length > 0 && (
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 pb-2 flex flex-wrap gap-2 overflow-x-auto">
-          {subcategories.map(s => (
-            <Link
-              key={s.id}
-              to={`/shop/${currentCategory.slug}/${s.slug}`}
-              className={`text-xs uppercase tracking-[0.15em] px-4 py-2 rounded-full transition-colors whitespace-nowrap ${subDetail.slug === s.slug ? 'bg-[#B4593F] text-white' : 'bg-white border border-[#EBD9CE] hover:border-[#B4593F]'}`}
-            >
-              {s.name}
-            </Link>
-          ))}
-        </div>
-      )}
-
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10 flex items-center justify-between border-y border-[#EBD9CE] py-4 mb-8">
         <div className="flex items-center gap-4">
           <button onClick={() => setFilterOpen(true)} className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em]">
