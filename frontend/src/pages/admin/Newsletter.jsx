@@ -1,10 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { adminNewsletter } from '../../lib/api';
+import { adminNewsletter, adminGetNewsletterSettings, adminUpdateNewsletterSettings } from '../../lib/api';
 import { Download, Mail } from 'lucide-react';
+import { toast } from 'sonner';
 
 const AdminNewsletter = () => {
   const [subs, setSubs] = useState([]);
-  useEffect(() => { adminNewsletter().then(setSubs).catch(() => setSubs([])); }, []);
+  const [enabled, setEnabled] = useState(false);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    adminNewsletter().then(setSubs).catch(() => setSubs([]));
+    adminGetNewsletterSettings().then(r => setEnabled(!!r?.enabled)).catch(() => setEnabled(false));
+  }, []);
+
+  const toggle = async (next) => {
+    setSaving(true);
+    try {
+      const r = await adminUpdateNewsletterSettings({ enabled: next });
+      setEnabled(!!r.enabled);
+      toast.success(next ? 'Newsletter section now visible on the site' : 'Newsletter section hidden from the site');
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || 'Failed');
+    } finally { setSaving(false); }
+  };
 
   const exportCsv = () => {
     const csv = 'email,subscribed_at\n' + subs.map(s => `${s.email},${s.created_at}`).join('\n');
@@ -23,6 +40,31 @@ const AdminNewsletter = () => {
           <p className="text-sm text-neutral-600 mt-1">{subs.length} subscribers</p>
         </div>
         <button onClick={exportCsv} className="inline-flex items-center gap-2 bg-[#213a60] hover:bg-[#B4593F] text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-widest"><Download className="w-4 h-4" /> Export CSV</button>
+      </div>
+
+      {/* Enable / disable email capture on the storefront */}
+      <div className="bg-white border border-[#EBD9CE] rounded-xl p-5 mb-6 flex items-center gap-4">
+        <label className="flex items-center gap-3 cursor-pointer flex-1">
+          <input
+            type="checkbox"
+            checked={enabled}
+            disabled={saving}
+            onChange={e => toggle(e.target.checked)}
+            className="accent-[#B4593F] w-5 h-5"
+            data-testid="newsletter-enabled-toggle"
+          />
+          <div>
+            <div className="text-sm font-medium text-[#213a60]">Show "Join our journey of hope" newsletter section on the site</div>
+            <div className="text-[11px] text-neutral-600 mt-0.5">
+              {enabled
+                ? 'Currently visible on the storefront footer. Uncheck to hide immediately.'
+                : "Hidden from the storefront. Turn on when you're ready to start collecting emails."}
+            </div>
+          </div>
+        </label>
+        <span className={`text-[10px] uppercase tracking-widest px-3 py-1 rounded-full ${enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-500'}`}>
+          {enabled ? 'Enabled' : 'Disabled'}
+        </span>
       </div>
 
       <div className="bg-white rounded-xl border border-[#EBD9CE] overflow-hidden">

@@ -74,12 +74,43 @@ class SubcategoryCreate(BaseModel):
     active: bool = True
 
 
+class SizeChart(BaseModel):
+    id: str = Field(default_factory=lambda: _uid('szc_'))
+    name: str                       # display name (e.g., "Unisex Classic Crew T-Shirt")
+    slug: str
+    section: str = ''               # e.g., "Men's T-Shirts", "Women's Tops & Dresses"
+    description: str = ''           # short instruction / how-to-measure notes
+    image: str = ''                 # single illustration/infographic
+    unit: str = 'in'                # 'in' or 'cm'
+    table_headers: List[str] = []   # column headers, first col usually 'Size'
+    table_rows: List[List[str]] = []  # each row is a list of cell strings aligned to headers
+    notes: str = ''                 # footnote / disclaimer
+    order: int = 0
+    active: bool = True
+    created_at: datetime = Field(default_factory=_now)
+
+
+class SizeChartCreate(BaseModel):
+    name: str
+    slug: str
+    section: str = ''
+    description: str = ''
+    image: str = ''
+    unit: str = 'in'
+    table_headers: List[str] = []
+    table_rows: List[List[str]] = []
+    notes: str = ''
+    order: int = 0
+    active: bool = True
+
+
 class Product(BaseModel):
     id: str = Field(default_factory=lambda: _uid('p_'))
     name: str
     slug: str
     category: str  # category id
     subcategory: Optional[str] = None  # subcategory id (optional)
+    size_chart_id: Optional[str] = None  # optional link to a SizeChart
     collections: List[str] = []  # list of collection ids
     price: int
     original_price: int
@@ -118,6 +149,7 @@ class ProductCreate(BaseModel):
     slug: str
     category: str
     subcategory: Optional[str] = None
+    size_chart_id: Optional[str] = None
     collections: List[str] = []
     price: int
     original_price: int
@@ -152,6 +184,7 @@ class ProductUpdate(BaseModel):
     slug: Optional[str] = None
     category: Optional[str] = None
     subcategory: Optional[str] = None
+    size_chart_id: Optional[str] = None
     collections: Optional[List[str]] = None
     price: Optional[int] = None
     original_price: Optional[int] = None

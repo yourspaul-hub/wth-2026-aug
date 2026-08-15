@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { adminListProducts, adminCreateProduct, adminUpdateProduct, adminDeleteProduct, adminListCategories, productTemplateUrl, adminBulkUploadProducts, adminImportFromSheet, adminListSubcategories, adminReorderProducts } from '../../lib/api';
+import { adminListProducts, adminCreateProduct, adminUpdateProduct, adminDeleteProduct, adminListCategories, productTemplateUrl, adminBulkUploadProducts, adminImportFromSheet, adminListSubcategories, adminReorderProducts, adminListSizeCharts } from '../../lib/api';
 import { toast } from 'sonner';
 import { Plus, Edit3, Trash2, X, Search, Layers, Image as ImageIcon, Sparkles, Info, Tag as TagIcon, Upload, Download, FileSpreadsheet, GripVertical, Copy } from 'lucide-react';
 import ImageFieldEditor from './ImageFieldEditor';
@@ -22,6 +22,7 @@ const AdminProducts = () => {
   const [items, setItems] = useState([]);
   const [cats, setCats] = useState([]);
   const [subs, setSubs] = useState([]);  // subcategories for the currently-edited product's category
+  const [sizeCharts, setSizeCharts] = useState([]);
   const [q, setQ] = useState('');
   const [editing, setEditing] = useState(null);
   const [tab, setTab] = useState('basic');
@@ -32,7 +33,11 @@ const AdminProducts = () => {
   const fileRef = useRef(null);
 
   const load = () => adminListProducts().then(setItems).catch(() => setItems([]));
-  useEffect(() => { load(); adminListCategories().then(setCats); }, []);
+  useEffect(() => {
+    load();
+    adminListCategories().then(setCats);
+    adminListSizeCharts().then(setSizeCharts).catch(() => setSizeCharts([]));
+  }, []);
 
   // Load subcategories whenever the editing product's category changes
   useEffect(() => {
@@ -123,6 +128,7 @@ const AdminProducts = () => {
       personalization_max_length: +editing.personalization_max_length,
       personalization_cost: Math.max(0, +(editing.personalization_cost || 0)),
       subcategory: editing.subcategory || null,
+      size_chart_id: editing.size_chart_id || null,
     };
     try {
       if (editing.id) await adminUpdateProduct(editing.id, payload); else await adminCreateProduct(payload);
@@ -294,6 +300,9 @@ const AdminProducts = () => {
                     <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Category</span><select value={editing.category || ''} onChange={e => setEditing({ ...editing, category: e.target.value, subcategory: '' })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]"><option value="">Select</option>{cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
                     <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Subcategory <span className="text-neutral-400 normal-case">(optional)</span></span><select disabled={!editing.category || subs.length === 0} value={editing.subcategory || ''} onChange={e => setEditing({ ...editing, subcategory: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F] disabled:opacity-60" data-testid="product-subcategory-select"><option value="">— None —</option>{subs.map(s => <option key={s.id} value={s.id}>{s.name}{!s.active ? ' (hidden)' : ''}</option>)}</select></label>
                   </div>
+                  <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Size Chart <span className="text-neutral-400 normal-case">(shown on the product page)</span></span><select value={editing.size_chart_id || ''} onChange={e => setEditing({ ...editing, size_chart_id: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" data-testid="product-size-chart-select"><option value="">— None —</option>{Object.entries(sizeCharts.reduce((acc, c) => { const k = c.section || 'Other'; (acc[k] = acc[k] || []).push(c); return acc; }, {})).map(([sec, arr]) => (
+                    <optgroup key={sec} label={sec}>{arr.map(c => <option key={c.id} value={c.id}>{c.name}{!c.active ? ' (hidden)' : ''}</option>)}</optgroup>
+                  ))}</select></label>
                   <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Verse / Subtitle</span><input value={editing.verse || ''} onChange={e => setEditing({ ...editing, verse: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
                   <label className="block"><span className="text-[11px] uppercase tracking-widest text-neutral-600">Description</span><textarea rows="4" value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} className="mt-1 w-full bg-[#FDF3EB] border border-[#EBD9CE] rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#B4593F]" /></label>
                   <div className="grid grid-cols-2 gap-3">

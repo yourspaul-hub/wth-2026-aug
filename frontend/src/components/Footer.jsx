@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Instagram, Facebook, Youtube, Mail, Phone, MapPin, Send } from 'lucide-react';
-import { subscribeNewsletter, publicGenericQrImageUrl } from '../lib/api';
+import { subscribeNewsletter, publicGenericQrImageUrl, fetchPublicSettings } from '../lib/api';
 import { toast } from 'sonner';
 import Logo from './Logo';
 import { useContentText } from '../context/ContentContext';
@@ -9,7 +9,11 @@ import { useCategories } from '../hooks/useCategories';
 
 const Footer = () => {
   const [email, setEmail] = useState('');
+  const [newsletterEnabled, setNewsletterEnabled] = useState(false);
   const { items: categories } = useCategories();
+  useEffect(() => {
+    fetchPublicSettings().then(r => setNewsletterEnabled(!!r?.newsletter?.enabled)).catch(() => setNewsletterEnabled(false));
+  }, []);
   const T = {
     newsTitle: useContentText('footer.newsletter.title'),
     newsTitleAccent: useContentText('footer.newsletter.title_accent'),
@@ -64,8 +68,9 @@ const Footer = () => {
   return (
     <footer className="bg-[#213a60] text-[#FDF3EB] pt-20 pb-10 mt-10" data-testid="site-footer">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
-        {/* Newsletter */}
-        <div className="grid md:grid-cols-2 gap-10 items-center pb-14 border-b border-white/10">
+        {/* Newsletter — only rendered when admin has enabled email capture */}
+        {newsletterEnabled && (
+        <div className="grid md:grid-cols-2 gap-10 items-center pb-14 border-b border-white/10" data-testid="footer-newsletter">
           <div>
             <h3 className="font-serif-display text-3xl md:text-4xl leading-tight">{newsMain}{newsTitleAccent && <> <span className="italic text-[#E88864]">{newsTitleAccent}</span></>}</h3>
             <p className="mt-3 text-white/70 max-w-md">{T.newsSub}</p>
@@ -77,6 +82,7 @@ const Footer = () => {
             </button>
           </form>
         </div>
+        )}
 
         {/* Global review QR — scan to leave a review */}
         <div className="py-14 border-b border-white/10 grid md:grid-cols-[auto_1fr] gap-8 items-center" data-testid="footer-review-qr">
@@ -124,10 +130,10 @@ const Footer = () => {
             <ul className="space-y-3 text-sm text-white/80">
               <li><Link to="/about" className="hover:text-[#E88864] transition-colors">{T.story}</Link></li>
               <li><Link to="/contact" className="hover:text-[#E88864] transition-colors">{T.contactLink}</Link></li>
-              <li><a href="#" onClick={e => e.preventDefault()} className="hover:text-[#E88864] transition-colors">{T.size}</a></li>
-              <li><a href="#" onClick={e => e.preventDefault()} className="hover:text-[#E88864] transition-colors">{T.terms}</a></li>
-              <li><a href="#" onClick={e => e.preventDefault()} className="hover:text-[#E88864] transition-colors">{T.privacy}</a></li>
-              <li><a href="#" onClick={e => e.preventDefault()} className="hover:text-[#E88864] transition-colors">{T.refund}</a></li>
+              <li><Link to="/size-guide" className="hover:text-[#E88864] transition-colors">{T.size}</Link></li>
+              <li><Link to="/terms" className="hover:text-[#E88864] transition-colors">{T.terms}</Link></li>
+              <li><Link to="/privacy" className="hover:text-[#E88864] transition-colors">{T.privacy}</Link></li>
+              <li><Link to="/shipping-returns" className="hover:text-[#E88864] transition-colors">{T.refund}</Link></li>
             </ul>
           </div>
 

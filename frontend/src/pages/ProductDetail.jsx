@@ -5,7 +5,8 @@ import { fetchProduct } from '../lib/api';
 import { useCart } from '../context/CartContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
-import { Heart, ShoppingBag, Minus, Plus, Truck, Sparkles, RefreshCw, Star, Share2, ChevronRight, Play, Package, Download } from 'lucide-react';
+import { Heart, ShoppingBag, Minus, Plus, Truck, Sparkles, RefreshCw, Star, Share2, ChevronRight, Play, Package, Download, Ruler } from 'lucide-react';
+import SizeChartModal from '../components/SizeChartModal';
 import RelatedProducts from '../components/RelatedProducts';
 import RecentlyViewed from '../components/RecentlyViewed';
 import { toast } from 'sonner';
@@ -32,6 +33,7 @@ const ProductDetail = () => {
   const [tab, setTab] = useState('details');
   const [customName, setCustomName] = useState('');
   const [selectedOptions, setSelectedOptions] = useState({});
+  const [sizeChartOpen, setSizeChartOpen] = useState(false);
   const [videoOpen, setVideoOpen] = useState(false);
 
   useEffect(() => {
@@ -207,7 +209,19 @@ const ProductDetail = () => {
             {/* Variant options */}
             {product.variant_options?.map(opt => (
               <div key={opt.name} className="mt-6">
-                <div className="text-[11px] uppercase tracking-[0.2em] text-neutral-600 mb-2">{opt.name}: <span className="text-[#B4593F]">{selectedOptions[opt.name]}</span></div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-[11px] uppercase tracking-[0.2em] text-neutral-600">{opt.name}: <span className="text-[#B4593F]">{selectedOptions[opt.name]}</span></div>
+                  {product.size_chart_id && opt.name.toLowerCase().includes('size') && (
+                    <button
+                      type="button"
+                      onClick={() => setSizeChartOpen(true)}
+                      data-testid="pd-open-size-chart"
+                      className="text-[11px] uppercase tracking-widest text-[#B4593F] hover:text-[#213a60] inline-flex items-center gap-1 underline-offset-4 hover:underline"
+                    >
+                      <Ruler className="w-3.5 h-3.5" /> Size Chart
+                    </button>
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {opt.values.map(val => {
                     const isSelected = selectedOptions[opt.name] === val;
@@ -222,6 +236,18 @@ const ProductDetail = () => {
                 </div>
               </div>
             ))}
+
+            {/* Size Chart trigger when there are no variant options but a chart is still linked */}
+            {product.size_chart_id && !product.variant_options?.some(o => o.name.toLowerCase().includes('size')) && (
+              <button
+                type="button"
+                onClick={() => setSizeChartOpen(true)}
+                data-testid="pd-open-size-chart-standalone"
+                className="mt-6 inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-[#B4593F] hover:text-[#213a60]"
+              >
+                <Ruler className="w-4 h-4" /> View Size Chart
+              </button>
+            )}
 
             {/* Static colors (if no variants) */}
             {(!product.variant_options?.length && product.colors?.length > 0) && (
@@ -271,15 +297,13 @@ const ProductDetail = () => {
               <button onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success('Link copied'); }} className="w-12 h-12 rounded-full border border-[#EBD9CE] flex items-center justify-center hover:border-[#B4593F] transition-colors" aria-label="Share"><Share2 className="w-4 h-4" /></button>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 mt-8 pt-6 border-t border-[#EBD9CE]">
+            <div className="grid grid-cols-2 gap-3 mt-8 pt-6 border-t border-[#EBD9CE]">
               {product.product_type === 'digital' ? [
                 { icon: Download, l: 'Instant Access', s: 'Delivered by email' },
                 { icon: RefreshCw, l: 'Lifetime Access', s: 'Re-download anytime' },
-                { icon: Sparkles, l: 'Best Quality', s: 'High-res files' },
               ] : [
                 { icon: Truck, l: 'Free Shipping', s: 'On orders ₹999+' },
                 { icon: RefreshCw, l: 'Easy Returns', s: '7-day window' },
-                { icon: Package, l: 'Gift Wrapped', s: 'Ready to give' },
               ].map((a, i) => {
                 const I = a.icon;
                 return (
@@ -294,14 +318,13 @@ const ProductDetail = () => {
 
             <div className="mt-10 border-t border-[#EBD9CE] pt-6">
               <div className="flex gap-6 text-xs uppercase tracking-[0.2em]">
-                {['details', 'shipping', 'reviews'].map(t => (
+                {['details', 'shipping'].map(t => (
                   <button key={t} onClick={() => setTab(t)} className={`pb-3 border-b-2 transition-colors ${tab === t ? 'border-[#B4593F] text-[#B4593F]' : 'border-transparent text-neutral-500'}`}>{t}</button>
                 ))}
               </div>
               <div className="pt-5 text-sm text-neutral-700 leading-relaxed">
                 {tab === 'details' && <p>{product.description || 'Made with the finest materials and handcrafted attention to detail.'}</p>}
                 {tab === 'shipping' && <p>{product.product_type === 'digital' ? 'This is a digital product. You will receive a download link on your email within minutes of purchase.' : 'We ship pan-India within 3-5 business days. International shipping available (7-14 business days). Free shipping on all orders over ₹999.'}</p>}
-                {tab === 'reviews' && <p>Rated {product.rating}/5 across {product.reviews} customer reviews. Verified buyers love the quality and thoughtful presentation.</p>}
               </div>
             </div>
           </div>
@@ -331,6 +354,7 @@ const ProductDetail = () => {
           </div>
         </>
       )}
+      <SizeChartModal chartId={product.size_chart_id} open={sizeChartOpen} onClose={() => setSizeChartOpen(false)} />
     </main>
   );
 };

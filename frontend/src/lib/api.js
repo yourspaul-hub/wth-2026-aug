@@ -240,6 +240,19 @@ export const adminReorderCategories = (ids) => api.post('/admin/categories/reord
 export const adminReorderSubcategories = (cid, ids) => api.post(`/admin/categories/${cid}/subcategories/reorder`, { ids }).then(r => r.data);
 export const adminReorderProducts = (ids) => api.post('/admin/products/reorder', { ids }).then(r => r.data);
 
+// Newsletter enable/disable
+export const adminGetNewsletterSettings = () => api.get('/admin/newsletter-settings').then(r => r.data);
+export const adminUpdateNewsletterSettings = (p) => api.put('/admin/newsletter-settings', p).then(r => r.data);
+
+// Size charts
+export const fetchSizeCharts = (section) => api.get('/size-charts', { params: section ? { section } : {} }).then(r => r.data);
+export const fetchSizeChart = (ref) => api.get(`/size-charts/${ref}`).then(r => r.data);
+export const adminListSizeCharts = () => api.get('/admin/size-charts').then(r => r.data);
+export const adminCreateSizeChart = (p) => api.post('/admin/size-charts', p).then(r => r.data);
+export const adminUpdateSizeChart = (id, p) => api.patch(`/admin/size-charts/${id}`, p).then(r => r.data);
+export const adminDeleteSizeChart = (id) => api.delete(`/admin/size-charts/${id}`).then(r => r.data);
+export const adminReorderSizeCharts = (ids) => api.post('/admin/size-charts/reorder', { ids }).then(r => r.data);
+
 // Admin users (RBAC)
 export const adminListUsers = () => api.get('/admin/users').then(r => r.data);
 export const adminInviteUser = (p) => api.post('/admin/users', p).then(r => r.data);

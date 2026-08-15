@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Tag, Star, Search, Send, ArrowUpRight, LogOut, ExternalLink, Layers, Truck, Percent, Mail, Clock, MapPin, FileText, Instagram, BarChart3, Users as UsersIcon, Puzzle, FolderOpen, Palette, Trash2, Sparkles, Image as ImageIcon, Handshake } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Tag, Star, Search, Send, ArrowUpRight, LogOut, ExternalLink, Layers, Truck, Percent, Mail, Clock, MapPin, FileText, Instagram, BarChart3, Users as UsersIcon, Puzzle, FolderOpen, Palette, Trash2, Sparkles, Image as ImageIcon, Handshake, Ruler } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Logo from '../../components/Logo';
 
@@ -14,6 +14,7 @@ const NAV = [
   { to: '/admin/orders', label: 'Orders', icon: ShoppingCart, roles: ['admin'] },
   { to: '/admin/products', label: 'Products', icon: Package, roles: ['admin', 'store_manager'] },
   { to: '/admin/categories', label: 'Categories', icon: FolderOpen, roles: ['admin', 'store_manager'] },
+  { to: '/admin/size-charts', label: 'Size Charts', icon: Ruler, roles: ['admin', 'store_manager'] },
   { to: '/admin/collections', label: 'Collections', icon: Layers, roles: ['admin', 'store_manager'] },
   { to: '/admin/coupons', label: 'Coupons', icon: Tag, roles: ['admin'] },
   { to: '/admin/shipping', label: 'Shipping', icon: Truck, roles: ['admin', 'store_manager'] },

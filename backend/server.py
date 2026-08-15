@@ -38,6 +38,7 @@ api = APIRouter(prefix='/api')
 from models import (
     AdminUser, Category, CategoryCreate,
     Subcategory, SubcategoryCreate,
+    SizeChart, SizeChartCreate,
     Product, ProductCreate, ProductUpdate,
     Collection, CollectionCreate,
     Review, ReviewCreate, ReviewUpdate,
@@ -330,6 +331,88 @@ async def reorder_subcategories(cid: str, payload: dict, user: dict = Depends(re
         raise HTTPException(status_code=400, detail='ids must be a list')
     for idx, sid in enumerate(ids):
         await db.subcategories.update_one({'id': sid, 'category_id': cid}, {'$set': {'order': idx}})
+    return {'ok': True, 'count': len(ids)}
+
+
+# ================= SIZE CHARTS =================
+@api.get('/size-charts')
+async def list_size_charts(section: Optional[str] = None):
+    filt: dict = {'active': True}
+    if section:
+        filt['section'] = section
+    docs = await db.size_charts.find(filt, {'_id': 0}).sort([('section', 1), ('order', 1), ('name', 1)]).to_list(500)
+    return docs
+
+
+@api.get('/size-charts/{ref}')
+async def get_size_chart(ref: str):
+    doc = await db.size_charts.find_one({'id': ref}, {'_id': 0})
+    if not doc:
+        doc = await db.size_charts.find_one({'slug': ref}, {'_id': 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail='Size chart not found')
+    return doc
+
+
+@api.get('/admin/size-charts')
+async def admin_list_size_charts(user: dict = Depends(require_store)):
+    docs = await db.size_charts.find({}, {'_id': 0}).sort([('section', 1), ('order', 1), ('name', 1)]).to_list(500)
+    if docs:
+        ids = [d['id'] for d in docs]
+        pipe = [
+            {'$match': {'size_chart_id': {'$in': ids}}},
+            {'$group': {'_id': '$size_chart_id', 'count': {'$sum': 1}}},
+        ]
+        counts = {row['_id']: row['count'] async for row in db.products.aggregate(pipe)}
+        for d in docs:
+            d['product_count'] = counts.get(d['id'], 0)
+    return docs
+
+
+@api.post('/admin/size-charts')
+async def create_size_chart(payload: SizeChartCreate, user: dict = Depends(require_store)):
+    if await db.size_charts.find_one({'slug': payload.slug}):
+        raise HTTPException(status_code=400, detail='A size chart with that slug already exists')
+    doc = SizeChart(**payload.model_dump()).model_dump()
+    await db.size_charts.insert_one(doc)
+    doc.pop('_id', None)
+    doc['product_count'] = 0
+    return doc
+
+
+@api.patch('/admin/size-charts/{sid}')
+async def update_size_chart(sid: str, payload: dict, user: dict = Depends(require_store)):
+    payload.pop('id', None)
+    payload.pop('_id', None)
+    current = await db.size_charts.find_one({'id': sid}, {'_id': 0})
+    if not current:
+        raise HTTPException(status_code=404, detail='Size chart not found')
+    if 'slug' in payload and payload['slug'] != current['slug']:
+        clash = await db.size_charts.find_one({'slug': payload['slug'], 'id': {'$ne': sid}})
+        if clash:
+            raise HTTPException(status_code=400, detail='Another size chart already uses that slug')
+    await db.size_charts.update_one({'id': sid}, {'$set': payload})
+    doc = await db.size_charts.find_one({'id': sid}, {'_id': 0})
+    doc['product_count'] = await db.products.count_documents({'size_chart_id': sid})
+    return doc
+
+
+@api.delete('/admin/size-charts/{sid}')
+async def delete_size_chart(sid: str, user: dict = Depends(require_store)):
+    linked = await db.products.count_documents({'size_chart_id': sid})
+    if linked > 0:
+        raise HTTPException(status_code=400, detail=f'{linked} product(s) still reference this size chart. Reassign them first.')
+    await db.size_charts.delete_one({'id': sid})
+    return {'ok': True}
+
+
+@api.post('/admin/size-charts/reorder')
+async def reorder_size_charts(payload: dict, user: dict = Depends(require_store)):
+    ids = payload.get('ids') or []
+    if not isinstance(ids, list):
+        raise HTTPException(status_code=400, detail='ids must be a list')
+    for idx, sid in enumerate(ids):
+        await db.size_charts.update_one({'id': sid}, {'$set': {'order': idx}})
     return {'ok': True, 'count': len(ids)}
 
 
@@ -3577,7 +3660,33 @@ async def get_public_settings():
             'profile_url': (await get_setting('INSTAGRAM_PROFILE_URL', 'https://www.instagram.com/wearthehope.co/')) or '',
             'handle': (await get_setting('INSTAGRAM_HANDLE', '@wearthehope')) or '@wearthehope',
         },
+        'newsletter': {
+            # Disabled by default — admins must explicitly enable email capture.
+            'enabled': ((await get_setting('NEWSLETTER_ENABLED', 'false')) or 'false').strip().lower() in ('true', '1', 'yes', 'on'),
+        },
     }
+
+
+@api.get('/admin/newsletter-settings')
+async def admin_get_newsletter_settings(user: dict = Depends(require_store)):
+    return {
+        'enabled': ((await get_setting('NEWSLETTER_ENABLED', 'false')) or 'false').strip().lower() in ('true', '1', 'yes', 'on'),
+    }
+
+
+class NewsletterSettingsUpdate(BaseModel):
+    enabled: bool
+
+
+@api.put('/admin/newsletter-settings')
+async def admin_update_newsletter_settings(payload: NewsletterSettingsUpdate, user: dict = Depends(require_store)):
+    now = datetime.now(timezone.utc)
+    await db.settings.update_one(
+        {'key': 'NEWSLETTER_ENABLED'},
+        {'$set': {'key': 'NEWSLETTER_ENABLED', 'value': 'true' if payload.enabled else 'false', 'category': 'marketing', 'updated_at': now}},
+        upsert=True,
+    )
+    return {'enabled': payload.enabled}
 
 
 class LightboxUpdate(BaseModel):
@@ -3786,6 +3895,47 @@ async def startup_event():
         logger.info('Seed complete')
     except Exception as e:
         logger.exception('Seed failed: %s', e)
+    # Seed size chart skeletons on first boot (from the reference guide)
+    if await db.size_charts.count_documents({}) == 0:
+        _default_headers = ['Size', 'Chest (in)', 'Length (in)', 'Shoulder (in)', 'Sleeve (in)']
+        _sc_seed = [
+            ("Men's T-Shirts", [
+                'Unisex Classic Crew T-Shirt', 'Unisex V-Neck T-Shirt', "Men's Polo T-Shirt",
+                'Unisex Raglan T-Shirt', "Men's Full Sleeve T-Shirt",
+            ]),
+            ("Women's Tops & Dresses", [
+                "Women's Classic T-Shirt", "Women's Cropped Hoodie", "Women's Crop Tank",
+                "Women's Crop Top", "Women's T-Shirt Dress", 'Maternity Dress', "Women's Tank Top",
+            ]),
+            ("Kids' Wear", [
+                "Boy's Crew Neck T-Shirt", "Girl's Crew Neck T-Shirt", 'Kids Hoodie', 'Kids Rompers',
+            ]),
+            ('Unisex Loungewear', [
+                'Unisex Joggers', 'Unisex Oversized T-Shirt', 'Unisex Sweatshirt', 'Unisex Hoodie',
+            ]),
+            ('All-Over Print (AOP) Collection', [
+                "Men's AOP Full Sleeve Tee", 'Unisex AOP T-Shirt', 'AOP Crop Top',
+                "Women's AOP T-Shirt", 'AOP Sports Bra', "Women's AOP Tank Top",
+            ]),
+        ]
+        seeds = []
+        order = 0
+        for section, names in _sc_seed:
+            for n in names:
+                slug = n.lower().replace("'", '').replace('&', 'and').replace(' ', '-').replace('(', '').replace(')', '').replace('.', '')
+                seeds.append({
+                    'id': f'szc_{uuid.uuid4().hex[:12]}',
+                    'name': n, 'slug': slug, 'section': section,
+                    'description': 'All measurements in inches. Lay the garment flat and measure without stretching.',
+                    'image': '', 'unit': 'in',
+                    'table_headers': list(_default_headers),
+                    'table_rows': [],
+                    'notes': '', 'order': order, 'active': True,
+                    'created_at': datetime.now(timezone.utc),
+                })
+                order += 1
+        await db.size_charts.insert_many(seeds)
+        logger.info('Seeded %d size chart skeletons', len(seeds))
     # Indexes
     await db.admin_sessions.create_index('session_token', unique=True)
     await db.admin_users.create_index('email', unique=True)
@@ -3800,6 +3950,7 @@ async def startup_event():
     await db.categories.create_index('slug', unique=True)
     await db.settings.create_index('key', unique=True)
     await db.site_content.create_index('key', unique=True)
+    await db.size_charts.create_index('slug', unique=True)
     # Seed default music settings on first boot (idempotent). Admin can replace via CMS.
     if not await db.settings.find_one({'key': 'MUSIC_URL'}):
         default_music = os.environ.get('DEFAULT_MUSIC_URL', '')

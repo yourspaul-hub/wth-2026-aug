@@ -47,6 +47,10 @@ import QrReviewSubmit from './pages/QrReviewSubmit';
 import PublicReviewSubmit from './pages/PublicReviewSubmit';
 import AdminCategories from './pages/admin/Categories';
 import AdminSubcategories from './pages/admin/Subcategories';
+import AdminSizeCharts from './pages/admin/SizeCharts';
+import TermsConditions from './pages/TermsConditions';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import ShippingReturns from './pages/ShippingReturns';
 import AdminUsers from './pages/admin/Users';
 import AdminIntegrations from './pages/admin/Integrations';
 import AdminDesign from './pages/admin/Design';
@@ -86,6 +90,11 @@ function AppRouter() {
         <Route path="/shop" element={<Shop />} />
         <Route path="/shop/:categorySlug" element={<Shop />} />
         <Route path="/shop/:categorySlug/:subSlug" element={<Shop />} />
+        <Route path="/terms" element={<TermsConditions />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/shipping-returns" element={<ShippingReturns />} />
+        <Route path="/refund-policy" element={<ShippingReturns />} />
+        <Route path="/refund" element={<ShippingReturns />} />
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
@@ -120,6 +129,7 @@ function AppRouter() {
           <Route path="analytics" element={<AdminAnalytics />} />
           <Route path="categories" element={<AdminCategories />} />
           <Route path="categories/:cid/subcategories" element={<AdminSubcategories />} />
+          <Route path="size-charts" element={<AdminSizeCharts />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="integrations" element={<AdminIntegrations />} />
           <Route path="design" element={<AdminDesign />} />
