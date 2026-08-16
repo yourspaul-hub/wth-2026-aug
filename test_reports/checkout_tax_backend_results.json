@@ -1,0 +1,193 @@
+{
+  "ok": true,
+  "results": [
+    {
+      "name": "public products API reachable",
+      "ok": true,
+      "detail": {
+        "status": 200
+      }
+    },
+    {
+      "name": "found product with category/subcategory and unrelated product",
+      "ok": true,
+      "detail": {
+        "sub_product": {
+          "id": "p_49658ec9cbf8",
+          "category": "cat_01",
+          "subcategory": "sc_6796560e4376",
+          "price": 349
+        },
+        "other_product": {
+          "id": "p_001",
+          "category": "cat_07",
+          "subcategory": null,
+          "price": 899
+        },
+        "plain_cat_product": {
+          "id": "p_001",
+          "category": "cat_07",
+          "subcategory": null,
+          "price": 899
+        }
+      }
+    },
+    {
+      "name": "tax-preview uses category-specific rate instead of global",
+      "ok": true,
+      "detail": {
+        "status": 200,
+        "response": {
+          "prices_include_tax": true,
+          "subtotal": 698,
+          "discount": 0,
+          "tax_amount": 33,
+          "tax_breakdown": [
+            {
+              "name": "QA CAT 5%",
+              "percent": 5.0,
+              "amount": 33
+            }
+          ]
+        },
+        "expected_tax": 33
+      }
+    },
+    {
+      "name": "tax-preview falls back to global for unrelated category",
+      "ok": true,
+      "detail": {
+        "status": 200,
+        "response": {
+          "prices_include_tax": true,
+          "subtotal": 899,
+          "discount": 0,
+          "tax_amount": 74,
+          "tax_breakdown": [
+            {
+              "name": "QA GST 9%",
+              "percent": 9.0,
+              "amount": 74
+            }
+          ]
+        },
+        "expected_tax": 74
+      }
+    },
+    {
+      "name": "tax-preview priority is subcategory > category > global",
+      "ok": true,
+      "detail": {
+        "status": 200,
+        "response": {
+          "prices_include_tax": true,
+          "subtotal": 349,
+          "discount": 0,
+          "tax_amount": 23,
+          "tax_breakdown": [
+            {
+              "name": "QA SUB 7%",
+              "percent": 7.0,
+              "amount": 23
+            }
+          ]
+        },
+        "expected_tax": 23
+      }
+    },
+    {
+      "name": "tax-preview returns zero/empty when no rates configured",
+      "ok": true,
+      "detail": {
+        "status": 200,
+        "response": {
+          "prices_include_tax": true,
+          "subtotal": 349,
+          "discount": 0,
+          "tax_amount": 0,
+          "tax_breakdown": []
+        }
+      }
+    },
+    {
+      "name": "admin PATCH to GST 5% is reflected in tax-preview",
+      "ok": true,
+      "detail": {
+        "patch_status": 200,
+        "patch_response": {
+          "id": "qa_tax_global_patch",
+          "name": "GST 5%",
+          "percent": 5,
+          "scope": "all",
+          "category_ids": [],
+          "subcategory_ids": [],
+          "active": true,
+          "order": 1,
+          "created_at": "2026-08-16T01:56:47.816000"
+        },
+        "preview": {
+          "prices_include_tax": true,
+          "subtotal": 899,
+          "discount": 0,
+          "tax_amount": 43,
+          "tax_breakdown": [
+            {
+              "name": "GST 5%",
+              "percent": 5,
+              "amount": 43
+            }
+          ]
+        },
+        "expected_tax": 43
+      }
+    },
+    {
+      "name": "tax-preview respects prices_include_tax=false exclusive math",
+      "ok": true,
+      "detail": {
+        "status": 200,
+        "response": {
+          "prices_include_tax": false,
+          "subtotal": 1000,
+          "discount": 0,
+          "tax_amount": 100,
+          "tax_breakdown": [
+            {
+              "name": "QA GST 10%",
+              "percent": 10.0,
+              "amount": 100
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "create_order total does not add tax again when prices_include_tax=true",
+      "ok": true,
+      "detail": {
+        "order_number": "WTH-20260816-ULZNT",
+        "subtotal": 899,
+        "shipping_fee": 99,
+        "tax": 82,
+        "total": 998,
+        "expected_tax": 82,
+        "expected_total": 998,
+        "include_tax": true
+      }
+    },
+    {
+      "name": "create_order total adds tax when prices_include_tax=false",
+      "ok": true,
+      "detail": {
+        "order_number": "WTH-20260816-BGNJA",
+        "subtotal": 899,
+        "shipping_fee": 99,
+        "tax": 90,
+        "total": 1088,
+        "expected_tax": 90,
+        "expected_total": 1088,
+        "include_tax": false
+      }
+    }
+  ]
+}

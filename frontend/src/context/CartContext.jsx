@@ -11,8 +11,8 @@ export const CartProvider = ({ children }) => {
   });
   const [isCartOpen, setCartOpen] = useState(false);
 
-  useEffect(() => { localStorage.setItem('wth_cart', JSON.stringify(items)); }, [items]);
-  useEffect(() => { localStorage.setItem('wth_wish', JSON.stringify(wishlist)); }, [wishlist]);
+  useEffect(() => { try { localStorage.setItem('wth_cart', JSON.stringify(items)); } catch { /* Safari private mode */ } }, [items]);
+  useEffect(() => { try { localStorage.setItem('wth_wish', JSON.stringify(wishlist)); } catch { /* Safari private mode */ } }, [wishlist]);
 
   const _keyOf = (p) => {
     const base = p.variant_id ? `${p.id}::${p.variant_id}` : p.id;

@@ -244,6 +244,7 @@ export const adminReorderProducts = (ids) => api.post('/admin/products/reorder',
 export const fetchPaymentMethods = () => api.get('/payment-methods').then(r => r.data);
 export const adminGetCheckoutSettings = () => api.get('/admin/checkout-settings').then(r => r.data);
 export const adminUpdateCheckoutSettings = (p) => api.put('/admin/checkout-settings', p).then(r => r.data);
+export const fetchTaxPreview = (items, discount = 0) => api.post('/checkout/tax-preview', { items, discount }).then(r => r.data);
 
 // Newsletter enable/disable
 export const adminGetNewsletterSettings = () => api.get('/admin/newsletter-settings').then(r => r.data);

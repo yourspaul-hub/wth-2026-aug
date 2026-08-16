@@ -1,0 +1,47 @@
+{
+  "verdict": "fixed",
+  "user_reported_bug": "In the checkout I'm seeing the tax 12%. Maybe it is hard-coded. If you look at the tax admin, I don't have a 12% tax slab. Can you please connect it correctly to the tax rules logic that we have connected to the collection & sub-collection?",
+  "summary": "No relevant testing skill found. Focused checkout tax verification passed: /api/checkout/tax-preview follows admin tax rules (subcategory > category > global), returns no line data with no rates, admin PATCH to GST 5% is reflected, and Checkout renders backend tax_breakdown instead of a hardcoded GST 12%. UI and order-total math passed for tax-inclusive and tax-exclusive modes. Payment processing was not the target; create_order regression used the app's existing MOCKED Razorpay payment object only to verify tax/total fields.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/verify_checkout_tax_backend.py",
+    "/app/test_reports/checkout_tax_backend_results.json",
+    "/app/test_reports/checkout_tax_ui_state.py",
+    "/app/test_reports/checkout_tax_ui_global_5_playwright.py",
+    "/app/test_reports/checkout_tax_ui_no_rates_playwright.py",
+    "/app/test_reports/checkout_tax_ui_exclusive_playwright.py"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Checkout.jsx no longer contains the previous hardcoded GST 12%/12-over-112 calculation; it renders data-testid tax-line-<i> rows from backend tax_breakdown.",
+    "Code review note only: tax-preview/order creation do not sort scoped category/subcategory matches by order when multiple scoped rates match the same category/subcategory; this was not part of the reported symptom and did not block this fix verification."
+  ],
+  "updated_files": [
+    "/app/test_reports/verify_checkout_tax_backend.py",
+    "/app/test_reports/checkout_tax_backend_results.json",
+    "/app/test_reports/checkout_tax_ui_state.py",
+    "/app/test_reports/checkout_tax_ui_global_5_playwright.py",
+    "/app/test_reports/checkout_tax_ui_no_rates_playwright.py",
+    "/app/test_reports/checkout_tax_ui_exclusive_playwright.py",
+    "/app/test_reports/ui_tax_state_snapshot.json",
+    "/app/test_reports/bug_verification_18.json",
+    "/app/test_reports/iteration_18.json"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  "seed_data_creation": "Temporarily replaced tax_rates and PRICES_INCLUDE_TAX settings during backend/UI tests (QA GST 5/7/9/10 rates, empty-rate state) and restored the original tax rates afterward. Temporary QA orders created for total regression were deleted and touched product documents were restored.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Original tax state restored: active tx_02 GST 12%, inactive tx_01 GST 5% and tx_03 GST 18%; no qa_* tax rates or qa-tax@example.com orders remain. Tests used product p_49658ec9cbf8 for subcategory matching and p_001 for checkout UI/global-rate checks.",
+  "rca_of_the_issue": "Reproduced the prior risk by changing configured tax slabs away from 12%: with only GST 5% active, checkout displayed 'GST 5% (5%) \u2014 included' and no 'GST 12%' text; with no tax rates configured, checkout rendered no tax line. This proves the summary is now driven by backend tax rules rather than the old hardcoded 12% preview."
+}

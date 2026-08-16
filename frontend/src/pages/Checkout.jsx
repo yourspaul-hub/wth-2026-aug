@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useCurrency } from '../context/CurrencyContext';
-import { createOrder, validateCoupon, verifyPayment, fetchShippingOptions, fetchPublicSettings, fetchPaymentMethods } from '../lib/api';
+import { createOrder, validateCoupon, verifyPayment, fetchShippingOptions, fetchPublicSettings, fetchPaymentMethods, fetchTaxPreview } from '../lib/api';
 import { toast } from 'sonner';
 import { ArrowRight, Tag, Truck, Lock, CheckCircle2, X, Info, CreditCard, Store, Wallet } from 'lucide-react';
 import SeoHelmet from '../components/SeoHelmet';
@@ -40,6 +40,7 @@ const Checkout = () => {
   const [paymentProvider, setPaymentProvider] = useState('razorpay');
   const [pmConfig, setPmConfig] = useState(null); // {razorpay:{enabled},stripe:{},paypal:{},cod:{}}
   const [pricesIncludeTax, setPricesIncludeTax] = useState(true);
+  const [taxInfo, setTaxInfo] = useState({ tax_amount: 0, tax_breakdown: [] });
   const nav = useNavigate();
 
   useEffect(() => { if (!orderPlaced && items.length === 0) nav('/shop'); }, [items.length, nav, orderPlaced]);
@@ -85,12 +86,17 @@ const Checkout = () => {
 
   const discount = coupon?.discount || 0;
   const shipping_fee = selectedShip ? (selectedShip.kind === 'free' ? 0 : selectedShip.effective_price ?? selectedShip.price) : 0;
-  // Tax preview @ 12% GST (server recalculates authoritatively). When prices already include GST we
-  // reverse-compute the amount from the subtotal instead of adding on top.
-  const taxable = Math.max(0, totals.subtotal - discount);
-  const tax_preview = pricesIncludeTax
-    ? Math.round(taxable * 12 / 112)
-    : Math.round(taxable * 0.12);
+
+  // Ask the backend for the exact tax breakdown so the summary matches the invoice.
+  useEffect(() => {
+    if (!items.length) { setTaxInfo({ tax_amount: 0, tax_breakdown: [] }); return; }
+    const payload = items.map(it => ({ product_id: it.id, price: it.price, qty: it.qty }));
+    fetchTaxPreview(payload, discount)
+      .then(r => setTaxInfo({ tax_amount: r.tax_amount || 0, tax_breakdown: r.tax_breakdown || [] }))
+      .catch(() => setTaxInfo({ tax_amount: 0, tax_breakdown: [] }));
+  }, [items, discount]);
+
+  const tax_preview = taxInfo.tax_amount;
   const total = pricesIncludeTax
     ? Math.max(0, totals.subtotal - discount + shipping_fee)
     : Math.max(0, totals.subtotal - discount + shipping_fee + tax_preview);
@@ -300,7 +306,15 @@ const Checkout = () => {
                 <div className="flex justify-between"><span className="text-neutral-600">Subtotal</span><span>{format(totals.subtotal)}</span></div>
                 {discount > 0 && <div className="flex justify-between text-[#B4593F]"><span>Discount</span><span>-{format(discount)}</span></div>}
                 <div className="flex justify-between"><span className="text-neutral-600">Shipping</span><span>{shipping_fee === 0 ? 'Free' : format(shipping_fee)}</span></div>
-                <div className="flex justify-between text-xs text-neutral-600"><span>{pricesIncludeTax ? 'GST 12% (included)' : 'GST 12% (est.)'}</span><span>{format(tax_preview)}</span></div>
+                {(taxInfo.tax_breakdown || []).map((b, i) => (
+                  <div key={i} className="flex justify-between text-xs text-neutral-600" data-testid={`tax-line-${i}`}>
+                    <span>{b.name} ({b.percent}%){pricesIncludeTax ? ' — included' : ''}</span>
+                    <span>{format(b.amount)}</span>
+                  </div>
+                ))}
+                {(!taxInfo.tax_breakdown || !taxInfo.tax_breakdown.length) && tax_preview > 0 && (
+                  <div className="flex justify-between text-xs text-neutral-600"><span>Tax{pricesIncludeTax ? ' (included)' : ' (est.)'}</span><span>{format(tax_preview)}</span></div>
+                )}
                 <div className="flex justify-between text-lg font-serif-display pt-3 border-t border-[#EBD9CE]"><span>Total</span><span className="text-[#B4593F]" data-testid="checkout-total">{format(total)}</span></div>
                 {currencyCode !== 'INR' && (
                   <div className="text-[10px] text-neutral-500">Payment is processed in INR. Amount converted from ₹{total.toLocaleString('en-IN')}.</div>

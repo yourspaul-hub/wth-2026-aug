@@ -6,9 +6,14 @@ import App from "@/App";
 
 // Prevent the browser from restoring the previous scroll position on load,
 // which can briefly show a lower section (e.g. About Story) before our own
-// scroll-to-top runs on first mount.
-if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
-  window.history.scrollRestoration = 'manual';
+// scroll-to-top runs on first mount. Safari also caches scroll position via
+// its back-forward cache, so we hard-reset it here and reset again inside
+// ScrollToTop's pageshow listener.
+if (typeof window !== 'undefined') {
+  if ('scrollRestoration' in window.history) {
+    window.history.scrollRestoration = 'manual';
+  }
+  try { window.scrollTo(0, 0); } catch (_e) { /* noop */ }
 }
 
 const queryClient = new QueryClient({

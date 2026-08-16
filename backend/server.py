@@ -1272,6 +1272,70 @@ async def delete_tax_rate(tid: str, user: dict = Depends(require_store)):
     return {'ok': True}
 
 
+class TaxPreviewLine(BaseModel):
+    product_id: Optional[str] = None
+    price: int = 0
+    qty: int = 1
+
+
+class TaxPreviewRequest(BaseModel):
+    items: List[TaxPreviewLine] = []
+    discount: int = 0
+
+
+@api.post('/checkout/tax-preview')
+async def checkout_tax_preview(payload: TaxPreviewRequest):
+    """Returns the exact tax breakdown that the order-creation endpoint would apply.
+    Used by the Checkout page to render an accurate summary instead of a hardcoded 12%."""
+    prices_include_tax = ((await get_setting('PRICES_INCLUDE_TAX', 'true')) or 'true').strip().lower() in ('true', '1', 'yes', 'on')
+    subtotal = sum(int(it.price) * int(it.qty) for it in payload.items)
+    discount = max(0, int(payload.discount or 0))
+    tax_amount = 0
+    breakdown = {}  # {rate_id: {name, percent, amount}}
+    if subtotal > 0:
+        global_rate = await db.tax_rates.find_one({'scope': 'all', 'active': True}, {'_id': 0}, sort=[('order', 1)])
+        for it in payload.items:
+            if not it.product_id or not it.price or not it.qty:
+                continue
+            p = await db.products.find_one({'id': it.product_id}, {'_id': 0, 'category': 1, 'subcategory': 1})
+            cat_id = (p or {}).get('category')
+            sub_id = (p or {}).get('subcategory')
+            rate = None
+            if sub_id:
+                rate = await db.tax_rates.find_one({'active': True, '$or': [
+                    {'subcategory_ids': sub_id},
+                    {'scope': 'subcategory', 'subcategory_id': sub_id},
+                ]}, {'_id': 0})
+            if not rate and cat_id:
+                rate = await db.tax_rates.find_one({'active': True, '$or': [
+                    {'category_ids': cat_id},
+                    {'scope': 'category', 'category_id': cat_id},
+                ]}, {'_id': 0})
+            if not rate:
+                rate = global_rate
+            if not rate:
+                continue
+            line_total = int(it.price) * int(it.qty)
+            line_discount = int(discount * line_total / subtotal) if subtotal else 0
+            line_taxable = max(0, line_total - line_discount)
+            if prices_include_tax:
+                line_tax = int(round(line_taxable * rate['percent'] / (100 + rate['percent'])))
+            else:
+                line_tax = int(round(line_taxable * rate['percent'] / 100))
+            tax_amount += line_tax
+            key = rate['id']
+            if key not in breakdown:
+                breakdown[key] = {'name': rate['name'], 'percent': rate['percent'], 'amount': 0}
+            breakdown[key]['amount'] += line_tax
+    return {
+        'prices_include_tax': prices_include_tax,
+        'subtotal': subtotal,
+        'discount': discount,
+        'tax_amount': tax_amount,
+        'tax_breakdown': list(breakdown.values()),
+    }
+
+
 # --- Legacy alias (kept for existing frontend calls) ---
 @api.post('/payments/razorpay/create-order')
 async def razorpay_create_order_legacy():

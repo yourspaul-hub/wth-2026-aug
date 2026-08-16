@@ -1,0 +1,38 @@
+{
+  "verdict": "fixed",
+  "user_reported_bug": "Why the website is not rendering properly on Safari? And why most of the times when the page loads, first we see the About Us page and then it gets redirected to the home page? It should always land on the home page.",
+  "summary": "No relevant testing skill found. Focused frontend regression testing passed: / loads at scrollY 0 on 375x812, 1024x768, and 1440x900; hard refresh after scrolling to the About Story section resets to top; route navigation to /shop, /about, and /contact lands at top; synthetic Safari bfcache PageTransitionEvent('pageshow', {persisted:true}) resets from About Story to scrollY 0 immediately at 0ms and remains 0 at 100ms; /shop#featured hash navigation is not forced to top; and intentional same-page anchor smooth scrolling still animates after the forced reset. No UI error messages were present. Browser console contained unrelated ERR_NAME_NOT_RESOLVED resource-load messages, but the tested storefront scroll/rendering flows completed successfully.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/safari_scroll_regression_iteration20_mcp_script.py"
+  ],
+  "action_items": [
+    "No action required for the reported Safari/homepage scroll regression based on this focused retest. Optional: verify once in a physical Safari/WebKit browser before production release."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/src/components/ScrollToTop.jsx now temporarily sets documentElement/body inline scrollBehavior to 'auto' around the forced scroll reset, then restores it on requestAnimationFrame; runtime testing confirmed this prevents the prior smooth-scroll animation during pageshow/bfcache restoration.",
+    "/app/frontend/src/index.js still sets history.scrollRestoration='manual' and performs a module-load scrollTo(0,0), supporting first-load and hard-refresh top positioning."
+  ],
+  "updated_files": [
+    "/app/test_reports/safari_scroll_regression_iteration20_mcp_script.py",
+    "/app/test_reports/bug_verification_20.json",
+    "/app/test_reports/iteration_20.json"
+  ],
+  "success_rate": {
+    "backend": "N/A - frontend only",
+    "frontend": "8/8 focused checks passed"
+  },
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "No relevant testing skill was found. WebKit/Safari itself was not directly available in the MCP browser runner, so the Safari bfcache path was verified in the available browser engine with a synthetic PageTransitionEvent('pageshow', {persisted:true}). The key previous failure is now fixed: after dispatching pageshow from the About Story scroll position, scrollY/docTop were 0 at 0ms and 100ms with About Story not visible.",
+  "rca_of_the_issue": "Previous iteration showed global html { scroll-behavior: smooth } caused forced scrollTo(0,0) on pageshow/bfcache restore to animate, making users see the About Story section before returning to the homepage hero. The current fix temporarily overrides html/body scrollBehavior to auto for the reset and restores smooth behavior on requestAnimationFrame; runtime proof shows instant top reset while intentional anchor smooth scrolling still works."
+}

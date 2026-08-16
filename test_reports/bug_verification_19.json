@@ -1,0 +1,46 @@
+{
+  "verdict": "not_fixed",
+  "user_reported_bug": "Can you please check why the website is not rendering properly on Safari browser? And why most of the times when the page loads, first we see the About Us page and then it gets redirected to the home page? It should be always the home page that should be rendered.",
+  "summary": "No relevant testing skill found. Focused frontend testing verified root / loads at scrollTop 0 across 375x812, 1024x768, and 1440x900; hard refresh after scrolling to About Story returns to top; / -> /shop -> Back returns to top; hash navigation preserves scroll; and localStorage.setItem throwing still allows Home and Add to Bag. However, a Safari bfcache-style pageshow event still visibly animates from the About Story area toward the hero instead of forcing an immediate top reset: after pageshow, scrollY remained 2745 at 0ms, 2723 at 100ms, and 1129 at ~400ms, only reaching 0 after ~1.1s. This preserves the user's visible symptom in the Safari restoration case.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ScrollToTop / global html scroll-behavior",
+        "issue": "Safari-style pageshow/bfcache reset is not instant. Because html has scroll-behavior: smooth, the programmatic scroll-to-top animates; during testing the page remained mid-scroll after pageshow (scrollY 1129 around 400ms), so users can still briefly see the About Story section before the hero.",
+        "selector": "[data-testid=\"home-about\"]",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/safari_scroll_regression_mcp_script.py"
+  ],
+  "action_items": [
+    "Make all load/route/pageshow scroll resets force an instant scroll despite global smooth scrolling. For example, temporarily set document.documentElement/body scrollBehavior to 'auto' before setting scrollTop/window.scrollTo, then restore it; or remove global html { scroll-behavior: smooth; } and apply smooth behavior only to intentional anchor interactions.",
+    "Retest the Safari bfcache/pageshow flow and assert scrollY/documentElement.scrollTop are 0 immediately after pageshow (not after a visible animation)."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/src/index.css sets html { scroll-behavior: smooth; }, which interferes with the intended instant scroll reset in /app/frontend/src/components/ScrollToTop.jsx and /app/frontend/src/index.js.",
+    "ScrollToTop uses window.scrollTo(0, 0) and scrollTop assignment, but the runtime proof showed the reset still animates under current CSS; this is the likely RCA for the remaining Safari-like flash/redirect perception."
+  ],
+  "updated_files": [
+    "/app/test_reports/safari_scroll_regression_mcp_script.py",
+    "/app/test_reports/bug_verification_19.json",
+    "/app/test_reports/iteration_19.json"
+  ],
+  "success_rate": {
+    "backend": "N/A - frontend only",
+    "frontend": "7/8 focused checks passed; 1 critical Safari bfcache/pageshow check failed"
+  },
+  "seed_data_creation": "None",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "No relevant testing skill was found. Re-run /app/test_reports/safari_scroll_regression_mcp_script.py via the MCP browser tool after the fix, with special attention to pageshow/bfcache timing. WebKit was not directly available through the browser tool, so Chromium plus a synthetic PageTransitionEvent('pageshow', {persisted:true}) was used as the Safari bfcache simulation.",
+  "rca_of_the_issue": "The implemented scroll reset works for normal load, reload, route navigation, hash regression, and private-mode localStorage robustness. The remaining bug is the bfcache/pageshow restoration path: the listener fires, but global CSS smooth scrolling causes the forced top reset to animate for about a second. This can reproduce the user's perception that the About Story/About Us section appears first and then the site redirects/scrolls to the home hero."
+}
