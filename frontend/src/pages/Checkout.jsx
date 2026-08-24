@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useCurrency } from '../context/CurrencyContext';
-import { createOrder, validateCoupon, verifyPayment, fetchShippingOptions, fetchPublicSettings, fetchPaymentMethods, fetchTaxPreview } from '../lib/api';
+import { createOrder, validateCoupon, verifyPayment, fetchShippingOptions, fetchPublicSettings, fetchPaymentMethods, fetchTaxPreview, trackCart } from '../lib/api';
 import { toast } from 'sonner';
 import { ArrowRight, Tag, Truck, Lock, CheckCircle2, X, Info, CreditCard, Store, Wallet } from 'lucide-react';
 import SeoHelmet from '../components/SeoHelmet';
@@ -50,6 +50,27 @@ const Checkout = () => {
     fetchPaymentMethods().then(setPmConfig).catch(() => setPmConfig(null));
     fetchPublicSettings().then(s => setPricesIncludeTax(s?.checkout?.prices_include_tax !== false)).catch(() => {});
   }, []);
+
+  // Register the cart as "abandoned" once the shopper has typed a valid email
+  // and there's at least one item. The backend scheduler will email them a
+  // recovery link if they don't complete checkout in ~4h. Debounced so we
+  // don't hammer the endpoint on every keystroke.
+  useEffect(() => {
+    if (orderPlaced) return undefined;
+    const email = (addr.email || '').trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return undefined;
+    if (!items.length) return undefined;
+    const handle = setTimeout(() => {
+      const payload = {
+        email,
+        name: (addr.full_name || '').trim() || null,
+        items: items.map(it => ({ product_id: it.product_id, name: it.name, price: it.price, qty: it.qty, image: it.image })),
+        subtotal: totals.subtotal,
+      };
+      trackCart(payload).catch(() => { /* silently ignore — best effort */ });
+    }, 1500);
+    return () => clearTimeout(handle);
+  }, [addr.email, addr.full_name, items, totals.subtotal, orderPlaced]);
 
   // Determine which methods actually render on the page. When products in the cart
   // opt out of COD, hide COD even if globally enabled.

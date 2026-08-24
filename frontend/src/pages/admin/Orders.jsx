@@ -11,9 +11,18 @@ const AdminOrders = () => {
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState(null);
   const [fulfilling, setFulfilling] = useState(null);
+  const [previewItem, setPreviewItem] = useState(null);
 
   const load = () => adminListOrders(filter || undefined).then(setOrders).catch(() => setOrders([]));
   useEffect(() => { load(); }, [filter]);
+
+  // Escape closes the item preview modal on top of any other panel.
+  useEffect(() => {
+    if (!previewItem) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') setPreviewItem(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [previewItem]);
 
   const updateStatus = async (order_number, patch) => {
     try {
@@ -103,7 +112,7 @@ const AdminOrders = () => {
             {orders.length === 0 ? (
               <tr><td colSpan="7" className="px-6 py-10 text-center text-neutral-500">No orders</td></tr>
             ) : orders.map(o => (
-              <tr key={o.order_number} className="hover:bg-[#FDF3EB]/50">
+              <tr key={o.order_number} className="hover:bg-[#FDF3EB]/50" data-testid={`order-row-${o.order_number}`}>
                 <td className="px-6 py-3 font-medium">{o.order_number}</td>
                 <td className="px-6 py-3">{o.shipping_address?.full_name}<div className="text-[11px] text-neutral-500">{o.shipping_address?.email}</div></td>
                 <td className="px-6 py-3 font-semibold">₹{o.total.toLocaleString('en-IN')}</td>
@@ -114,7 +123,7 @@ const AdminOrders = () => {
                   </select>
                 </td>
                 <td className="px-6 py-3 text-xs text-neutral-500">{new Date(o.created_at).toLocaleDateString()}</td>
-                <td className="px-6 py-3"><button onClick={() => setSelected(o)} className="text-xs text-[#B4593F] hover:underline">Details</button></td>
+                <td className="px-6 py-3"><button onClick={() => setSelected(o)} className="text-xs text-[#B4593F] hover:underline" data-testid={`order-details-btn-${o.order_number}`}>Details</button></td>
               </tr>
             ))}
           </tbody>
@@ -145,13 +154,24 @@ const AdminOrders = () => {
                 <div className="text-[11px] uppercase tracking-widest text-[#B4593F] mb-2">Items</div>
                 <div className="space-y-3">
                   {selected.items.map((it, i) => (
-                    <div key={i} className="flex items-center gap-3 border border-[#EBD9CE] rounded-lg p-2">
+                    <button
+                      type="button"
+                      key={i}
+                      onClick={() => setPreviewItem(it)}
+                      className="w-full text-left flex items-center gap-3 border border-[#EBD9CE] hover:border-[#B4593F] hover:bg-[#FDF3EB]/60 rounded-lg p-2 transition-colors"
+                      data-testid={`order-item-row-${i}`}
+                    >
                       <img src={it.image} alt="" className="w-14 h-14 rounded object-cover" />
-                      <div className="flex-1 text-sm"><div className="font-medium">{it.name}</div><div className="text-xs text-neutral-500">Qty: {it.qty} · ₹{it.price}</div>{it.customization && <div className="text-[11px] italic text-[#B4593F]">{it.customization}</div>}</div>
+                      <div className="flex-1 text-sm">
+                        <div className="font-medium">{it.name}</div>
+                        <div className="text-xs text-neutral-500">Qty: {it.qty} · ₹{it.price}{it.variant_label ? ` · ${it.variant_label}` : ''}</div>
+                        {it.customization && <div className="text-[11px] italic text-[#B4593F]">{it.customization}</div>}
+                      </div>
                       <div className="font-semibold">₹{(it.price * it.qty).toLocaleString('en-IN')}</div>
-                    </div>
+                    </button>
                   ))}
                 </div>
+                <div className="text-[11px] text-neutral-500 mt-2">Tip: click any item to see the full product image + details.</div>
               </div>
               <div className="bg-[#FDF3EB] rounded-lg p-4 text-sm space-y-2">
                 <div className="flex justify-between"><span>Subtotal</span><span>₹{selected.subtotal.toLocaleString('en-IN')}</span></div>
@@ -223,6 +243,48 @@ const AdminOrders = () => {
             if (selected?.order_number === updated.order_number) setSelected(updated);
           }}
         />
+      )}
+
+      {previewItem && (
+        <>
+          <div onClick={() => setPreviewItem(null)} className="fixed inset-0 bg-black/70 z-[60]" data-testid="order-item-preview-backdrop" />
+          <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 py-8 pointer-events-none" onClick={() => setPreviewItem(null)}>
+            <div className="pointer-events-auto bg-white rounded-2xl overflow-hidden shadow-2xl border border-white/40 max-w-3xl w-full max-h-full flex flex-col" data-testid="order-item-preview" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#EBD9CE]">
+                <h3 className="font-serif-display text-xl truncate pr-4">{previewItem.name}</h3>
+                <button onClick={() => setPreviewItem(null)} className="p-1 rounded hover:bg-neutral-100" data-testid="order-item-preview-close"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="grid md:grid-cols-2 gap-6 p-6 overflow-y-auto">
+                <div className="bg-[#FDF3EB] rounded-xl overflow-hidden flex items-center justify-center min-h-[240px]">
+                  {previewItem.image
+                    ? <img src={previewItem.image} alt={previewItem.name} className="w-full h-auto max-h-[70vh] object-contain" data-testid="order-item-preview-image" />
+                    : <div className="text-sm text-neutral-500 py-16 px-6 text-center">No image on file for this product.</div>}
+                </div>
+                <div className="text-sm space-y-3">
+                  <div><span className="text-[11px] uppercase tracking-widest text-[#B4593F]">Product</span><div className="font-medium">{previewItem.name}</div></div>
+                  {previewItem.sku && <div><span className="text-[11px] uppercase tracking-widest text-[#B4593F]">SKU</span><div>{previewItem.sku}</div></div>}
+                  {previewItem.variant_label && <div><span className="text-[11px] uppercase tracking-widest text-[#B4593F]">Variant</span><div>{previewItem.variant_label}</div></div>}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><span className="text-[11px] uppercase tracking-widest text-[#B4593F]">Quantity</span><div className="font-medium">{previewItem.qty}</div></div>
+                    <div><span className="text-[11px] uppercase tracking-widest text-[#B4593F]">Unit price</span><div className="font-medium">₹{previewItem.price?.toLocaleString('en-IN')}</div></div>
+                  </div>
+                  <div><span className="text-[11px] uppercase tracking-widest text-[#B4593F]">Line total</span><div className="font-semibold">₹{((previewItem.price || 0) * (previewItem.qty || 1)).toLocaleString('en-IN')}</div></div>
+                  {previewItem.customization && (
+                    <div className="border-t border-[#EBD9CE] pt-3">
+                      <span className="text-[11px] uppercase tracking-widest text-[#B4593F]">Personalisation</span>
+                      <div className="italic text-[#B4593F]">{previewItem.customization}</div>
+                    </div>
+                  )}
+                  {previewItem.product_id && (
+                    <a href={`/product/${previewItem.product_id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs uppercase tracking-widest bg-white border border-[#EBD9CE] hover:border-[#B4593F] text-[#213a60] px-4 py-2.5 rounded-full transition-colors mt-3" data-testid="order-item-preview-view-product">
+                      <ExternalLink className="w-3.5 h-3.5" /> View product page
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

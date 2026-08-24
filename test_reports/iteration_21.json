@@ -1,0 +1,54 @@
+{
+  "summary": "Iteration 21 (5 new features): full backend + frontend E2E. New pytest suite /app/backend/tests/test_phase_n_admin_emails_analytics.py = 11/11 PASS (admin order emails on POST /api/orders and /api/payments/razorpay/verify, 0-admin safety, ADMIN_NOTIFICATION_EMAILS schema+roundtrip, expanded /api/admin/analytics/summary keys + session attribution, queue_email mocked fallback, abandoned-cart sweep). Playwright: Instagram in-app-browser UA (iOS + Android) renders home fully, hero CTA navigates to /shop, mobile hamburger nav works, MusicWidget suppressed, scrollRestoration override skipped (stays 'auto'); Admin Orders item preview modal opens with image + qty/price/SKU/personalisation and closes; Admin Analytics renders all 6 new panels + Sessions/Pages-per-session/Bounce KPIs and reacts to range switch. Verified the real in-app scheduler autonomously fired an abandoned-cart recovery email 60s after boot (backend log + outbox, exactly one email per cart).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/cart/track", "issue": "DEAD FEATURE: trackCart() is exported in frontend/src/lib/api.js but never called anywhere in the app, so abandoned_carts are never created by real shopper sessions -> the new abandoned-cart recovery scheduler can only ever fire on manually/admin-inserted carts. Also the endpoint is unauthenticated and accepts an arbitrary email, so the confirmed requirement 'abandoned-cart emails only for logged-in users' is not enforced (there is no customer auth in the app at all - only admin Emergent auth)."},
+      {"endpoint": "GET /api/admin/analytics/summary", "issue": "Bounce rate reads 0% on real data. Events without session_id are bucketed as 'anon-<YYYYMMDDHHMM>' so multiple distinct visitors in the same minute collapse into one 'session' (count>1 => never a bounce); combined with React StrictMode firing page_view twice per route in dev, every session has >=2 views so bounce_rate is structurally 0 and sessions/avg_pages_per_session are unreliable until session_id events dominate."},
+      {"endpoint": "emit_admin_order_email", "issue": "Fan-out is every db.admin_users doc with role='admin' (24 rows in this preview DB, many left over from earlier test iterations). Each order now queues 24+ outbox rows; when Gmail creds are set this becomes 24 real SMTP sends per order, serially inside the request path (await queue_email in a for-loop) which will slow POST /api/orders. Consider background task + dedupe/cap."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Navbar (mobile/tablet hamburger)", "issue": "Hamburger buttons had no data-testid - added data-testid='nav-menu-btn' (mobile) and 'nav-menu-btn-tablet' (tablet) so IG-UA nav flows are testable", "selector": "button[aria-label=\"Menu\"]", "priority": "LOW"},
+      {"component": "admin/Orders order table", "issue": "Order rows and the 'Details' button had no data-testid; added data-testid='order-row-{order_number}' and 'order-details-btn-{order_number}'. The item preview modal itself (order-item-row-N / order-item-preview / -image / -close) works correctly.", "selector": "tbody tr", "priority": "LOW"},
+      {"component": "admin/Orders item preview modal", "issue": "Clicking the backdrop centre cannot close the modal - the pointer-events wrapper (fixed inset-0 z-[60] flex ...) puts the modal card over the backdrop, so only the thin outer margin is clickable and no Escape handler exists. Close button works.", "selector": "[data-testid='order-item-preview-backdrop']", "priority": "LOW"},
+      {"component": "Home sections (Categories, FeaturedProducts)", "issue": "No data-testid on the Categories / FeaturedProducts sections (AboutStory=home-about and InstagramFeed=instagram-feed do have them), so section-level render assertions for the IG bug had to fall back to image/text probes.", "selector": "n/a", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Storefront page_view tracking", "issue": "Two identical POST /api/analytics/track calls per route change (React.StrictMode double effect in dev). Harmless in a prod build but doubles page_views and zeroes bounce rate in this preview env.", "affected_selectors": ["AnalyticsTracker"]}
+    ],
+    "design_issues": [
+      {"screen": "Home hero (data cleanup, was breaking the storefront)", "issues": ["Found 19 leftover TEST hero slides in db.hero_slides from earlier iterations (images pointing at https://cdn.example.com/TEST-M-*.jpg, empty headings, 'Slide-0/1/2'). Home showed a broken hero image + 20 carousel dots for every visitor including the Instagram UA runs. I deleted the 19 cdn.example.com slides; home now renders the real 'Share the Message of Love & Hope' slide with 0 broken images."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase_n_admin_emails_analytics.py",
+    "/app/test_reports/pytest/iteration17_results.xml"
+  ],
+  "action_items": [
+    "Wire trackCart()/POST /api/cart/track into the storefront (cart drawer / checkout email step) and gate it to authenticated shoppers, otherwise the abandoned-cart recovery feature never triggers in production and the 'logged-in users only' requirement is unmet (no customer auth currently exists).",
+    "Make the analytics session model robust: drop or narrow the 'anon-<minute>' session fallback (or ignore session-less events for bounce/session KPIs) and de-dupe repeated page_view posts for the same session+path so bounce rate / sessions / pages-per-session are meaningful.",
+    "Move admin order notification fan-out off the request path (asyncio task / background) and cap/dedupe recipients - 24 admins currently means 24 serial SMTP sends per order once Gmail creds are configured.",
+    "Optional UX: allow Escape / true backdrop click to close the Orders item preview modal.",
+    "Optional: add data-testid to Categories and FeaturedProducts home sections."
+  ],
+  "critical_code_review_comments": [
+    "queue_email performs blocking SMTP inside a thread executor per recipient and is awaited inline in POST /api/orders; with N admins this multiplies checkout latency by N. Fire-and-forget via asyncio.create_task or a queue worker.",
+    "_behaviour_stats loads every page_view document for the window into Python dicts (no aggregation pipeline, no limit). At real traffic volumes this will be slow/memory heavy - move to a $group aggregation.",
+    "_abandoned_cart_scheduler is correct and idempotent (recovery_email_sent guard verified: exactly one email per cart), but it never checks whether the cart belongs to a logged-in user, contradicting the stated requirement.",
+    "server.py is 4433 lines - well past the 700-line guideline; split routers (orders/payments/analytics/settings/email) into modules."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase_n_admin_emails_analytics.py",
+    "/app/frontend/src/pages/admin/Orders.jsx (added data-testid to order rows + Details button)",
+    "/app/frontend/src/components/Navbar.jsx (added data-testid to mobile/tablet hamburger)"
+  ],
+  "success_rate": {"backend": "100% (11/11 new pytest cases)", "frontend": "100% of requested flows verified (IG UA iOS+Android, order item preview, analytics panels); only test-selector/testid gaps and the cleanup items above"},
+  "seed_data_creation": "Created and then deleted: TEST Phase N products, 5 test orders, 1 stale abandoned cart, ~27 outbox emails, 6 analytics events, 41 leftover test admin users + sessions. Also deleted 19 stale TEST hero slides (cdn.example.com) polluting the storefront. Remaining fresh admin session for UI: session_token cookie 'ui_sess_1787550282635' (role admin) - still valid.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "/app/memory/test_credentials.md mongosh minting works as documented. UI cookie used: session_token=ui_sess_1787550282635 (admin).",
+  "context_for_next_testing_agent": "Backend suite: pytest tests/test_phase_n_admin_emails_analytics.py -v -n 0 (needs MONGO_URL/DB_NAME exported: set -a && source /app/backend/.env && set +a). Admin auth is cookie/Bearer session_token minted via mongosh. Gmail creds are unset so every outbox row is status='mocked' provider='mock' - that is the expected pass condition. The abandoned-cart scheduler really fires ~60s after backend boot and every 15 min after; inserting a cart with updated_at 5h ago + recovered:false is enough to observe it in /var/log/supervisor/backend.err.log. Beware: db.admin_users has 24 admins so admin_order_placed queues one outbox row per admin. Watch for test-data leaks into db.hero_slides / db.products (previous iterations left broken cdn.example.com slides that visibly broke the homepage).",
+  "rca_of_the_issue": "Instagram freeze bug: root cause was the unconditional window.history.scrollRestoration='manual' + hard scroll override plus the autoplaying MusicWidget fetch inside IG/FB WebViews. The isInAppBrowser() guard in index.js / ScrollToTop.jsx / MusicWidget.jsx fixes it - verified with real IG iOS and Android UAs: scrollRestoration stays 'auto', no music widget node, full render of hero/about/instagram sections, scrolling to 3500px and back works, hero CTA and hamburger navigation both reach /shop, zero page errors. Bounce-rate 0% RCA: session-less events are grouped per-minute ('anon-<minute>') and StrictMode double-posts each page_view, so every synthetic session has >=2 views and can never be counted as a bounce."
+}

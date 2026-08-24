@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Music, Play, Pause, Volume2, VolumeX, X } from 'lucide-react';
 import { api } from '../lib/api';
+import { isInAppBrowser } from '../lib/inAppBrowser';
 
 const STORAGE_KEY = 'wth_music_state';
 
@@ -33,6 +34,10 @@ const MusicWidget = () => {
 
   useEffect(() => {
     let alive = true;
+    // Skip music entirely inside Instagram / Facebook / Threads in-app browsers.
+    // These WebViews reacted badly to autoplaying audio and the site froze on
+    // arrival for social-media traffic.
+    if (isInAppBrowser()) return () => { alive = false; };
     api.get('/settings/public').then(r => {
       if (!alive) return;
       const s = r.data?.music || {};

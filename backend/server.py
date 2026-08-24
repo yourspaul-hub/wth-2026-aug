@@ -8,6 +8,10 @@ import asyncio
 import uuid
 import random
 import string
+import smtplib
+import ssl
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import List, Optional
@@ -1024,6 +1028,12 @@ async def create_order(payload: OrderCreate):
     except Exception as _e:
         logger.warning('order_placed email failed: %s', _e)
 
+    # Notify admins of the new order (best-effort)
+    try:
+        await emit_admin_order_email(doc, 'order_placed')
+    except Exception as _e:
+        logger.warning('admin order_placed email failed: %s', _e)
+
     # Mark abandoned cart recovered if exists
     try:
         await db.abandoned_carts.update_one({'email': payload.shipping_address.email, 'recovered': False}, {'$set': {'recovered': True}})
@@ -1130,6 +1140,10 @@ async def verify_payment(payload: PaymentVerify):
         await emit_order_email(order, 'order_paid')
     except Exception as _e:
         logger.warning('order_paid email failed: %s', _e)
+    try:
+        await emit_admin_order_email(order, 'order_paid')
+    except Exception as _e:
+        logger.warning('admin order_paid email failed: %s', _e)
     return {'ok': True, 'mocked': is_mocked, 'provider': provider, 'reference': reference, 'order': order}
 
 
@@ -2125,14 +2139,102 @@ def _email_shell(subject: str, body_html: str) -> str:
 
 
 async def queue_email(*, to: str, subject: str, template: str, body_html: str, context: dict = None, order_number: str = None):
+    """Persist email to the outbox and attempt real Gmail SMTP dispatch when
+    credentials are configured. Falls back gracefully to `status='mocked'` when
+    Gmail is not set up so nothing breaks during development."""
+    html_wrapped = _email_shell(subject, body_html)
     doc = EmailOutbox(
         to=to, subject=subject, template=template,
-        html=_email_shell(subject, body_html),
+        html=html_wrapped,
         context=context or {}, order_number=order_number,
         status='mocked', provider='mock',
     ).model_dump()
+
+    gmail_from = ((await get_setting('GMAIL_FROM_ADDRESS', '')) or '').strip()
+    gmail_pw = ((await get_setting('GMAIL_APP_PASSWORD', '')) or '').strip()
+    if gmail_from and gmail_pw and to:
+        try:
+            await asyncio.get_event_loop().run_in_executor(
+                None, _send_smtp_sync, gmail_from, gmail_pw, to, subject, html_wrapped,
+            )
+            doc['status'] = 'sent'
+            doc['provider'] = 'gmail'
+            doc['sent_at'] = datetime.now(timezone.utc)
+        except Exception as e:
+            doc['status'] = 'failed'
+            doc['provider'] = 'gmail'
+            doc['error'] = str(e)[:400]
+            logger.warning('SMTP dispatch failed for %s: %s', to, e)
     await db.email_outbox.insert_one(doc)
     return doc
+
+
+def _send_smtp_sync(gmail_from: str, gmail_pw: str, to: str, subject: str, html: str) -> None:
+    """Blocking Gmail SMTP send. Runs inside a thread executor from `queue_email`."""
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = subject
+    msg['From'] = f'Wear The Hope <{gmail_from}>'
+    msg['To'] = to
+    msg.attach(MIMEText(html, 'html', 'utf-8'))
+    ctx = ssl.create_default_context()
+    with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=ctx, timeout=15) as server:
+        server.login(gmail_from, gmail_pw)
+        server.sendmail(gmail_from, [to], msg.as_string())
+
+
+async def _admin_recipient_emails() -> List[str]:
+    """Collect admin notification emails from Settings + admin_users role='admin'.
+    De-duplicates and returns a clean list. If nothing is configured, returns []."""
+    raw = ((await get_setting('ADMIN_NOTIFICATION_EMAILS', '')) or '').strip()
+    emails: List[str] = []
+    if raw:
+        for e in raw.replace(';', ',').split(','):
+            e = e.strip()
+            if e and '@' in e:
+                emails.append(e)
+    async for u in db.admin_users.find({'role': 'admin'}, {'_id': 0, 'email': 1}):
+        e = (u.get('email') or '').strip()
+        if e and '@' in e:
+            emails.append(e)
+    # Dedupe, preserve order
+    seen = set()
+    out = []
+    for e in emails:
+        low = e.lower()
+        if low in seen:
+            continue
+        seen.add(low)
+        out.append(e)
+    return out
+
+
+async def emit_admin_order_email(order: dict, event: str):
+    """Fire-and-forget notification to every admin whenever a new order lands or
+    payment is confirmed. Runs off the request path so SMTP fan-out never
+    blocks checkout latency."""
+    recipients = await _admin_recipient_emails()
+    if not recipients:
+        return
+    on = order['order_number']
+    a = order['shipping_address']
+    label = 'New order received' if event == 'order_placed' else 'Payment received'
+    subject = f'[Admin] {label} · {on}'
+    body = (
+        f"<h2 style='font-family:Georgia,serif;font-size:24px'>{label}</h2>"
+        f"<p style='color:#555;line-height:1.6'>Order <strong>{on}</strong> · &#8377;{order['total']:,} · {order.get('payment_provider','').title()} ({(order.get('payment_status') or '').upper()})</p>"
+        f"<p style='color:#555;line-height:1.6'><strong>{a['full_name']}</strong> · {a['email']} · {a['phone']}<br>"
+        f"{a['line1']}{', ' + a['line2'] if a.get('line2') else ''}<br>{a['city']}, {a['state']} {a['pincode']} · {a['country']}</p>"
+        + _order_summary_html(order)
+    )
+
+    async def _fanout():
+        for to in recipients:
+            try:
+                await queue_email(to=to, subject=subject, template=f'admin_{event}', body_html=body, context={'order_number': on}, order_number=on)
+            except Exception as e:
+                logger.warning('admin email to %s failed: %s', to, e)
+
+    asyncio.create_task(_fanout())
 
 
 def _order_summary_html(o: dict) -> str:
@@ -2882,6 +2984,9 @@ async def admin_analytics_summary(days: int = 30, user: dict = Depends(require_a
         source_map = {'Instagram': 42, 'Google': 28, 'Direct': 18, 'Facebook': 8, 'Other': 4}
     traffic_sources = [{'source': k, 'value': v} for k, v in sorted(source_map.items(), key=lambda x: -x[1])]
 
+    # ---- Session-based behaviour (top pages / entry / exit / device / hour) ----
+    behaviour = await _behaviour_stats(since)
+
     # ---- Totals ----
     total_pv = sum(s['page_views'] for s in series)
     total_orders = sum(s['orders'] for s in series)
@@ -2901,11 +3006,126 @@ async def admin_analytics_summary(days: int = 30, user: dict = Depends(require_a
             'revenue': total_revenue,
             'conversion_percent': conversion,
             'aov': aov,
+            'sessions': behaviour['sessions'],
+            'bounce_rate': behaviour['bounce_rate'],
+            'avg_pages_per_session': behaviour['avg_pages_per_session'],
         },
         'top_products': top_products,
         'traffic_sources': traffic_sources,
+        'top_pages': behaviour['top_pages'],
+        'entry_pages': behaviour['entry_pages'],
+        'exit_pages': behaviour['exit_pages'],
+        'device_breakdown': behaviour['device_breakdown'],
+        'hourly_distribution': behaviour['hourly_distribution'],
+        'weekday_distribution': behaviour['weekday_distribution'],
         'pixel_ga_id': 'G-MOCKED-XXXXX',
         'pixel_fb_id': 'FBPIXEL_MOCKED',
+    }
+
+
+# ---- helper: session/behaviour stats used by the analytics dashboard ----
+def _pretty_page_label(path: str) -> str:
+    p = (path or '/').split('?', 1)[0]
+    if p == '/':
+        return 'Home'
+    # Strip leading /
+    return p
+
+
+def _device_from_ua(ua: str) -> str:
+    ua = (ua or '').lower()
+    if not ua:
+        return 'Unknown'
+    if 'ipad' in ua or 'tablet' in ua:
+        return 'Tablet'
+    if 'mobi' in ua or 'iphone' in ua or 'android' in ua:
+        return 'Mobile'
+    return 'Desktop'
+
+
+async def _behaviour_stats(since: datetime) -> dict:
+    """Aggregate top / entry / exit pages, bounce rate, device split and hour
+    distribution from analytics_events."""
+    # Group events by session_id to compute entry/exit and bounce.
+    sessions: dict = {}
+    top_pages: dict = {}
+    device_map: dict = {}
+    hour_map = {i: 0 for i in range(24)}
+    weekday_map = {i: 0 for i in range(7)}
+
+    async for e in db.analytics_events.find(
+        {'name': 'page_view', 'created_at': {'$gte': since}},
+        {'_id': 0, 'path': 1, 'session_id': 1, 'created_at': 1, 'user_agent': 1},
+    ):
+        path = _pretty_page_label(e.get('path') or '/')
+        top_pages[path] = top_pages.get(path, 0) + 1
+
+        ua = e.get('user_agent') or ''
+        device_map[_device_from_ua(ua)] = device_map.get(_device_from_ua(ua), 0) + 1
+
+        ts = e.get('created_at')
+        if isinstance(ts, datetime):
+            hour_map[ts.hour] = hour_map.get(ts.hour, 0) + 1
+            weekday_map[ts.weekday()] = weekday_map.get(ts.weekday(), 0) + 1
+
+        # Only count events that carry a real client-generated session_id
+        # towards session/bounce/pages-per-session metrics; session-less
+        # legacy hits are still counted for top_pages/device but ignored
+        # here so a single missing session_id can't collapse many unique
+        # visitors into one huge non-bounce session.
+        sid = (e.get('session_id') or '').strip()
+        if not sid:
+            continue
+        s = sessions.setdefault(sid, {'first_path': path, 'first_ts': ts, 'last_path': path, 'last_ts': ts, 'count': 0})
+        s['count'] += 1
+        if isinstance(ts, datetime) and (not isinstance(s['last_ts'], datetime) or ts > s['last_ts']):
+            s['last_ts'] = ts
+            s['last_path'] = path
+        if isinstance(ts, datetime) and (not isinstance(s['first_ts'], datetime) or ts < s['first_ts']):
+            s['first_ts'] = ts
+            s['first_path'] = path
+
+    def _top(m: dict, n: int) -> list:
+        return [{'label': k, 'value': v} for k, v in sorted(m.items(), key=lambda x: -x[1])[:n]]
+
+    entry_map: dict = {}
+    exit_map: dict = {}
+    bounces = 0
+    for s in sessions.values():
+        entry_map[s['first_path']] = entry_map.get(s['first_path'], 0) + 1
+        exit_map[s['last_path']] = exit_map.get(s['last_path'], 0) + 1
+        if s['count'] <= 1:
+            bounces += 1
+
+    total_sessions = len(sessions) or 0
+    # Mocked fallback so brand-new stores still see a demo shape
+    if total_sessions == 0:
+        entry_map = {'Home': 62, '/shop': 18, '/about': 10, '/product/…': 6, '/blog': 4}
+        exit_map = {'Home': 22, '/shop': 25, '/checkout': 15, '/product/…': 20, '/about': 18}
+        top_pages = {'Home': 340, '/shop': 210, '/product/…': 180, '/about': 92, '/checkout': 55}
+        device_map = {'Mobile': 68, 'Desktop': 28, 'Tablet': 4}
+        for h in (10, 11, 12, 20, 21, 22):
+            hour_map[h] = 22
+        for w in range(7):
+            weekday_map[w] = 30 + (w * 4)
+        total_sessions = 100
+        bounces = 46
+
+    bounce_rate = round((bounces / total_sessions * 100), 1) if total_sessions else 0.0
+    total_page_views = sum(top_pages.values())
+    avg_pps = round((total_page_views / total_sessions), 2) if total_sessions else 0.0
+
+    weekday_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    return {
+        'sessions': total_sessions,
+        'bounce_rate': bounce_rate,
+        'avg_pages_per_session': avg_pps,
+        'top_pages': _top(top_pages, 8),
+        'entry_pages': _top(entry_map, 8),
+        'exit_pages': _top(exit_map, 8),
+        'device_breakdown': [{'label': k, 'value': v} for k, v in sorted(device_map.items(), key=lambda x: -x[1])],
+        'hourly_distribution': [{'label': f'{h:02d}:00', 'value': hour_map.get(h, 0)} for h in range(24)],
+        'weekday_distribution': [{'label': weekday_names[w], 'value': weekday_map.get(w, 0)} for w in range(7)],
     }
 
 
@@ -3262,6 +3482,7 @@ INTEGRATIONS_SCHEMA = [
         'fields': [
             {'key': 'GMAIL_FROM_ADDRESS', 'label': 'From address', 'placeholder': 'orders@wearthehope.com', 'secret': False},
             {'key': 'GMAIL_APP_PASSWORD', 'label': 'App password (16 chars)', 'placeholder': '••••••••••••••••', 'secret': True},
+            {'key': 'ADMIN_NOTIFICATION_EMAILS', 'label': 'Admin notification emails (comma separated)', 'placeholder': 'orders@wearthehope.com, founder@wearthehope.com', 'secret': False},
         ],
     },
     {
@@ -4099,8 +4320,7 @@ async def startup_event():
         await seed_all(db)
         logger.info('Seed complete')
     except Exception as e:
-        logger.exception('Seed failed: %s', e)
-    # Seed size chart skeletons on first boot (from the reference guide)
+        logger.exception('Seed failed: %s', e)    # Seed size chart skeletons on first boot (from the reference guide)
     if await db.size_charts.count_documents({}) == 0:
         _default_headers = ['Size', 'Chest (in)', 'Length (in)', 'Shoulder (in)', 'Sleeve (in)']
         _sc_seed = [
@@ -4175,6 +4395,49 @@ async def startup_event():
     await db.seo_meta.create_index('path', unique=True)
     await db.newsletter.create_index('email', unique=True)
     await db.collections.create_index('slug', unique=True)
+
+    # Start the abandoned-cart recovery scheduler (fires every 15 minutes)
+    asyncio.create_task(_abandoned_cart_scheduler())
+
+
+# ================= ABANDONED CART SCHEDULER =================
+async def _abandoned_cart_scheduler():
+    """Background loop that fires the recovery email once per cart, roughly 4h
+    after the shopper last touched it. Only runs while cart is <24h old so we
+    do not spam long-dead sessions."""
+    await asyncio.sleep(60)  # let boot complete before first sweep
+    while True:
+        try:
+            now = datetime.now(timezone.utc)
+            four_h = now - timedelta(hours=4)
+            one_day = now - timedelta(hours=24)
+            cursor = db.abandoned_carts.find({
+                'recovered': False,
+                'recovery_email_sent': {'$ne': True},
+                'updated_at': {'$lt': four_h, '$gte': one_day},
+            }, {'_id': 0})
+            async for c in cursor:
+                try:
+                    items_html = ''.join(
+                        f"<tr><td style='padding:6px 8px'>{it.get('name', 'Item')}</td>"
+                        f"<td style='padding:6px 8px;text-align:right'>&#8377;{(it.get('price', 0) * it.get('qty', 1)):,}</td></tr>"
+                        for it in c.get('items', [])
+                    )
+                    body = (
+                        f"<h2 style='font-family:Georgia,serif;font-size:24px'>Hey {c.get('name') or 'friend'}, you left something behind ✨</h2>"
+                        f"<p style='color:#555;line-height:1.6'>We saved your bag for you. Complete your order and let hope travel with you.</p>"
+                        f"<table width='100%' style='font-size:14px;margin:12px 0'>{items_html}</table>"
+                        f"<p><a href='{(await get_setting('PUBLIC_APP_URL', '')) or '#'}/checkout' style='display:inline-block;padding:12px 24px;background:{BRAND_COLOR};color:#fff;text-decoration:none;border-radius:999px;font-size:12px;letter-spacing:2px'>COMPLETE MY ORDER</a></p>"
+                        f"<p style='font-size:11px;color:#8a8a8a'>Use code <strong>COMEBACK10</strong> for 10% off — valid 48 hours.</p>"
+                    )
+                    await queue_email(to=c['email'], subject='You left hope in your bag', template='abandoned_cart', body_html=body, context={'cart_id': c['id'], 'auto': True})
+                    await db.abandoned_carts.update_one({'id': c['id']}, {'$set': {'recovery_email_sent': True, 'recovery_sent_at': now}})
+                    logger.info('Abandoned cart recovery sent → %s', c['email'])
+                except Exception as e:
+                    logger.warning('abandoned cart email failed for %s: %s', c.get('email'), e)
+        except Exception as e:
+            logger.exception('abandoned cart scheduler tick failed: %s', e)
+        await asyncio.sleep(15 * 60)  # 15 minutes
 
 
 @app.on_event('shutdown')

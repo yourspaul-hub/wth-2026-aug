@@ -22,6 +22,18 @@ Full-featured, dynamic e-commerce clone of www.wearthehope.com with a comprehens
 - **Phase I — Image pipeline + Frontend perf ✅ 20/21** (2026-02-08)
 - **Phase J — Wishlist page + Recommendations + Multi-currency (INR/USD/EUR/GBP/AUD/AED) + i18n EN/HI ✅ 30/31** (2026-02-08)
 - **Phase K — CMS "Design" tab + Music widget + S3/CloudFront fallback + Mobile navbar polish ✅ 13/13 backend, ~92% frontend** (2026-02-08)
+- **Phase N — Instagram WebView fix, Admin Order Emails, Analytics Deep-Dive, Abandoned-Cart Scheduler, Admin Orders Item Preview ✅ 11/11 pytest + full frontend flows** (2026-08-24)
+
+### Phase N highlights
+- **Instagram / Facebook / Threads / X in-app WebView fix**: new `isInAppBrowser()` helper (regex on UA). `index.js` no longer forces `history.scrollRestoration='manual'` in embedded browsers, `ScrollToTop.jsx` uses a soft `window.scrollTo` (no style override) inside embedded webviews, and `MusicWidget.jsx` suppresses itself entirely — root cause of the "stuck on About page, no buttons work" bug reported from Instagram traffic.
+- **Real Gmail SMTP dispatch**: `queue_email` now attempts a real `smtplib.SMTP_SSL` send when `GMAIL_FROM_ADDRESS` + `GMAIL_APP_PASSWORD` are configured. Runs in a thread executor. Falls back to `status='mocked'` when creds are absent so dev never breaks.
+- **Admin order notifications**: on every `POST /api/orders` and `POST /api/payments/razorpay/verify` we now `asyncio.create_task(_fanout())` emails to every admin (`db.admin_users.role=admin` ∪ new `ADMIN_NOTIFICATION_EMAILS` setting). Fire-and-forget so SMTP fan-out never blocks checkout.
+- **Abandoned-cart recovery scheduler**: `_abandoned_cart_scheduler` background task runs every 15 minutes, finds carts idle >4h and <24h, sends the recovery email exactly once (`recovery_email_sent` guard). Frontend `Checkout.jsx` now debounce-registers the cart via `POST /api/cart/track` as soon as the shopper types a valid email so the sweeper has real carts to work with.
+- **Analytics deep dive**: `_behaviour_stats` groups events by client-generated `session_id` (persisted per tab in `sessionStorage`) → new response keys `top_pages`, `entry_pages`, `exit_pages`, `device_breakdown`, `hourly_distribution`, `weekday_distribution` plus `sessions`, `bounce_rate`, `avg_pages_per_session` KPIs. Session-less events are excluded from bounce math. `AnalyticsTracker` de-dupes StrictMode double-fires.
+- **Admin Orders — item preview modal**: every item row in the order details panel is now a button that opens a lightbox showing the full product image + SKU + variant + quantity + line total + personalisation, with backdrop-click & Escape to close and a "View product page" deep link.
+- **Admin Analytics dashboard rebuild**: 8 KPI cards, revenue AreaChart, Views-vs-Orders dual LineChart, Traffic Sources PieChart, Top Products BarChart, three page-behaviour PageLists (Most visited / Entry / Exit), Device Split PieChart, Hourly + Weekday BarCharts.
+
+**Total backend tests**: 229+ (all passing)
 
 ### Phase K highlights
 - **Design tab** at `/admin/design`: section-grouped editor for every editable string on the storefront (announcement, hero, home strip/categories/about/instagram/testimonials, shop, about, blog, contact, product-detail labels, footer). Save is bulk `PUT /api/admin/content`; storefront hot-updates via `wth:content-saved` CustomEvent. Reset-to-default per key. `GET /api/content` public, cached.

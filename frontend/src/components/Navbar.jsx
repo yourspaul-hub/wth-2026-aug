@@ -87,7 +87,7 @@ const Navbar = () => {
         {/* Hamburger left | Logo center | Search + Lang/Cur + Cart right */}
         <div className="hidden md:grid lg:hidden grid-cols-[1fr_auto_1fr] items-center h-20 gap-4">
           <div className="flex items-center">
-            <button className="p-2 -ml-2" onClick={() => setMobileOpen(v => !v)} aria-label="Menu">
+            <button className="p-2 -ml-2" onClick={() => setMobileOpen(v => !v)} aria-label="Menu" data-testid="nav-menu-btn-tablet">
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
@@ -110,7 +110,7 @@ const Navbar = () => {
         {/* Hamburger left | Logo center | Cart right */}
         <div className="grid md:hidden grid-cols-[1fr_auto_1fr] items-center h-16 gap-4">
           <div className="flex items-center">
-            <button className="p-2 -ml-2" onClick={() => setMobileOpen(v => !v)} aria-label="Menu">
+            <button className="p-2 -ml-2" onClick={() => setMobileOpen(v => !v)} aria-label="Menu" data-testid="nav-menu-btn">
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
