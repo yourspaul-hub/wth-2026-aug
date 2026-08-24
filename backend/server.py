@@ -3504,15 +3504,6 @@ INTEGRATIONS_SCHEMA = [
         ],
     },
     {
-        'category': 'google',
-        'label': 'Google — Places API',
-        'description': 'Used to sync real Google Business reviews. Without this key, the reviews sync runs in mocked mode.',
-        'docs_url': 'https://developers.google.com/maps/documentation/places/web-service/get-api-key',
-        'fields': [
-            {'key': 'GOOGLE_PLACES_API_KEY', 'label': 'API key', 'placeholder': 'AIza...', 'secret': True},
-        ],
-    },
-    {
         'category': 'general',
         'label': 'General — Public App URL',
         'description': 'Base URL used when building QR-code review links and outbound emails. Should match your production domain.',

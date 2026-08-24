@@ -5,7 +5,7 @@ import { fetchProduct } from '../lib/api';
 import { useCart } from '../context/CartContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
-import { Heart, ShoppingBag, Minus, Plus, Truck, Sparkles, RefreshCw, Star, Share2, ChevronRight, Play, Package, Download, Ruler } from 'lucide-react';
+import { Heart, ShoppingBag, Minus, Plus, Truck, Sparkles, RefreshCw, Share2, ChevronRight, Play, Package, Download, Ruler } from 'lucide-react';
 import SizeChartModal from '../components/SizeChartModal';
 import RelatedProducts from '../components/RelatedProducts';
 import RecentlyViewed from '../components/RecentlyViewed';
@@ -122,7 +122,6 @@ const ProductDetail = () => {
       '@type': 'Offer', 'price': displayPrice, 'priceCurrency': 'INR',
       'availability': inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
     },
-    'aggregateRating': { '@type': 'AggregateRating', 'ratingValue': product.rating, 'reviewCount': product.reviews },
   };
 
   return (
@@ -186,11 +185,7 @@ const ProductDetail = () => {
             {product.verse && <div className="italic text-neutral-600 mt-2">{product.verse}</div>}
 
             <div className="flex items-center gap-3 mt-4">
-              <div className="flex items-center gap-0.5">
-                {[...Array(5)].map((_, i) => <Star key={i} className={`w-4 h-4 ${i < Math.round(product.rating) ? 'fill-[#E8B364] stroke-[#E8B364]' : 'stroke-neutral-300'}`} />)}
-              </div>
-              <span className="text-sm text-neutral-600">{product.rating} ({product.reviews} reviews)</span>
-              <span className={`ml-auto text-[11px] uppercase tracking-[0.15em] px-3 py-1 rounded-full ${inStock ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'}`}>{inStock ? `In stock (${displayStock})` : 'Out of stock'}</span>
+              <span className={`text-[11px] uppercase tracking-[0.15em] px-3 py-1 rounded-full ${inStock ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'}`}>{inStock ? `In stock (${displayStock})` : 'Out of stock'}</span>
             </div>
 
             <div className="flex items-baseline gap-3 mt-6">

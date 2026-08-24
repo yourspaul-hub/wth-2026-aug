@@ -130,7 +130,7 @@ export const CONTENT_SECTIONS = [
     id: 'home.categories', page: 'home',
     label: 'Home — "Shop by Category" block',
     items: [
-      { key: 'home.categories.eyebrow', default: 'Curated Categories' },
+      { key: 'home.categories.eyebrow', default: 'Shop by Category' },
       { key: 'home.categories.title', default: 'Shop by', hint: 'Main heading (normal weight)' },
       { key: 'home.categories.title_accent', default: 'purpose', hint: 'Italic accent word' },
       { key: 'home.categories.subtitle', default: '', hint: 'Optional lead paragraph — leave blank to hide' },
