@@ -22,7 +22,31 @@ const Categories = () => {
     return () => io.disconnect();
   }, [cats]);
 
-  if (loading || !cats.length) return null;
+  // While the category API is still resolving, reserve the section height
+  // with a light skeleton grid so the browser paints predictable layout
+  // instead of promoting "Our Story" to the top of the fold.
+  if (loading) {
+    return (
+      <section id="categories" className="relative py-24 bg-[#FDF3EB]" data-testid="home-categories-loading" aria-busy="true">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
+          <div className="flex flex-wrap items-end justify-between gap-6 mb-14">
+            <div>
+              <div className="h-4 w-32 rounded-full bg-white/70 mb-3" />
+              <div className="h-10 w-72 rounded-lg bg-white/70" />
+            </div>
+            <div className="h-4 w-40 rounded-full bg-white/70" />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="aspect-[4/5] rounded-2xl bg-white/60" />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+  // Genuinely empty after load — hide the section entirely.
+  if (!cats.length) return null;
 
   return (
     <section id="categories" ref={containerRef} className="relative py-24 bg-[#FDF3EB]">

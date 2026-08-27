@@ -14,11 +14,14 @@ const normalize = (p) => ({
 const FeaturedProducts = ({ title = 'Bestsellers', subtitle = 'Handpicked for you', filter = null, limit = 8, viewAllHref = '/shop', apiTag = null }) => {
   const ref = useRef(null);
   const [items, setItems] = useState([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    setLoaded(false);
     fetchProducts({ limit: 50, tag: apiTag || undefined })
       .then(res => setItems((res.items || []).map(normalize)))
-      .catch(() => setItems([]));
+      .catch(() => setItems([]))
+      .finally(() => setLoaded(true));
   }, [apiTag]);
 
   useEffect(() => {
@@ -30,6 +33,36 @@ const FeaturedProducts = ({ title = 'Bestsellers', subtitle = 'Handpicked for yo
   }, [items]);
 
   const list = (filter ? items.filter(filter) : items).slice(0, limit);
+
+  // Reserve section height with skeletons on the very first paint so the
+  // page height is stable before the products API responds. Only hide the
+  // section entirely if the fetch resolved and there's genuinely nothing
+  // to show — otherwise the browser lands on "Our Story" at the top of the
+  // viewport during the initial load window.
+  if (!loaded) {
+    return (
+      <section className="py-24 bg-gradient-to-b from-[#FDF3EB] via-[#F9E7DC] to-[#FDF3EB]" data-testid="featured-products-loading" aria-busy="true">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
+          <div className="flex flex-wrap items-end justify-between gap-6 mb-12">
+            <div>
+              <div className="h-4 w-40 rounded-full bg-white/70 mb-3" />
+              <div className="h-10 w-72 rounded-lg bg-white/70" />
+            </div>
+            <div className="h-4 w-32 rounded-full bg-white/70" />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 md:gap-7">
+            {Array.from({ length: Math.min(limit, 8) }).map((_, i) => (
+              <div key={i} className="space-y-3">
+                <div className="aspect-[4/5] rounded-2xl bg-white/60" />
+                <div className="h-4 w-3/4 rounded bg-white/60" />
+                <div className="h-4 w-1/3 rounded bg-white/60" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
   if (list.length === 0) return null;
 
   return (

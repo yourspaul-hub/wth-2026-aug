@@ -47,7 +47,32 @@ const Hero = () => {
   const stat3v = get('home.hero.stat3.value', '4.9★');
   const stat3l = get('home.hero.stat3.label', 'Google Rating');
 
-  if (!slide) return null;
+  // Reserve layout height even before the first slide arrives — otherwise
+  // the DOM starts short (only sections below the fold), the browser paints
+  // "Our Story" at the top of the viewport, and by the time the hero images
+  // and slides load the visitor is already scrolled mid-page.
+  if (!slide) {
+    return (
+      <section
+        className="relative overflow-hidden gradient-cream"
+        data-testid="hero-section"
+        aria-busy="true"
+        style={{ minHeight: 'clamp(520px, 72vh, 780px)' }}
+      >
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-16 md:py-24 grid lg:grid-cols-2 gap-12 items-center">
+          <div className="space-y-6">
+            <div className="h-6 w-40 rounded-full bg-white/50" />
+            <div className="h-14 w-3/4 rounded-lg bg-white/50" />
+            <div className="h-14 w-2/3 rounded-lg bg-white/40" />
+            <div className="h-4 w-5/6 rounded bg-white/40" />
+            <div className="h-4 w-4/6 rounded bg-white/30" />
+            <div className="h-12 w-48 rounded-full bg-white/50 mt-6" />
+          </div>
+          <div className="h-[420px] md:h-[560px] rounded-[24px] bg-white/40" />
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="relative overflow-hidden gradient-cream" data-testid="hero-section">
