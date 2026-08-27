@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { imgProps, preloadHref } from '../lib/imgSrc';
@@ -17,11 +17,17 @@ const resolveSrc = (u) => (u && u.startsWith('/api/') ? `${BACKEND}${u}` : u);
 const Hero = () => {
   const [idx, setIdx] = useState(0);
   const [slides, setSlides] = useState([]);
+  const [loadState, setLoadState] = useState('loading'); // loading | ready | error
   const { get } = useContent();
 
-  useEffect(() => {
-    fetchHeroSlides().then(list => setSlides(list || [])).catch(() => setSlides([]));
+  const loadSlides = useCallback(() => {
+    setLoadState('loading');
+    fetchHeroSlides()
+      .then(list => { setSlides(list || []); setLoadState('ready'); })
+      .catch(() => { setSlides([]); setLoadState('error'); });
   }, []);
+
+  useEffect(() => { loadSlides(); }, [loadSlides]);
 
   const displaySlides = useMemo(
     () => slides.filter(s => s.image && String(s.image).trim()).map(s => ({ ...s, image: resolveSrc(s.image) })),
@@ -56,7 +62,7 @@ const Hero = () => {
       <section
         className="relative overflow-hidden gradient-cream"
         data-testid="hero-section"
-        aria-busy="true"
+        aria-busy={loadState === 'loading'}
         style={{ minHeight: 'clamp(520px, 72vh, 780px)' }}
       >
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-16 md:py-24 grid lg:grid-cols-2 gap-12 items-center">
@@ -66,7 +72,18 @@ const Hero = () => {
             <div className="h-14 w-2/3 rounded-lg bg-white/40" />
             <div className="h-4 w-5/6 rounded bg-white/40" />
             <div className="h-4 w-4/6 rounded bg-white/30" />
-            <div className="h-12 w-48 rounded-full bg-white/50 mt-6" />
+            {loadState === 'error' ? (
+              <div className="mt-6 flex flex-col gap-3" data-testid="hero-error">
+                <p className="text-sm text-[#B4593F]">We couldn&apos;t reach our store just now. Please check your connection and try again.</p>
+                <button
+                  onClick={loadSlides}
+                  className="inline-flex items-center gap-2 bg-[#B4593F] hover:bg-[#213a60] text-white px-6 py-3 rounded-full text-xs uppercase tracking-[0.2em] transition-colors w-fit"
+                  data-testid="hero-retry"
+                >Try again</button>
+              </div>
+            ) : (
+              <div className="h-12 w-48 rounded-full bg-white/50 mt-6" />
+            )}
           </div>
           <div className="h-[420px] md:h-[560px] rounded-[24px] bg-white/40" />
         </div>

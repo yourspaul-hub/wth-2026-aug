@@ -16,7 +16,30 @@ export const API_BASE = `${BACKEND_URL || ''}/api`;
 export const api = axios.create({
   baseURL: API_BASE,
   withCredentials: true,
+  // Never allow a call to hang forever — flaky 3G / captive-portal networks
+  // on some Android phones would otherwise leave the storefront stuck on
+  // skeletons with no error surfaced to the shopper.
+  timeout: 15000,
 });
+
+// Retry idempotent GETs up to 3× with exponential backoff on transient
+// errors (timeout, network drop, 5xx). Prevents "products never load" on
+// unreliable mobile networks where the first packet is often lost.
+api.interceptors.response.use(
+  (r) => r,
+  async (error) => {
+    const cfg = error.config;
+    if (!cfg || cfg.method !== 'get') return Promise.reject(error);
+    cfg.__retryCount = (cfg.__retryCount || 0);
+    const status = error.response?.status;
+    const retriable = !error.response || status === 0 || status >= 500 || error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK';
+    if (!retriable || cfg.__retryCount >= 3) return Promise.reject(error);
+    cfg.__retryCount += 1;
+    const delay = 400 * Math.pow(2, cfg.__retryCount - 1); // 400 → 800 → 1600ms
+    await new Promise((r) => setTimeout(r, delay));
+    return api(cfg);
+  }
+);
 
 // Public endpoints
 export const fetchCategories = () => api.get('/categories').then(r => r.data);

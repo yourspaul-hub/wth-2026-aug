@@ -6,7 +6,7 @@ import { useContentText } from '../context/ContentContext';
 
 const Categories = () => {
   const containerRef = useRef(null);
-  const { items: cats, loading } = useCategories();
+  const { items: cats, loading, error, retry } = useCategories();
   const eyebrow = useContentText('home.categories.eyebrow');
   const title = useContentText('home.categories.title');
   const titleAccent = useContentText('home.categories.title_accent');
@@ -24,10 +24,12 @@ const Categories = () => {
 
   // While the category API is still resolving, reserve the section height
   // with a light skeleton grid so the browser paints predictable layout
-  // instead of promoting "Our Story" to the top of the fold.
-  if (loading) {
+  // instead of promoting "Our Story" to the top of the fold. If the fetch
+  // fails outright, surface a friendly retry state so mobile visitors on
+  // flaky networks are never left staring at pale rectangles.
+  if (loading || (error && !cats.length)) {
     return (
-      <section id="categories" className="relative py-24 bg-[#FDF3EB]" data-testid="home-categories-loading" aria-busy="true">
+      <section id="categories" className="relative py-24 bg-[#FDF3EB]" data-testid="home-categories-loading" aria-busy={loading}>
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
           <div className="flex flex-wrap items-end justify-between gap-6 mb-14">
             <div>
@@ -41,6 +43,12 @@ const Categories = () => {
               <div key={i} className="aspect-[4/5] rounded-2xl bg-white/60" />
             ))}
           </div>
+          {error && (
+            <div className="mt-8 flex flex-col items-center gap-3 text-center" data-testid="categories-error">
+              <p className="text-sm text-[#B4593F]">We couldn&apos;t load our collections. Please check your connection.</p>
+              <button onClick={retry} className="inline-flex items-center gap-2 bg-[#B4593F] hover:bg-[#213a60] text-white px-6 py-3 rounded-full text-xs uppercase tracking-[0.2em] transition-colors" data-testid="categories-retry">Try again</button>
+            </div>
+          )}
         </div>
       </section>
     );

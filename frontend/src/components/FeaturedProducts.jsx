@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from './ProductCard';
 import { fetchProducts } from '../lib/api';
@@ -14,15 +14,16 @@ const normalize = (p) => ({
 const FeaturedProducts = ({ title = 'Bestsellers', subtitle = 'Handpicked for you', filter = null, limit = 8, viewAllHref = '/shop', apiTag = null }) => {
   const ref = useRef(null);
   const [items, setItems] = useState([]);
-  const [loaded, setLoaded] = useState(false);
+  const [loadState, setLoadState] = useState('loading'); // loading | ready | error
 
-  useEffect(() => {
-    setLoaded(false);
+  const load = useCallback(() => {
+    setLoadState('loading');
     fetchProducts({ limit: 50, tag: apiTag || undefined })
-      .then(res => setItems((res.items || []).map(normalize)))
-      .catch(() => setItems([]))
-      .finally(() => setLoaded(true));
+      .then(res => { setItems((res.items || []).map(normalize)); setLoadState('ready'); })
+      .catch(() => { setItems([]); setLoadState('error'); });
   }, [apiTag]);
+
+  useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
     const els = ref.current?.querySelectorAll('.reveal');
@@ -35,13 +36,13 @@ const FeaturedProducts = ({ title = 'Bestsellers', subtitle = 'Handpicked for yo
   const list = (filter ? items.filter(filter) : items).slice(0, limit);
 
   // Reserve section height with skeletons on the very first paint so the
-  // page height is stable before the products API responds. Only hide the
-  // section entirely if the fetch resolved and there's genuinely nothing
-  // to show — otherwise the browser lands on "Our Story" at the top of the
-  // viewport during the initial load window.
-  if (!loaded) {
+  // page height is stable before the products API responds. On network
+  // failure we swap the last skeleton row for a retry state instead of
+  // hiding the section entirely — leaving the shopper staring at a blank
+  // gap was the "products not loading on certain mobiles" bug.
+  if (loadState !== 'ready') {
     return (
-      <section className="py-24 bg-gradient-to-b from-[#FDF3EB] via-[#F9E7DC] to-[#FDF3EB]" data-testid="featured-products-loading" aria-busy="true">
+      <section className="py-24 bg-gradient-to-b from-[#FDF3EB] via-[#F9E7DC] to-[#FDF3EB]" data-testid="featured-products-loading" aria-busy={loadState === 'loading'}>
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
           <div className="flex flex-wrap items-end justify-between gap-6 mb-12">
             <div>
@@ -59,6 +60,12 @@ const FeaturedProducts = ({ title = 'Bestsellers', subtitle = 'Handpicked for yo
               </div>
             ))}
           </div>
+          {loadState === 'error' && (
+            <div className="mt-10 flex flex-col items-center gap-3 text-center" data-testid="featured-products-error">
+              <p className="text-sm text-[#B4593F]">We couldn&apos;t load our products right now. Please check your connection.</p>
+              <button onClick={load} className="inline-flex items-center gap-2 bg-[#B4593F] hover:bg-[#213a60] text-white px-6 py-3 rounded-full text-xs uppercase tracking-[0.2em] transition-colors" data-testid="featured-products-retry">Try again</button>
+            </div>
+          )}
         </div>
       </section>
     );
