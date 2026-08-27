@@ -5,8 +5,19 @@
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#000000" />
         <meta name="description" content="Wear The Hope — Faith-driven products, crafted to impact lives. Handcrafted with love in India, shipping worldwide." />
+        <!--
+          Warm up the TCP + TLS handshake to origins we'll hit within the first
+          few hundred milliseconds. Shaves ~150–250ms off first-image time on
+          cold 3G/4G mobile connections. Additional origins for the API and
+          the S3/CloudFront image CDN are injected at runtime from index.js
+          because they depend on env vars / admin settings.
+        -->
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
+        <link rel="dns-prefetch" href="//images.unsplash.com" />
+        <link rel="dns-prefetch" href="//www.instagram.com" />
+        <link rel="dns-prefetch" href="//i.ytimg.com" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap" rel="stylesheet" />
         <!--
         manifest.json provides metadata used when your web app is installed on a

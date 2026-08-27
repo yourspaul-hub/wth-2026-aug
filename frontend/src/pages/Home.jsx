@@ -44,8 +44,14 @@ const Home = () => {
   return (
     <main>
       <Lightbox />
-      <Hero />
-      <FeatureStrip />
+      {/* Hero + Feature strip are hidden on phones (< md/768px) per product
+          decision — the mobile experience jumps straight into Shop by
+          purpose to shorten the path to product. Tablet + desktop are
+          unchanged. */}
+      <div className="hidden md:block">
+        <Hero />
+        <FeatureStrip />
+      </div>
       <Categories />
       <FeaturedProducts title="Bestsellers" subtitle="Handpicked for you" filter={(p) => p.ribbon === 'Best Seller'} limit={8} />
       <AboutStory />

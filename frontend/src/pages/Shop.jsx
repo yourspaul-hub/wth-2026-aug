@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { fetchProducts, fetchSubcategories, fetchSubcategory } from '../lib/api';
@@ -19,6 +19,9 @@ const Shop = () => {
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [products, setProducts] = useState([]);
+  // Load state for the product fetch (mirrors the pattern used on Home so
+  // the shop grid recovers gracefully when a mobile network drops packets).
+  const [loadState, setLoadState] = useState('loading'); // loading | ready | error
   const [subcategories, setSubcategories] = useState([]);
   const [subDetail, setSubDetail] = useState(null);   // hydrated when subSlug is present
   const { items: cats } = useCategories();
@@ -28,11 +31,14 @@ const Shop = () => {
   const emptyTitle = useContentText('shop.empty.title');
   const emptyBody = useContentText('shop.empty.body');
 
-  useEffect(() => {
+  const loadProducts = useCallback(() => {
+    setLoadState('loading');
     fetchProducts({ category: categorySlug || undefined, subcategory: subSlug || undefined, q: q || undefined, sort, limit: 100 })
-      .then(res => setProducts((res.items || []).map(normalize)))
-      .catch(() => setProducts([]));
+      .then(res => { setProducts((res.items || []).map(normalize)); setLoadState('ready'); })
+      .catch(() => { setProducts([]); setLoadState('error'); });
   }, [categorySlug, subSlug, q, sort]);
+
+  useEffect(() => { loadProducts(); }, [loadProducts]);
 
   // Load subcategories for the current parent category (used both to render the strip on the category page and for nav on the subcategory page)
   useEffect(() => {

@@ -4081,6 +4081,12 @@ async def get_public_settings():
             'prices_include_tax': ((await get_setting('PRICES_INCLUDE_TAX', 'true')) or 'true').strip().lower() in ('true', '1', 'yes', 'on'),
             'cod_enabled': ((await get_setting('COD_ENABLED', 'true')) or 'true').strip().lower() in ('true', '1', 'yes', 'on'),
         },
+        'image_cdn': {
+            # Exposed publicly so the storefront can `<link rel="preconnect">`
+            # the image CDN on cold loads. Empty string means "no CDN, images
+            # come from the API host itself".
+            'cloudfront': ((await get_setting('CLOUDFRONT_DOMAIN', '')) or '').strip(),
+        },
     }
 
 
