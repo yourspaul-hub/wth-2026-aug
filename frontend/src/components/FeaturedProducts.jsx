@@ -42,7 +42,7 @@ const FeaturedProducts = ({ title = 'Bestsellers', subtitle = 'Handpicked for yo
   // gap was the "products not loading on certain mobiles" bug.
   if (loadState !== 'ready') {
     return (
-      <section className="py-24 bg-gradient-to-b from-[#FDF3EB] via-[#F9E7DC] to-[#FDF3EB]" data-testid="featured-products-loading" aria-busy={loadState === 'loading'}>
+      <section className="py-14 md:py-24 bg-gradient-to-b from-[#FDF3EB] via-[#F9E7DC] to-[#FDF3EB]" data-testid="featured-products-loading" aria-busy={loadState === 'loading'}>
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
           <div className="flex flex-wrap items-end justify-between gap-6 mb-12">
             <div>
@@ -73,7 +73,7 @@ const FeaturedProducts = ({ title = 'Bestsellers', subtitle = 'Handpicked for yo
   if (list.length === 0) return null;
 
   return (
-    <section ref={ref} className="py-24 bg-gradient-to-b from-[#FDF3EB] via-[#F9E7DC] to-[#FDF3EB]">
+    <section ref={ref} className="py-14 md:py-24 bg-gradient-to-b from-[#FDF3EB] via-[#F9E7DC] to-[#FDF3EB]">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
         <div className="flex flex-wrap items-end justify-between gap-6 mb-12">
           <div className="reveal">

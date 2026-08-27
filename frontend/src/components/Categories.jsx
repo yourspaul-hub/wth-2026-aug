@@ -29,7 +29,7 @@ const Categories = () => {
   // flaky networks are never left staring at pale rectangles.
   if (loading || (error && !cats.length)) {
     return (
-      <section id="categories" className="relative py-24 bg-[#FDF3EB]" data-testid="home-categories-loading" aria-busy={loading}>
+      <section id="categories" className="relative py-10 md:py-24 bg-[#FDF3EB]" data-testid="home-categories-loading" aria-busy={loading}>
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
           <div className="flex flex-wrap items-end justify-between gap-6 mb-14">
             <div>
@@ -57,9 +57,9 @@ const Categories = () => {
   if (!cats.length) return null;
 
   return (
-    <section id="categories" ref={containerRef} className="relative py-24 bg-[#FDF3EB]">
+    <section id="categories" ref={containerRef} className="relative py-10 md:py-24 bg-[#FDF3EB]">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
-        <div className="flex flex-wrap items-end justify-between gap-6 mb-14">
+        <div className="flex flex-wrap items-end justify-between gap-6 mb-8 md:mb-14">
           <div className="reveal">
             <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">{eyebrow}</div>
             <h2 className="font-serif-display text-4xl md:text-5xl text-[#213a60] leading-tight max-w-xl">{title}{titleAccent && <> <span className="italic">{titleAccent}</span></>}</h2>

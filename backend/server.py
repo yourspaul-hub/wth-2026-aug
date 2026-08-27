@@ -4297,15 +4297,32 @@ async def public_download_catalogue():
 # --- Mount ---
 app.include_router(api)
 
+# CORS — the browser rejects `Access-Control-Allow-Origin: *` combined with
+# credentials (this is the exact spec violation that was silently blocking
+# credentialed requests on some strict-privacy mobile browsers, leaving the
+# storefront stuck on skeletons). When we want to allow "any origin" we set
+# `allow_origin_regex` to `.*` so Starlette echoes the request's Origin
+# header back — that is valid with credentials and unblocks Samsung
+# Internet, Xiaomi Mint, Brave and any browser that enforces the spec.
 _cors_env = os.environ.get('CORS_ORIGINS', '*').strip()
-_cors_origins = ['*'] if _cors_env in ('', '*') else [o.strip() for o in _cors_env.split(',') if o.strip()]
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=_cors_origins,
-    allow_methods=['*'],
-    allow_headers=['*'],
-)
+if _cors_env in ('', '*'):
+    app.add_middleware(
+        CORSMiddleware,
+        allow_credentials=True,
+        allow_origins=[],
+        allow_origin_regex='.*',
+        allow_methods=['*'],
+        allow_headers=['*'],
+    )
+else:
+    _cors_origins = [o.strip() for o in _cors_env.split(',') if o.strip()]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_credentials=True,
+        allow_origins=_cors_origins,
+        allow_methods=['*'],
+        allow_headers=['*'],
+    )
 
 
 @app.on_event('startup')

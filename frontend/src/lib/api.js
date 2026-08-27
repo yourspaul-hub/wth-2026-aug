@@ -13,44 +13,67 @@ if (!BACKEND_URL && typeof window !== 'undefined') {
 
 export const API_BASE = `${BACKEND_URL || ''}/api`;
 
+// Credentialed instance — used for auth, cart, admin. Cookies are sent so
+// the backend can identify the shopper / admin session.
 export const api = axios.create({
   baseURL: API_BASE,
   withCredentials: true,
   // Never allow a call to hang forever — flaky 3G / captive-portal networks
   // on some Android phones would otherwise leave the storefront stuck on
   // skeletons with no error surfaced to the shopper.
-  timeout: 15000,
+  timeout: 12000,
+});
+
+// Public read instance — no cookies, no CORS credentials handshake. Some
+// mobile browsers (Samsung Internet, Xiaomi Mint, older WebViews, browsers
+// running in strict-privacy mode) silently block credentialed cross-origin
+// requests, which is exactly the failure mode that was leaving the
+// storefront stuck on skeletons for products + categories while
+// non-credentialed calls (settings, content) still succeeded. Public
+// endpoints don't need any cookie context, so routing them through this
+// instance eliminates the entire class of "products won't load on certain
+// phones" bugs.
+export const publicApi = axios.create({
+  baseURL: API_BASE,
+  withCredentials: false,
+  timeout: 12000,
 });
 
 // Retry idempotent GETs up to 3× with exponential backoff on transient
 // errors (timeout, network drop, 5xx). Prevents "products never load" on
 // unreliable mobile networks where the first packet is often lost.
-api.interceptors.response.use(
-  (r) => r,
-  async (error) => {
-    const cfg = error.config;
-    if (!cfg || cfg.method !== 'get') return Promise.reject(error);
-    cfg.__retryCount = (cfg.__retryCount || 0);
-    const status = error.response?.status;
-    const retriable = !error.response || status === 0 || status >= 500 || error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK';
-    if (!retriable || cfg.__retryCount >= 3) return Promise.reject(error);
-    cfg.__retryCount += 1;
-    const delay = 400 * Math.pow(2, cfg.__retryCount - 1); // 400 → 800 → 1600ms
-    await new Promise((r) => setTimeout(r, delay));
-    return api(cfg);
-  }
-);
+const _installRetry = (instance) => {
+  instance.interceptors.response.use(
+    (r) => r,
+    async (error) => {
+      const cfg = error.config;
+      if (!cfg || cfg.method !== 'get') return Promise.reject(error);
+      cfg.__retryCount = (cfg.__retryCount || 0);
+      const status = error.response?.status;
+      const retriable = !error.response || status === 0 || status >= 500 || error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK';
+      if (!retriable || cfg.__retryCount >= 3) return Promise.reject(error);
+      cfg.__retryCount += 1;
+      const delay = 400 * Math.pow(2, cfg.__retryCount - 1); // 400 → 800 → 1600ms
+      await new Promise((r) => setTimeout(r, delay));
+      return instance(cfg);
+    }
+  );
+};
+_installRetry(api);
+_installRetry(publicApi);
 
-// Public endpoints
-export const fetchCategories = () => api.get('/categories').then(r => r.data);
-export const fetchProducts = (params = {}) => api.get('/products', { params }).then(r => r.data);
-export const fetchProduct = (id) => api.get(`/products/${id}`).then(r => r.data);
-export const fetchRecommendations = (id, limit = 8) => api.get(`/products/${id}/recommendations`, { params: { limit } }).then(r => r.data);
-export const fetchCurrencyRates = () => api.get('/currency/rates').then(r => r.data);
-export const fetchSiteContent = () => api.get('/content').then(r => r.data);
+// Public endpoints — routed through `publicApi` (no cookies). This makes the
+// storefront resilient to strict-privacy mobile browsers that silently block
+// credentialed cross-origin requests.
+export const fetchCategories = () => publicApi.get('/categories').then(r => r.data);
+export const fetchProducts = (params = {}) => publicApi.get('/products', { params }).then(r => r.data);
+export const fetchProduct = (id) => publicApi.get(`/products/${id}`).then(r => r.data);
+export const fetchRecommendations = (id, limit = 8) => publicApi.get(`/products/${id}/recommendations`, { params: { limit } }).then(r => r.data);
+export const fetchCurrencyRates = () => publicApi.get('/currency/rates').then(r => r.data);
+export const fetchSiteContent = () => publicApi.get('/content').then(r => r.data);
 export const adminSaveSiteContent = (updates) => api.put('/admin/content', { updates }).then(r => r.data);
 export const adminResetSiteContentKey = (key) => api.delete(`/admin/content/${encodeURIComponent(key)}`).then(r => r.data);
-export const fetchPublicSettings = () => api.get('/settings/public').then(r => r.data);
+export const fetchPublicSettings = () => publicApi.get('/settings/public').then(r => r.data);
 export const adminUploadCatalogue = (file, onProgress) => {
   const fd = new FormData();
   fd.append('file', file);
@@ -60,8 +83,8 @@ export const adminUploadCatalogue = (file, onProgress) => {
   }).then(r => r.data);
 };
 export const adminDeleteCatalogue = () => api.delete('/admin/catalogue').then(r => r.data);
-export const fetchReviews = () => api.get('/reviews').then(r => r.data?.items || r.data || []);
-export const fetchReviewsFull = (params = {}) => api.get('/reviews', { params }).then(r => r.data);
+export const fetchReviews = () => publicApi.get('/reviews').then(r => r.data?.items || r.data || []);
+export const fetchReviewsFull = (params = {}) => publicApi.get('/reviews', { params }).then(r => r.data);
 export const validateCoupon = (code, subtotal) => api.post('/coupons/validate', { code, subtotal }).then(r => r.data);
 export const createOrder = (payload) => api.post('/orders', payload).then(r => r.data);
 export const verifyPayment = (payload) => api.post('/payments/razorpay/verify', payload).then(r => r.data);
@@ -69,8 +92,8 @@ export const getOrder = (orderNumber) => api.get(`/orders/${orderNumber}`).then(
 export const shippingRates = (pincode, weight) => api.post('/shipping/rates', { pincode, weight }).then(r => r.data);
 export const trackShipment = (awb) => api.get(`/shipping/track/${awb}`).then(r => r.data);
 export const subscribeNewsletter = (email) => api.post('/newsletter/subscribe', { email }).then(r => r.data);
-export const getSeoMeta = (path) => api.get('/seo/meta', { params: { path } }).then(r => r.data);
-export const listRedirects = () => api.get('/redirects').then(r => r.data);
+export const getSeoMeta = (path) => publicApi.get('/seo/meta', { params: { path } }).then(r => r.data);
+export const listRedirects = () => publicApi.get('/redirects').then(r => r.data);
 
 // Auth
 export const authSession = (session_id) => api.post('/auth/session', { session_id }).then(r => r.data);
@@ -100,7 +123,7 @@ export const adminUploadImageFile = (file) => {
 export const adminUploadImageFromUrl = (url) => api.post('/admin/images/upload-from-url', { url }).then(r => r.data);
 
 // --- Hero slides ---
-export const fetchHeroSlides = () => api.get('/hero-slides').then(r => r.data?.items || []);
+export const fetchHeroSlides = () => publicApi.get('/hero-slides').then(r => r.data?.items || []);
 export const adminListHeroSlides = () => api.get('/admin/hero-slides').then(r => r.data?.items || []);
 export const adminCreateHeroSlide = (payload) => api.post('/admin/hero-slides', payload).then(r => r.data);
 export const adminUpdateHeroSlide = (id, patch) => api.patch(`/admin/hero-slides/${id}`, patch).then(r => r.data);
@@ -112,7 +135,7 @@ export const adminGetLightbox = () => api.get('/admin/lightbox').then(r => r.dat
 export const adminUpdateLightbox = (patch) => api.put('/admin/lightbox', patch).then(r => r.data);
 
 // --- Partnerships (About page "Business is ministry") ---
-export const fetchPartnerships = () => api.get('/partnerships').then(r => r.data?.items || []);
+export const fetchPartnerships = () => publicApi.get('/partnerships').then(r => r.data?.items || []);
 export const adminListPartnerships = () => api.get('/admin/partnerships').then(r => r.data?.items || []);
 export const adminCreatePartnership = (payload) => api.post('/admin/partnerships', payload).then(r => r.data);
 export const adminUpdatePartnership = (id, patch) => api.patch(`/admin/partnerships/${id}`, patch).then(r => r.data);
@@ -153,16 +176,16 @@ export const adminNewsletter = () => api.get('/admin/newsletter').then(r => r.da
 export const adminListCategories = () => api.get('/categories').then(r => r.data);
 
 // Collections
-export const fetchCollections = (featured) => api.get('/collections', { params: featured !== undefined ? { featured } : {} }).then(r => r.data);
-export const fetchCollection = (slug) => api.get(`/collections/${slug}`).then(r => r.data);
+export const fetchCollections = (featured) => publicApi.get('/collections', { params: featured !== undefined ? { featured } : {} }).then(r => r.data);
+export const fetchCollection = (slug) => publicApi.get(`/collections/${slug}`).then(r => r.data);
 export const adminListCollections = () => api.get('/admin/collections').then(r => r.data);
 export const adminCreateCollection = (payload) => api.post('/admin/collections', payload).then(r => r.data);
 export const adminUpdateCollection = (id, patch) => api.patch(`/admin/collections/${id}`, patch).then(r => r.data);
 export const adminDeleteCollection = (id) => api.delete(`/admin/collections/${id}`).then(r => r.data);
 
 // Shipping rules & Tax rates
-export const fetchShippingOptions = (params = {}) => api.get('/shipping/options', { params }).then(r => r.data);
-export const fetchTaxRates = () => api.get('/tax/rates').then(r => r.data);
+export const fetchShippingOptions = (params = {}) => publicApi.get('/shipping/options', { params }).then(r => r.data);
+export const fetchTaxRates = () => publicApi.get('/tax/rates').then(r => r.data);
 export const adminListShippingRules = () => api.get('/admin/shipping-rules').then(r => r.data);
 export const adminCreateShippingRule = (p) => api.post('/admin/shipping-rules', p).then(r => r.data);
 export const adminUpdateShippingRule = (id, p) => api.patch(`/admin/shipping-rules/${id}`, p).then(r => r.data);
@@ -182,7 +205,7 @@ export const adminListAbandonedCarts = () => api.get('/admin/abandoned-carts').t
 export const adminSendRecovery = (id) => api.post(`/admin/abandoned-carts/${id}/send-recovery`).then(r => r.data);
 
 // Locations (Contact / Stores)
-export const listLocations = () => api.get('/locations').then(r => r.data);
+export const listLocations = () => publicApi.get('/locations').then(r => r.data);
 export const adminListLocations = () => api.get('/admin/locations').then(r => r.data);
 export const adminCreateLocation = (p) => api.post('/admin/locations', p).then(r => r.data);
 export const adminUpdateLocation = (id, p) => api.patch(`/admin/locations/${id}`, p).then(r => r.data);
@@ -198,15 +221,15 @@ export const adminBulkUploadProducts = (file) => {
 export const adminImportFromSheet = (url) => api.post('/admin/products/import-sheet', { url }).then(r => r.data);
 
 // Blog
-export const listBlogPosts = (params) => api.get('/blog', { params }).then(r => r.data);
-export const getBlogPost = (slug) => api.get(`/blog/${slug}`).then(r => r.data);
+export const listBlogPosts = (params) => publicApi.get('/blog', { params }).then(r => r.data);
+export const getBlogPost = (slug) => publicApi.get(`/blog/${slug}`).then(r => r.data);
 export const adminListBlog = () => api.get('/admin/blog').then(r => r.data);
 export const adminCreateBlog = (p) => api.post('/admin/blog', p).then(r => r.data);
 export const adminUpdateBlog = (id, p) => api.patch(`/admin/blog/${id}`, p).then(r => r.data);
 export const adminDeleteBlog = (id) => api.delete(`/admin/blog/${id}`).then(r => r.data);
 
 // Instagram
-export const listInstagram = (limit = 12) => api.get('/instagram', { params: { limit } }).then(r => r.data);
+export const listInstagram = (limit = 12) => publicApi.get('/instagram', { params: { limit } }).then(r => r.data);
 export const adminListInstagram = () => api.get('/admin/instagram').then(r => r.data);
 export const adminCreateInstagram = (p) => api.post('/admin/instagram', p).then(r => r.data);
 export const adminUpdateInstagram = (id, p) => api.patch(`/admin/instagram/${id}`, p).then(r => r.data);
@@ -251,8 +274,8 @@ export const adminDeleteCategory = (id) => api.delete(`/admin/categories/${id}`)
 export const listAllCategories = () => api.get('/categories').then(r => r.data);
 
 // Subcategories
-export const fetchSubcategories = (categorySlug) => api.get('/subcategories', { params: categorySlug ? { category: categorySlug } : {} }).then(r => r.data);
-export const fetchSubcategory = (slug, categorySlug) => api.get(`/subcategories/${slug}`, { params: categorySlug ? { category: categorySlug } : {} }).then(r => r.data);
+export const fetchSubcategories = (categorySlug) => publicApi.get('/subcategories', { params: categorySlug ? { category: categorySlug } : {} }).then(r => r.data);
+export const fetchSubcategory = (slug, categorySlug) => publicApi.get(`/subcategories/${slug}`, { params: categorySlug ? { category: categorySlug } : {} }).then(r => r.data);
 export const adminListSubcategories = (cid) => api.get(`/admin/categories/${cid}/subcategories`).then(r => r.data);
 export const adminCreateSubcategory = (cid, p) => api.post(`/admin/categories/${cid}/subcategories`, p).then(r => r.data);
 export const adminUpdateSubcategory = (sid, p) => api.patch(`/admin/subcategories/${sid}`, p).then(r => r.data);
@@ -274,7 +297,7 @@ export const adminGetNewsletterSettings = () => api.get('/admin/newsletter-setti
 export const adminUpdateNewsletterSettings = (p) => api.put('/admin/newsletter-settings', p).then(r => r.data);
 
 // Size charts
-export const fetchSizeCharts = (section) => api.get('/size-charts', { params: section ? { section } : {} }).then(r => r.data);
+export const fetchSizeCharts = (section) => publicApi.get('/size-charts', { params: section ? { section } : {} }).then(r => r.data);
 export const fetchSizeChart = (ref) => api.get(`/size-charts/${ref}`).then(r => r.data);
 export const adminListSizeCharts = () => api.get('/admin/size-charts').then(r => r.data);
 export const adminCreateSizeChart = (p) => api.post('/admin/size-charts', p).then(r => r.data);
