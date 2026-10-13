@@ -7,12 +7,9 @@ import { useContentText } from '../context/ContentContext';
 const BACKEND = process.env.REACT_APP_BACKEND_URL || '';
 const resolveSrc = (u) => (u && u.startsWith('/api/') ? `${BACKEND}${u}` : u);
 
-const stats = [
-  { icon: Users, num: '10K+', label: 'Happy Customers' },
-  { icon: Globe2, num: '25+', label: 'Countries Reached' },
-  { icon: Award, num: '4.9★', label: 'Google Rating' },
-  { icon: Sparkles, num: '180+', label: 'Unique Designs' },
-];
+// Icon set is fixed; numbers + labels are CMS-editable from
+// Admin → Design → About page (keys about.stats.{1..4}.{num,label}).
+const STAT_ICONS = [Users, Globe2, Award, Sparkles];
 
 const values = [
   {
@@ -56,6 +53,20 @@ const About = () => {
   const missionQuote = useContentText('about.mission.quote');
   const valuesEyebrow = useContentText('about.values.eyebrow', 'What we believe');
   const valuesTitle = useContentText('about.values.title');
+  const stat1Num = useContentText('about.stats.1.num', '10K+');
+  const stat1Label = useContentText('about.stats.1.label', 'Happy Customers');
+  const stat2Num = useContentText('about.stats.2.num', '25+');
+  const stat2Label = useContentText('about.stats.2.label', 'Countries Reached');
+  const stat3Num = useContentText('about.stats.3.num', '4.9★');
+  const stat3Label = useContentText('about.stats.3.label', 'Google Rating');
+  const stat4Num = useContentText('about.stats.4.num', '180+');
+  const stat4Label = useContentText('about.stats.4.label', 'Unique Designs');
+  const stats = [
+    { icon: STAT_ICONS[0], num: stat1Num, label: stat1Label },
+    { icon: STAT_ICONS[1], num: stat2Num, label: stat2Label },
+    { icon: STAT_ICONS[2], num: stat3Num, label: stat3Label },
+    { icon: STAT_ICONS[3], num: stat4Num, label: stat4Label },
+  ];
 
   return (
     <main className="pt-6" data-testid="about-page">
