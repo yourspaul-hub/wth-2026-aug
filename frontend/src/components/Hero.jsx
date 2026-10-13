@@ -46,12 +46,14 @@ const Hero = () => {
 
   const eyebrow = get('home.hero.eyebrow', 'Since December 2018');
   const secondaryCta = get('home.hero.cta.secondary', 'Our Story');
-  const stat1v = get('home.hero.stat1.value', '10K+');
-  const stat1l = get('home.hero.stat1.label', 'Happy Customers');
-  const stat2v = get('home.hero.stat2.value', '180+');
-  const stat2l = get('home.hero.stat2.label', 'Unique Designs');
-  const stat3v = get('home.hero.stat3.value', '4.9★');
-  const stat3l = get('home.hero.stat3.label', 'Google Rating');
+  // Stat badges share the About-page CMS keys (about.stats.*) so the same
+  // number never has to be edited in two places.
+  const stat1v = get('about.stats.1.num', '10K+');
+  const stat1l = get('about.stats.1.label', 'Happy Customers');
+  const stat2v = get('about.stats.4.num', '180+');
+  const stat2l = get('about.stats.4.label', 'Unique Designs');
+  const stat3v = get('about.stats.3.num', '4.9★');
+  const stat3l = get('about.stats.3.label', 'Google Rating');
 
   // Reserve layout height even before the first slide arrives — otherwise
   // the DOM starts short (only sections below the fold), the browser paints

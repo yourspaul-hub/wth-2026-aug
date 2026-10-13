@@ -11,19 +11,19 @@ const resolveSrc = (u) => (u && u.startsWith('/api/') ? `${BACKEND}${u}` : u);
 // Admin → Design → About page (keys about.stats.{1..4}.{num,label}).
 const STAT_ICONS = [Users, Globe2, Award, Sparkles];
 
-const values = [
+// Icons are fixed; titles + descriptions are CMS-editable from
+// Admin → Design → About page (keys about.values.{1..3}.{title,desc}).
+const VALUE_ICONS = [HandHeart, Sparkles, Handshake];
+const VALUE_DEFAULTS = [
   {
-    icon: HandHeart,
     title: 'Obedience Before Understanding',
     desc: 'We registered the brand before we saw the roadmap. Like Joshua stepping into the Jordan, we choose faith over fear at every fork in the road.',
   },
   {
-    icon: Sparkles,
     title: 'Business as Ministry',
     desc: 'Every product carries a prayer. Every partnership becomes a platform. Commerce is our canvas — the message of hope is our masterpiece.',
   },
   {
-    icon: Handshake,
     title: 'Lives Before Brands',
     desc: 'Sustainable jobs, restored dignity, empowered communities. Our success is measured in the lives touched, not just the units shipped.',
   },
@@ -53,6 +53,17 @@ const About = () => {
   const missionQuote = useContentText('about.mission.quote');
   const valuesEyebrow = useContentText('about.values.eyebrow', 'What we believe');
   const valuesTitle = useContentText('about.values.title');
+  const value1Title = useContentText('about.values.1.title', VALUE_DEFAULTS[0].title);
+  const value1Desc = useContentText('about.values.1.desc', VALUE_DEFAULTS[0].desc);
+  const value2Title = useContentText('about.values.2.title', VALUE_DEFAULTS[1].title);
+  const value2Desc = useContentText('about.values.2.desc', VALUE_DEFAULTS[1].desc);
+  const value3Title = useContentText('about.values.3.title', VALUE_DEFAULTS[2].title);
+  const value3Desc = useContentText('about.values.3.desc', VALUE_DEFAULTS[2].desc);
+  const values = [
+    { icon: VALUE_ICONS[0], title: value1Title, desc: value1Desc },
+    { icon: VALUE_ICONS[1], title: value2Title, desc: value2Desc },
+    { icon: VALUE_ICONS[2], title: value3Title, desc: value3Desc },
+  ];
   const stat1Num = useContentText('about.stats.1.num', '10K+');
   const stat1Label = useContentText('about.stats.1.label', 'Happy Customers');
   const stat2Num = useContentText('about.stats.2.num', '25+');
