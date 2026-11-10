@@ -229,3 +229,6 @@ User pivoted from Vercel → **Emergent-hosted deployment** with custom domain.
 - `/api/products` and `/api/reviews` both return paginated envelopes
 - Uploaded images: `db.images.files` + `db.images.chunks` (GridFS)
 - PUBLIC_APP_URL in DB settings drives review/QR URLs
+
+## 2026-06 Product ratings removed
+- Removed star rating from ProductCard (all grids) and 'Top Rated' sort from Shop. Homepage reviews kept unchanged.

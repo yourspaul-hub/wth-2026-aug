@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, ShoppingBag, Star, Eye } from 'lucide-react';
+import { Heart, ShoppingBag, Eye } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { imgProps } from '../lib/imgSrc';
 import { useCart } from '../context/CartContext';
@@ -68,13 +68,7 @@ const ProductCard = ({ product }) => {
       </div>
 
       <div className="pt-4">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-medium text-[#213a60] group-hover:text-[#B4593F] transition-colors line-clamp-1">{product.name}</h3>
-          <div className="flex items-center gap-1 text-[11px] text-neutral-600 shrink-0">
-            <Star className="w-3 h-3 fill-[#E8B364] stroke-[#E8B364]" />
-            {product.rating}
-          </div>
-        </div>
+        <h3 className="text-sm font-medium text-[#213a60] group-hover:text-[#B4593F] transition-colors line-clamp-1">{product.name}</h3>
         <p className="text-[11px] italic text-neutral-500 mt-1 line-clamp-1">{product.verse}</p>
         <div className="mt-2 flex items-center gap-2">
           <span className="text-[#B4593F] font-semibold" data-testid={`product-card-price-${product.id}`}>{format(product.price)}</span>
