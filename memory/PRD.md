@@ -232,3 +232,10 @@ User pivoted from Vercel → **Emergent-hosted deployment** with custom domain.
 
 ## 2026-06 Product ratings removed
 - Removed star rating from ProductCard (all grids) and 'Top Rated' sort from Shop. Homepage reviews kept unchanged.
+
+## 2026-06 Mobile tidy-up (tested iteration_22)
+- No horizontal scroll on any storefront page at 390px (fixed product page, shop toolbar, checkout grid overflow).
+- Product page: mobile thumbnail strip, shorter breadcrumb, smaller wrapping title; toast skipped on mobile when cart drawer opens.
+- Off-canvas drawers no longer bleed shadow on the right edge; filter drawer above music pill.
+- Footer 2-column links with bigger tap areas; tighter section padding on mobile (About, Contact, Reviews, Instagram, Story).
+- Music pill compact on mobile with contrast ring; hover-only card buttons hidden on touch screens.

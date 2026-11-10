@@ -108,7 +108,7 @@ const ProductDetail = () => {
       image: activeVariant?.image || product.image,
       customization: trimmedCustom || undefined,
     }, qty);
-    toast.success(`Added ${qty} × ${product.name}${variantLabel ? ' (' + variantLabel + ')' : ''} to bag`);
+    if (window.innerWidth >= 768) toast.success(`Added ${qty} × ${product.name}${variantLabel ? ' (' + variantLabel + ')' : ''} to bag`);
   };
 
   const productJsonLd = {
@@ -293,7 +293,7 @@ const ProductDetail = () => {
                 <span className="w-12 text-center">{qty}</span>
                 <button onClick={() => setQty(q => Math.min(displayStock || 99, q + 1))} className="w-11 h-12 flex items-center justify-center hover:bg-[#FDF3EB] rounded-r-full"><Plus className="w-4 h-4" /></button>
               </div>
-              <button disabled={!inStock} onClick={handleAdd} className="flex-1 min-w-0 bg-[#213a60] hover:bg-[#B4593F] disabled:bg-neutral-300 disabled:cursor-not-allowed transition-colors text-white px-6 py-4 rounded-full text-xs uppercase tracking-[0.2em] inline-flex items-center justify-center gap-2 whitespace-nowrap">
+              <button disabled={!inStock} onClick={handleAdd} data-testid="pd-add-to-bag" className="flex-1 min-w-0 bg-[#213a60] hover:bg-[#B4593F] disabled:bg-neutral-300 disabled:cursor-not-allowed transition-colors text-white px-6 py-4 rounded-full text-xs uppercase tracking-[0.2em] inline-flex items-center justify-center gap-2 whitespace-nowrap">
                 <ShoppingBag className="w-4 h-4" /> {inStock ? 'Add to Bag' : 'Out of Stock'}
               </button>
               <button onClick={() => toggleWishlist(product)} className={`hidden md:flex w-12 h-12 rounded-full border border-[#EBD9CE] items-center justify-center hover:border-[#B4593F] transition-colors ${wished ? 'text-[#B4593F]' : ''}`} aria-label="Wishlist">

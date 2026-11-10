@@ -16,14 +16,14 @@ const CartDrawer = () => {
         onClick={() => setCartOpen(false)}
         className={`fixed inset-0 bg-black/50 z-50 transition-opacity duration-500 ${isCartOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
       />
-      <aside className={`fixed top-0 right-0 h-full w-full sm:w-[440px] bg-[#FDF3EB] z-50 transition-[transform,visibility] duration-500 ${isCartOpen ? 'translate-x-0 shadow-2xl' : 'translate-x-full invisible'}`}>
+      <aside data-testid="cart-drawer" className={`fixed top-0 right-0 h-full w-full sm:w-[440px] bg-[#FDF3EB] z-50 transition-[transform,visibility] duration-500 ${isCartOpen ? 'translate-x-0 shadow-2xl' : 'translate-x-full invisible'}`}>
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between px-6 py-5 border-b border-[#EBD9CE]">
             <div className="flex items-center gap-3">
               <ShoppingBag className="w-5 h-5 text-[#B4593F]" />
               <h3 className="font-serif-display text-2xl">{t('cart.title')} <span className="text-neutral-500 text-base">({totals.count})</span></h3>
             </div>
-            <button onClick={() => setCartOpen(false)} className="p-2 hover:bg-white rounded-full transition-colors" aria-label="Close"><X className="w-5 h-5" /></button>
+            <button onClick={() => setCartOpen(false)} data-testid="cart-drawer-close" className="p-2 hover:bg-white rounded-full transition-colors" aria-label="Close"><X className="w-5 h-5" /></button>
           </div>
 
           <div className="flex-1 overflow-y-auto px-6 py-5">

@@ -48,7 +48,7 @@ const ProductCard = ({ product }) => {
         )}
 
         {/* Actions overlay */}
-        <div className="absolute right-3 top-14 flex flex-col gap-2 opacity-0 translate-x-3 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500">
+        <div className="absolute right-3 top-14 hidden md:flex flex-col gap-2 opacity-0 translate-x-3 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500">
           <button onClick={onWish} aria-label="Wishlist" className={`w-9 h-9 rounded-full bg-white shadow flex items-center justify-center hover:bg-[#B4593F] hover:text-white transition-colors ${wished ? 'text-[#B4593F]' : 'text-neutral-700'}`}>
             <Heart className={`w-4 h-4 ${wished ? 'fill-current' : ''}`} />
           </button>
@@ -60,7 +60,7 @@ const ProductCard = ({ product }) => {
         {/* Add to bag CTA */}
         <button
           onClick={onAdd}
-          className="absolute bottom-3 left-3 right-3 bg-[#213a60] hover:bg-[#B4593F] text-white text-[11px] uppercase tracking-[0.2em] py-3 rounded-full flex items-center justify-center gap-2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500"
+          className="absolute bottom-3 left-3 right-3 bg-[#213a60] hover:bg-[#B4593F] text-white text-[11px] uppercase tracking-[0.2em] py-3 rounded-full hidden md:flex items-center justify-center gap-2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500"
           data-testid={`product-card-add-${product.id}`}
         >
           <ShoppingBag className="w-3.5 h-3.5" /> {t('common.add_to_bag')}

@@ -1,0 +1,35 @@
+{
+  "summary": "Iteration 22 - Mobile tidy-up review (frontend only, Playwright 390x844 + desktop 1920x800 regression). ALL 10 requested items PASS. No page scrolls sideways (documentElement.scrollWidth == 390 and window.scrollX stays 0) on /, /shop, /shop/drinkware, /shop/clothing, /product/p_49658ec9cbf8, /product/p_001, /checkout (with an item), /about, /contact, /terms, /privacy, /shipping-returns, /wishlist. The only elements extending past the right edge are the clipped announcement marquee, which is expected. Shop toolbar: Filters (24-112px), '17 products' (124-189px) and the sort select (216-366px) all sit on one row. Sort options are only Featured / Price: Low to High / Price: High to Low, with no 'Top Rated'. Price-asc sorting works (249, 349, 349, 499...). The filter drawer slides in (mid-animation transform translateX -179px), and the close button sets it to visibility:hidden at translateX(-390). Product cards on home and shop have 0 star icons. Product page on mobile: the breadcrumb ends at the category (HOME/SHOP/HEAD GEAR, product name hidden). The h1 (30px) wraps inside 24-366px and the main image fits inside 25-365px. p_001 (2 gallery images) shows pd-mobile-thumbs, and tapping thumb-1 changes the main image. p_49658ec9cbf8 has only 1 image, so it correctly shows no strip. On desktop the strip is hidden and the breadcrumb shows the product name. Add to Bag opens the cart drawer (full width on mobile, 440px on desktop). After closing: left=390, visibility hidden, box-shadow none, scrollWidth 390, so nothing bleeds on the right edge. Checkout with an item: Shipping Details, Shipping Method, Payment Method and Order Summary cards all have 24px/24px side margins. Music pill on mobile is 68x40 with no text (aria-label 'Play ambient music') and tapping it opens the Now Playing panel. On desktop it still shows the 'MUSIC' label. Footer on mobile: SHOP (left 24) and COMPANY (left 207) sit side by side at the same top, links are 32-40px tall, and CONTACT is full width (342px). The 'Since 2018' badge is at 134-354px, inside the 390 viewport. Desktop home, shop, product page, checkout and footer render intact with scrollWidth 1920. No orders placed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ProductDetail Add to Bag / CartDrawer close", "issue": "These had no data-testid. I added data-testid='pd-add-to-bag', 'cart-drawer' (aside) and 'cart-drawer-close'.", "selector": "[data-testid='pd-add-to-bag']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Cart drawer (mobile)", "issues": ["The sonner 'Added to bag' toast (top-center) covers the drawer header ('Your Bag (n)' and the X close button) for a few seconds right after adding. Consider bottom-center toasts on mobile, or not showing the toast when the drawer opens."]},
+      {"screen": "Music widget pill over footer (mobile + desktop)", "issues": ["The pill background #213a60/95 is the same colour as the footer, so it nearly disappears when scrolled to the footer. On mobile it also overlaps the copyright line on the right. Low priority: add a light ring/border or a contrasting colour."]},
+      {"screen": "Filter drawer (mobile)", "issues": ["The music pill (z-40) still shows on top of the full-width Filters drawer (also z-40). Hide it or lower its z-index while the drawer is open."]},
+      {"screen": "Shop toolbar (desktop)", "issues": ["The border-y lines run about 34px beyond the content edges on both sides, because the border sits on the padded max-w container. This predates this change and is cosmetic."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional: move toasts to bottom-center on mobile, or skip the toast when the cart drawer auto-opens, so the drawer close button isn't covered.",
+    "Optional: hide the music pill while the filter or cart drawers are open, and give it a contrasting ring so it stays visible over the dark footer."
+  ],
+  "critical_code_review_comments": [
+    "Checkout.jsx repeats the same long input className on every field. Extract it into a constant or a small <Field> component (DRY).",
+    "ProductCard hover-only action buttons (wishlist, quick view, add to bag) use opacity-0 with group-hover, so on touch devices they are invisible but still tappable over the image. A tap near the bottom of a card image can add the item to the bag unseen. Consider showing them on mobile, or disabling pointer-events until hover.",
+    "The ProductCard 'Quick view' button has no onClick handler (dead button)."
+  ],
+  "updated_files": [
+    "/app/frontend/src/pages/ProductDetail.jsx (data-testid pd-add-to-bag)",
+    "/app/frontend/src/components/CartDrawer.jsx (data-testid cart-drawer, cart-drawer-close)"
+  ],
+  "success_rate": {"backend": "N/A (skipped as requested)", "frontend": "100% (10/10 requested checks)"},
+  "seed_data_creation": "None. I only added items to the browser cart; no orders were placed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Mobile checks use 390x844 and assert documentElement.scrollWidth==390. The announcement marquee span is naturally wider than the screen but clipped. p_001 has 2 gallery images (use it for pd-mobile-thumb tests). p_49658ec9cbf8 has 1 image. New testids: pd-add-to-bag, cart-drawer, cart-drawer-close. Note that the browser_automation tool rewrites screenshot paths and breaks f-string paths, so use literal filenames."
+}

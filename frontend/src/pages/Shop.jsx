@@ -161,8 +161,8 @@ const Shop = () => {
         </div>
       </div>
 
-      <div onClick={() => setFilterOpen(false)} className={`fixed inset-0 bg-black/50 z-40 transition-opacity ${filterOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} />
-      <aside className={`fixed top-0 left-0 h-full w-full sm:w-[360px] bg-white z-40 p-6 overflow-y-auto transition-[transform,visibility] duration-500 ${filterOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full invisible'}`}>
+      <div onClick={() => setFilterOpen(false)} className={`fixed inset-0 bg-black/50 z-50 transition-opacity ${filterOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} />
+      <aside className={`fixed top-0 left-0 h-full w-full sm:w-[360px] bg-white z-50 p-6 overflow-y-auto transition-[transform,visibility] duration-500 ${filterOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full invisible'}`}>
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-serif-display text-2xl">Filters</h3>
           <button onClick={() => setFilterOpen(false)} data-testid="shop-filters-close" className="w-10 h-10 -mr-2 flex items-center justify-center" aria-label="Close filters"><X className="w-5 h-5" /></button>

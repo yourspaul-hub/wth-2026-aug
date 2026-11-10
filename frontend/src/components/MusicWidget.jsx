@@ -155,7 +155,7 @@ const MusicWidget = () => {
         <button
           onClick={toggle}
           onDoubleClick={() => setCollapsed(false)}
-          className="group flex items-center gap-2 pl-2 pr-3 sm:pl-3 sm:pr-4 py-2 sm:py-2.5 bg-[#213a60]/95 hover:bg-[#B4593F] text-white rounded-full shadow-2xl backdrop-blur transition-all"
+          className="group flex items-center gap-2 pl-2 pr-3 sm:pl-3 sm:pr-4 py-2 sm:py-2.5 bg-[#213a60]/95 hover:bg-[#B4593F] text-white rounded-full shadow-2xl ring-1 ring-white/30 backdrop-blur transition-all"
           aria-label={playing ? 'Pause ambient music' : 'Play ambient music'}
           data-testid="music-widget-toggle"
         >
