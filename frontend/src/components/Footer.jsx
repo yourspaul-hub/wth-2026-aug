@@ -105,8 +105,8 @@ const Footer = () => {
         </div>
 
         {/* Main */}
-        <div className="grid md:grid-cols-4 gap-10 py-14">
-          <div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-10 md:gap-10 py-12 md:py-14">
+          <div className="col-span-2 md:col-span-1">
             <Logo variant="light" withTagline className="h-12 mb-4" />
             <p className="text-white/70 text-sm leading-relaxed max-w-xs">{T.tagline}</p>
             <div className="flex items-center gap-3 mt-6">
@@ -118,26 +118,26 @@ const Footer = () => {
 
           <div>
             <div className="text-xs uppercase tracking-[0.2em] text-[#E88864] mb-5">{T.colShop}</div>
-            <ul className="space-y-3 text-sm text-white/80">
+            <ul className="space-y-1 md:space-y-3 text-sm text-white/80">
               {categories.slice(0,6).map(c => (
-                <li key={c.id}><Link to={`/shop/${c.slug}`} className="hover:text-[#E88864] transition-colors">{c.name}</Link></li>
+                <li key={c.id}><Link to={`/shop/${c.slug}`} className="inline-block py-1.5 md:py-0 hover:text-[#E88864] transition-colors">{c.name}</Link></li>
               ))}
             </ul>
           </div>
 
           <div>
             <div className="text-xs uppercase tracking-[0.2em] text-[#E88864] mb-5">{T.colCompany}</div>
-            <ul className="space-y-3 text-sm text-white/80">
-              <li><Link to="/about" className="hover:text-[#E88864] transition-colors">{T.story}</Link></li>
-              <li><Link to="/contact" className="hover:text-[#E88864] transition-colors">{T.contactLink}</Link></li>
-              <li><Link to="/size-guide" className="hover:text-[#E88864] transition-colors">{T.size}</Link></li>
-              <li><Link to="/terms" className="hover:text-[#E88864] transition-colors">{T.terms}</Link></li>
-              <li><Link to="/privacy" className="hover:text-[#E88864] transition-colors">{T.privacy}</Link></li>
-              <li><Link to="/shipping-returns" className="hover:text-[#E88864] transition-colors">{T.refund}</Link></li>
+            <ul className="space-y-1 md:space-y-3 text-sm text-white/80">
+              <li><Link to="/about" className="inline-block py-1.5 md:py-0 hover:text-[#E88864] transition-colors">{T.story}</Link></li>
+              <li><Link to="/contact" className="inline-block py-1.5 md:py-0 hover:text-[#E88864] transition-colors">{T.contactLink}</Link></li>
+              <li><Link to="/size-guide" className="inline-block py-1.5 md:py-0 hover:text-[#E88864] transition-colors">{T.size}</Link></li>
+              <li><Link to="/terms" className="inline-block py-1.5 md:py-0 hover:text-[#E88864] transition-colors">{T.terms}</Link></li>
+              <li><Link to="/privacy" className="inline-block py-1.5 md:py-0 hover:text-[#E88864] transition-colors">{T.privacy}</Link></li>
+              <li><Link to="/shipping-returns" className="inline-block py-1.5 md:py-0 hover:text-[#E88864] transition-colors">{T.refund}</Link></li>
             </ul>
           </div>
 
-          <div>
+          <div className="col-span-2 md:col-span-1">
             <div className="text-xs uppercase tracking-[0.2em] text-[#E88864] mb-5">{T.colContact}</div>
             <ul className="space-y-4 text-sm text-white/80">
               <li className="flex items-start gap-3"><Phone className="w-4 h-4 mt-0.5 text-[#E88864]" /> {T.phone}</li>

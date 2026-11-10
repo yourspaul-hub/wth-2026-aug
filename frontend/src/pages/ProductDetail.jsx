@@ -138,17 +138,16 @@ const ProductDetail = () => {
       </Helmet>
 
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
-        <nav className="text-[11px] uppercase tracking-[0.2em] text-neutral-500 mb-8">
+        <nav className="text-[11px] uppercase tracking-[0.2em] text-neutral-500 mb-5 md:mb-8 leading-loose">
           <Link to="/" className="hover:text-[#B4593F]">Home</Link>
           <ChevronRight className="inline w-3 h-3 mx-2" />
           <Link to="/shop" className="hover:text-[#B4593F]">Shop</Link>
           {product.category_slug && (<><ChevronRight className="inline w-3 h-3 mx-2" /><Link to={`/shop/${product.category_slug}`} className="hover:text-[#B4593F]">{product.category_name}</Link></>)}
-          <ChevronRight className="inline w-3 h-3 mx-2" />
-          <span className="text-[#B4593F]">{product.name}</span>
+          <span className="hidden sm:inline"><ChevronRight className="inline w-3 h-3 mx-2" /><span className="text-[#B4593F]">{product.name}</span></span>
         </nav>
 
-        <div className="grid lg:grid-cols-2 gap-12">
-          <div className="flex gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+          <div className="flex gap-4 min-w-0">
             <div className="hidden md:flex flex-col gap-3 w-20 shrink-0">
               {gallery.map((img, i) => (
                 <button key={i} onClick={() => setActiveImg(i)} className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors ${activeImg === i ? 'border-[#B4593F]' : 'border-transparent'}`}>
@@ -162,7 +161,8 @@ const ProductDetail = () => {
                 </button>
               ))}
             </div>
-            <div className="flex-1 aspect-[4/5] rounded-2xl overflow-hidden bg-white border border-[#EBD9CE] relative">
+            <div className="flex-1 min-w-0">
+            <div className="aspect-[4/5] rounded-2xl overflow-hidden bg-white border border-[#EBD9CE] relative">
               <img src={gallery[activeImg]} alt={product.name} className="w-full h-full object-cover transition-opacity duration-500" />
               {product.ribbon && (
                 <span className="absolute top-4 left-4 shimmer-badge text-white text-xs uppercase tracking-[0.15em] px-4 py-1.5 rounded-full">{product.ribbon}</span>
@@ -173,6 +173,16 @@ const ProductDetail = () => {
                 </button>
               )}
             </div>
+            {gallery.length > 1 && (
+              <div className="md:hidden flex gap-2 mt-3 overflow-x-auto pb-1" data-testid="pd-mobile-thumbs">
+                {gallery.map((img, i) => (
+                  <button key={i} onClick={() => setActiveImg(i)} data-testid={`pd-mobile-thumb-${i}`} className={`w-16 h-16 shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${activeImg === i ? 'border-[#B4593F]' : 'border-transparent'}`}>
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+            </div>
           </div>
 
           <div>
@@ -181,7 +191,7 @@ const ProductDetail = () => {
               {product.product_type === 'digital' && <span className="bg-emerald-600 text-white text-[10px] uppercase tracking-[0.15em] px-3 py-1 rounded-full inline-flex items-center gap-1"><Download className="w-3 h-3" /> Digital</span>}
               <span className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">SKU: {displaySku}</span>
             </div>
-            <h1 className="font-serif-display text-4xl md:text-5xl text-[#213a60] leading-tight">{product.name}</h1>
+            <h1 className="font-serif-display text-3xl sm:text-4xl md:text-5xl text-[#213a60] leading-tight break-words">{product.name}</h1>
             {product.verse && <div className="italic text-neutral-600 mt-2">{product.verse}</div>}
 
             <div className="flex items-center gap-3 mt-4">

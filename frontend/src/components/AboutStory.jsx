@@ -23,15 +23,15 @@ const AboutStory = () => {
   }, []);
 
   return (
-    <section className="py-24 bg-[#FDF3EB] relative overflow-hidden" data-testid="home-about">
+    <section className="py-14 md:py-24 bg-[#FDF3EB] relative overflow-hidden" data-testid="home-about">
       <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
-        <div className="grid md:grid-cols-2 gap-14 items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-14 items-center">
           <div className="relative">
             <div className="relative aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl">
               <img src="https://images.unsplash.com/photo-1509440159596-0249088772ff?crop=entropy&cs=srgb&fm=jpg&q=85&w=1200" alt="Loaves of bread — inspired by the five loaves and two fish" className="w-full h-full object-cover" loading="lazy" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
             </div>
-            <div className="absolute -bottom-6 -right-6 bg-white rounded-2xl p-6 shadow-xl border border-[#EBD9CE] max-w-[240px]">
+            <div className="absolute -bottom-6 right-3 md:-right-6 bg-white rounded-2xl p-5 md:p-6 shadow-xl border border-[#EBD9CE] max-w-[220px] md:max-w-[240px]">
               <Heart className="w-6 h-6 text-[#B4593F] mb-2" />
               <div className="font-serif-display text-2xl text-[#213a60] italic leading-tight">{badge1}</div>
               <div className="text-xs text-neutral-600 mt-1">{badge2}</div>

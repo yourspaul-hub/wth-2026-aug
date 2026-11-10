@@ -82,7 +82,7 @@ const About = () => {
   return (
     <main className="pt-6" data-testid="about-page">
       {/* Hero */}
-      <section className="gradient-cream py-24 relative overflow-hidden">
+      <section className="gradient-cream py-14 md:py-24 relative overflow-hidden">
         <div className="max-w-[1200px] mx-auto px-6 lg:px-10 text-center relative">
           <div className="inline-flex items-center gap-2 bg-white/70 border border-[#EBD9CE] rounded-full px-4 py-1.5 mb-6">
             <Heart className="w-3.5 h-3.5 text-[#B4593F]" />
@@ -114,7 +114,7 @@ const About = () => {
       </section>
 
       {/* Origin story */}
-      <section className="py-24 bg-[#FDF3EB]">
+      <section className="py-14 md:py-24 bg-[#FDF3EB]">
         <div className="max-w-[1200px] mx-auto px-6 lg:px-10 grid md:grid-cols-2 gap-14 items-center">
           <div className="aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl">
             <img
@@ -136,7 +136,7 @@ const About = () => {
       </section>
 
       {/* Values */}
-      <section className="py-24 bg-white">
+      <section className="py-14 md:py-24 bg-white">
         <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
           <div className="text-center mb-14 max-w-2xl mx-auto">
             <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">{valuesEyebrow}</div>
@@ -161,7 +161,7 @@ const About = () => {
 
       {/* Partnerships */}
       {partnerships.length > 0 && (
-        <section className="py-24 gradient-cream border-y border-[#EBD9CE]" data-testid="about-partnerships">
+        <section className="py-14 md:py-24 gradient-cream border-y border-[#EBD9CE]" data-testid="about-partnerships">
           <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
             <div className="text-center mb-14 max-w-2xl mx-auto">
               <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">Partners in the mission</div>
@@ -214,7 +214,7 @@ const About = () => {
       )}
 
       {/* Looking forward */}
-      <section className="py-24 bg-white">
+      <section className="py-14 md:py-24 bg-white">
         <div className="max-w-[900px] mx-auto px-6 lg:px-10 text-center">
           <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-4">The journey continues</div>
           <h2 className="font-serif-display text-4xl md:text-5xl leading-tight text-[#213a60]">
@@ -228,7 +228,7 @@ const About = () => {
 
       {/* Testimonial highlight (pulled live from Reviews) */}
       {featuredReview && (
-        <section className="py-24 gradient-blush">
+        <section className="py-14 md:py-24 gradient-blush">
           <div className="max-w-[900px] mx-auto px-6 lg:px-10 text-center">
             <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-4">Voices of our community</div>
             <p className="font-serif-display text-3xl md:text-4xl italic leading-relaxed text-[#213a60]">&ldquo;{featuredReview.text}&rdquo;</p>
@@ -250,7 +250,7 @@ const About = () => {
       )}
 
       {/* CTA */}
-      <section className="py-24 bg-[#FDF3EB] text-center">
+      <section className="py-14 md:py-24 bg-[#FDF3EB] text-center">
         <div className="max-w-[900px] mx-auto px-6 lg:px-10">
           <h3 className="font-serif-display text-4xl md:text-5xl leading-tight text-[#213a60]">Ready to <span className="italic text-[#B4593F]">wear the hope</span>?</h3>
           <p className="mt-4 text-neutral-700">Explore our full collection or reach out for custom orders. We&rsquo;d love to hear your story.</p>

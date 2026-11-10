@@ -144,15 +144,15 @@ const Shop = () => {
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-2" />
       )}
 
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-10 flex items-center justify-between border-y border-[#EBD9CE] py-4 mb-8">
-        <div className="flex items-center gap-4">
-          <button onClick={() => setFilterOpen(true)} className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em]">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-10 flex items-center justify-between gap-3 border-y border-[#EBD9CE] py-3 md:py-4 mb-6 md:mb-8">
+        <div className="flex items-center gap-3 md:gap-4 min-w-0">
+          <button onClick={() => setFilterOpen(true)} data-testid="shop-filters-btn" className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] py-2.5">
             <SlidersHorizontal className="w-4 h-4" /> {filtersLabel}
           </button>
-          <span className="text-xs text-neutral-500">{list.length} products</span>
+          <span className="text-xs text-neutral-500 whitespace-nowrap" data-testid="shop-product-count">{list.length} products</span>
         </div>
-        <div className="relative">
-          <select value={sort} onChange={e => setSort(e.target.value)} className="appearance-none bg-transparent border border-[#EBD9CE] rounded-full pl-5 pr-10 py-2.5 text-xs uppercase tracking-[0.15em] cursor-pointer hover:border-[#B4593F] transition-colors">
+        <div className="relative shrink-0">
+          <select value={sort} onChange={e => setSort(e.target.value)} data-testid="shop-sort-select" className="appearance-none bg-transparent border border-[#EBD9CE] rounded-full pl-4 md:pl-5 pr-9 md:pr-10 py-2.5 text-[11px] md:text-xs uppercase tracking-[0.1em] md:tracking-[0.15em] cursor-pointer hover:border-[#B4593F] transition-colors max-w-[150px] md:max-w-none">
             <option value="featured">Featured</option>
             <option value="price-asc">Price: Low to High</option>
             <option value="price-desc">Price: High to Low</option>
@@ -162,10 +162,10 @@ const Shop = () => {
       </div>
 
       <div onClick={() => setFilterOpen(false)} className={`fixed inset-0 bg-black/50 z-40 transition-opacity ${filterOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} />
-      <aside className={`fixed top-0 left-0 h-full w-full sm:w-[360px] bg-white z-40 shadow-2xl p-6 overflow-y-auto transition-transform duration-500 ${filterOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed top-0 left-0 h-full w-full sm:w-[360px] bg-white z-40 p-6 overflow-y-auto transition-[transform,visibility] duration-500 ${filterOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full invisible'}`}>
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-serif-display text-2xl">Filters</h3>
-          <button onClick={() => setFilterOpen(false)}><X className="w-5 h-5" /></button>
+          <button onClick={() => setFilterOpen(false)} data-testid="shop-filters-close" className="w-10 h-10 -mr-2 flex items-center justify-center" aria-label="Close filters"><X className="w-5 h-5" /></button>
         </div>
         <div className="space-y-6">
           <div>

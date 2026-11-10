@@ -61,7 +61,7 @@ const InstagramFeed = ({ limit = 6, showHeader = true }) => {
   if (provider !== 'curated' && !hasWidget) return null;
 
   return (
-    <section className="py-20 bg-white" data-testid="instagram-feed">
+    <section className="py-14 md:py-20 bg-white" data-testid="instagram-feed">
       <div className="max-w-[1300px] mx-auto px-6 lg:px-10">
         {showHeader && (
           <div className="text-center mb-12">

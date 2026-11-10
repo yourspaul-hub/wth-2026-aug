@@ -34,7 +34,7 @@ const Contact = () => {
 
   return (
     <main className="pt-6" data-testid="contact-page">
-      <section className="gradient-cream py-20">
+      <section className="gradient-cream py-14 md:py-20">
         <div className="max-w-[1200px] mx-auto px-6 lg:px-10 text-center">
           <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">{eyebrow}</div>
           <h1 className="font-serif-display text-5xl md:text-6xl">{title}{titleAccent && <> <span className="italic">{titleAccent}</span></>}</h1>
@@ -43,7 +43,7 @@ const Contact = () => {
       </section>
 
       {locations.length > 0 && (
-        <section className="py-20 bg-white" data-testid="locations-section">
+        <section className="py-14 md:py-20 bg-white" data-testid="locations-section">
           <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
             <div className="text-center mb-12">
               <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3">Find us</div>
@@ -115,7 +115,7 @@ const Contact = () => {
         </section>
       )}
 
-      <section className="py-20 bg-[#FDF3EB]">
+      <section className="py-14 md:py-20 bg-[#FDF3EB]">
         <div className="max-w-[1200px] mx-auto px-6 lg:px-10 grid lg:grid-cols-5 gap-10">
           <div className="lg:col-span-2">
             <h2 className="font-serif-display text-3xl mb-6">Reach out directly</h2>

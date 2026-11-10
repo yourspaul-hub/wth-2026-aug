@@ -21,7 +21,7 @@ const ReviewsSection = () => {
   const average = (items.reduce((s, r) => s + (r.rating || 5), 0) / items.length).toFixed(1);
 
   return (
-    <section className="py-20 bg-white" data-testid="reviews-section">
+    <section className="py-14 md:py-20 bg-white" data-testid="reviews-section">
       <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
         <div className="text-center mb-12 max-w-2xl mx-auto">
           <div className="text-[11px] uppercase tracking-[0.3em] text-[#B4593F] mb-3 inline-flex items-center gap-2">

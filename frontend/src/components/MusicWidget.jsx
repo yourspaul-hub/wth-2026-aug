@@ -155,7 +155,7 @@ const MusicWidget = () => {
         <button
           onClick={toggle}
           onDoubleClick={() => setCollapsed(false)}
-          className="group flex items-center gap-2 pl-3 pr-4 py-2.5 bg-[#213a60]/95 hover:bg-[#B4593F] text-white rounded-full shadow-2xl backdrop-blur transition-all"
+          className="group flex items-center gap-2 pl-2 pr-3 sm:pl-3 sm:pr-4 py-2 sm:py-2.5 bg-[#213a60]/95 hover:bg-[#B4593F] text-white rounded-full shadow-2xl backdrop-blur transition-all"
           aria-label={playing ? 'Pause ambient music' : 'Play ambient music'}
           data-testid="music-widget-toggle"
         >
@@ -165,7 +165,7 @@ const MusicWidget = () => {
               <span className="absolute inset-0 rounded-full ring-2 ring-[#E88864] animate-ping opacity-60" aria-hidden />
             )}
           </span>
-          <span className="text-[10px] uppercase tracking-[0.2em]">
+          <span className="hidden sm:inline text-[10px] uppercase tracking-[0.2em]">
             {playing ? (muted ? 'Tap to unmute' : 'Playing') : 'Music'}
           </span>
           <span

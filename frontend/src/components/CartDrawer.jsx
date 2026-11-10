@@ -16,7 +16,7 @@ const CartDrawer = () => {
         onClick={() => setCartOpen(false)}
         className={`fixed inset-0 bg-black/50 z-50 transition-opacity duration-500 ${isCartOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
       />
-      <aside className={`fixed top-0 right-0 h-full w-full sm:w-[440px] bg-[#FDF3EB] z-50 shadow-2xl transition-transform duration-500 ${isCartOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <aside className={`fixed top-0 right-0 h-full w-full sm:w-[440px] bg-[#FDF3EB] z-50 transition-[transform,visibility] duration-500 ${isCartOpen ? 'translate-x-0 shadow-2xl' : 'translate-x-full invisible'}`}>
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between px-6 py-5 border-b border-[#EBD9CE]">
             <div className="flex items-center gap-3">

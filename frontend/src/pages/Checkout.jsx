@@ -221,8 +221,8 @@ const Checkout = () => {
           <span className="font-serif-display text-3xl">Checkout</span>
         </div>
 
-        <div className="grid lg:grid-cols-5 gap-10">
-          <div className="lg:col-span-3 space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-10">
+          <div className="lg:col-span-3 space-y-6 lg:space-y-8 min-w-0">
             <div className="bg-white rounded-2xl border border-[#EBD9CE] p-6 md:p-8">
               <h2 className="font-serif-display text-2xl mb-6">Shipping Details</h2>
               <div className="grid md:grid-cols-2 gap-4">
@@ -290,7 +290,7 @@ const Checkout = () => {
             </div>
           </div>
 
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 min-w-0">
             <div className="sticky top-24 bg-white rounded-2xl border border-[#EBD9CE] p-6">
               <h2 className="font-serif-display text-2xl mb-4">Order Summary</h2>
               <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
