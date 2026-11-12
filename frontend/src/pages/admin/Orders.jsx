@@ -38,7 +38,7 @@ const AdminOrders = () => {
     if (reason === null) return;
     try {
       const res = await refundOrder(order.order_number, reason);
-      toast.success('Refund processed (mocked)');
+      toast.success('Order marked as refunded and stock restored. Send the money back from your Razorpay dashboard if paid online.');
       setOrders(prev => prev.map(o => o.order_number === order.order_number ? res.order : o));
       setSelected(res.order);
     } catch (e) { toast.error(e?.response?.data?.detail || 'Refund failed'); }

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { adminAnalyticsSummary } from '../../lib/api';
-import { TrendingUp, Eye, ShoppingCart, IndianRupee, Percent, Info, Users, Clock, LogIn, LogOut, Monitor, MousePointerClick } from 'lucide-react';
+import { TrendingUp, Eye, ShoppingCart, IndianRupee, Percent, Users, Clock, LogIn, LogOut, Monitor, MousePointerClick } from 'lucide-react';
+import { useIntegrationSection, IntegrationBanner } from './IntegrationStatus';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, BarChart, Bar, Legend, CartesianGrid, Area, AreaChart } from 'recharts';
 
 const RANGES = [7, 14, 30, 90];
@@ -10,6 +11,7 @@ const AdminAnalytics = () => {
   const [days, setDays] = useState(30);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const ga = useIntegrationSection('Analytics — Google');
 
   useEffect(() => {
     setLoading(true);
@@ -36,12 +38,12 @@ const AdminAnalytics = () => {
         </div>
       </div>
 
-      <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-4 mb-6 text-sm flex items-start gap-3">
-        <Info className="w-4 h-4 mt-0.5 shrink-0" />
-        <div>
-          Traffic + source data is <strong>MOCKED</strong> (GA <code>{data.pixel_ga_id}</code> · FB Pixel <code>{data.pixel_fb_id}</code>) until enough real page-views are captured. Order + revenue data is <strong>real</strong> from your database. Connect GA4 &amp; Meta Pixel IDs in <code>Admin → Integrations</code> for full production ingestion.
-        </div>
-      </div>
+      <IntegrationBanner
+        section={ga}
+        testId="analytics-ga-status"
+        liveText={<>Google Analytics <strong>connected</strong> ({data.pixel_ga_id}). Your storefront sends visits to GA4. The numbers below are real visits, orders and revenue recorded by your store.</>}
+        offText={<>The numbers below are real visits, orders and revenue recorded by your store. Google Analytics is <strong>not connected</strong>. Add your GA4 Measurement ID to also see visits in Google Analytics.</>}
+      />
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">

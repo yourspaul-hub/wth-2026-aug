@@ -54,8 +54,8 @@ const AdminInstagram = () => {
         </button>
       </div>
 
-      <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-4 mb-6 text-xs">
-        <strong>Curated feed — MOCKED.</strong> To auto-sync from your Instagram, connect the Meta Graph API in .env and swap this list with the live pull. For now, manage what appears on the storefront here.
+      <div className="bg-[#FDF3EB] border border-[#EBD9CE] text-neutral-700 rounded-lg p-4 mb-6 text-xs" data-testid="ig-curated-note">
+        These are the posts shown in the homepage Instagram section. Add posts and tag products to make them shoppable. To show your live Instagram feed instead, choose Behold or Elfsight in <strong>Instagram Settings</strong>.
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

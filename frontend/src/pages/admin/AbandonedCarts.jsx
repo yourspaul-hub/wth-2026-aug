@@ -12,7 +12,13 @@ const AdminAbandonedCarts = () => {
 
   const doSend = async (c) => {
     if (!window.confirm(`Send recovery email to ${c.email}?`)) return;
-    try { await adminSendRecovery(c.id); toast.success('Recovery email queued (mocked)'); load(); }
+    try {
+      const r = await adminSendRecovery(c.id);
+      if (r.email_status === 'sent') toast.success('Recovery email sent');
+      else if (r.email_status === 'failed') toast.error(`Email failed: ${r.error || 'Gmail rejected it'}`);
+      else toast.message('Saved to Email Outbox — connect Gmail in Integrations to deliver it');
+      load();
+    }
     catch { toast.error('Failed'); }
   };
 

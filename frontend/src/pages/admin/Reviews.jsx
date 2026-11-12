@@ -1,21 +1,19 @@
 import React, { useState } from 'react';
 import ReviewsListTab from './ReviewsListTab';
 import ReviewsQrTab from './ReviewsQrTab';
-import ReviewsGoogleTab from './ReviewsGoogleTab';
-import { Star, QrCode, Globe } from 'lucide-react';
+import { Star, QrCode } from 'lucide-react';
 
 const AdminReviews = () => {
   const [tab, setTab] = useState('reviews');
   const tabs = [
     { key: 'reviews', label: 'All Reviews', icon: Star },
     { key: 'qr', label: 'QR Codes', icon: QrCode },
-    { key: 'google', label: 'Google Locations', icon: Globe },
   ];
   return (
     <div>
       <div className="mb-8">
         <h1 className="font-serif-display text-4xl">Reviews Hub</h1>
-        <p className="text-sm text-neutral-600 mt-1">Manage manual + QR-submitted + auto-synced Google reviews all in one place.</p>
+        <p className="text-sm text-neutral-600 mt-1">Manage manual and QR-submitted reviews in one place.</p>
       </div>
       <div className="flex gap-2 mb-6 border-b border-[#EBD9CE]">
         {tabs.map(t => {
@@ -36,7 +34,6 @@ const AdminReviews = () => {
 
       {tab === 'reviews' && <ReviewsListTab />}
       {tab === 'qr' && <ReviewsQrTab />}
-      {tab === 'google' && <ReviewsGoogleTab />}
     </div>
   );
 };

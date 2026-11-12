@@ -2400,9 +2400,9 @@ async def send_recovery(cid: str, user: dict = Depends(require_admin)):
         raise HTTPException(status_code=404, detail='Cart not found')
     items_html = ''.join(f"<tr><td style='padding:6px 8px'>{it.get('name', 'Item')}</td><td style='padding:6px 8px;text-align:right'>&#8377;{(it.get('price', 0) * it.get('qty', 1)):,}</td></tr>" for it in c.get('items', []))
     body = f"<h2 style='font-family:Georgia,serif;font-size:24px'>Hey {c.get('name') or 'friend'}, you left something behind ✨</h2><p style='color:#555;line-height:1.6'>We saved your bag for you. Complete your order and let hope travel with you.</p><table width='100%' style='font-size:14px;margin:12px 0'>{items_html}</table><p><a href='#' style='display:inline-block;padding:12px 24px;background:{BRAND_COLOR};color:#fff;text-decoration:none;border-radius:999px;font-size:12px;letter-spacing:2px'>COMPLETE MY ORDER</a></p><p style='font-size:11px;color:#8a8a8a'>Or use code <strong>COMEBACK10</strong> for 10% off — valid 48 hours.</p>"
-    await queue_email(to=c['email'], subject='You left hope in your bag', template='abandoned_cart', body_html=body, context={'cart_id': cid})
+    doc = await queue_email(to=c['email'], subject='You left hope in your bag', template='abandoned_cart', body_html=body, context={'cart_id': cid})
     await db.abandoned_carts.update_one({'id': cid}, {'$set': {'recovery_email_sent': True}})
-    return {'ok': True, 'mocked': True}
+    return {'ok': True, 'email_status': doc.get('status'), 'error': doc.get('error')}
 
 
 # ================= EMAIL OUTBOX (Admin) =================
@@ -2921,9 +2921,7 @@ async def admin_analytics_summary(days: int = 30, user: dict = Depends(require_a
         day = _day_key(e['created_at']) if isinstance(e['created_at'], datetime) else str(e['created_at'])[:10]
         events_by_day[day] = events_by_day.get(day, 0) + 1
 
-    # Build a continuous day series
-    total_events = sum(events_by_day.values())
-    use_mock_baseline = total_events < 20  # not enough real events yet
+    # Build a continuous day series (real page_view events only)
     series = []
     for i in range(days - 1, -1, -1):
         d = (now - timedelta(days=i))
@@ -2931,9 +2929,6 @@ async def admin_analytics_summary(days: int = 30, user: dict = Depends(require_a
         pv = events_by_day.get(key, 0)
         ords = orders_by_day.get(key, 0)
         rev = revenue_by_day.get(key, 0)
-        if pv == 0 and use_mock_baseline:
-            base = 120 + int(50 * ((i * 7) % 11) / 11)
-            pv = base + ords * 45  # correlate with orders
         series.append({
             'date': key,
             'label': d.strftime('%d %b'),
@@ -2980,8 +2975,6 @@ async def admin_analytics_summary(days: int = 30, user: dict = Depends(require_a
             src = 'Other'
         source_map[src] = source_map.get(src, 0) + 1
 
-    if not source_map:  # mocked default
-        source_map = {'Instagram': 42, 'Google': 28, 'Direct': 18, 'Facebook': 8, 'Other': 4}
     traffic_sources = [{'source': k, 'value': v} for k, v in sorted(source_map.items(), key=lambda x: -x[1])]
 
     # ---- Session-based behaviour (top pages / entry / exit / device / hour) ----
@@ -2997,7 +2990,7 @@ async def admin_analytics_summary(days: int = 30, user: dict = Depends(require_a
     aov = int(total_revenue / total_orders) if total_orders else 0
 
     return {
-        'mocked': True,
+        'mocked': False,
         'range_days': days,
         'series': series,
         'totals': {
@@ -3018,8 +3011,8 @@ async def admin_analytics_summary(days: int = 30, user: dict = Depends(require_a
         'device_breakdown': behaviour['device_breakdown'],
         'hourly_distribution': behaviour['hourly_distribution'],
         'weekday_distribution': behaviour['weekday_distribution'],
-        'pixel_ga_id': 'G-MOCKED-XXXXX',
-        'pixel_fb_id': 'FBPIXEL_MOCKED',
+        'pixel_ga_id': ((await get_setting('GA4_MEASUREMENT_ID', '')) or '').strip(),
+        'pixel_fb_id': ((await get_setting('FB_PIXEL_ID', '')) or '').strip(),
     }
 
 
@@ -3426,19 +3419,20 @@ INTEGRATIONS_SCHEMA = [
         'fields': [
             {'key': 'INSTAGRAM_HANDLE', 'label': 'Handle (public)', 'placeholder': 'wearthehope', 'secret': False},
             {'key': 'INSTAGRAM_PROFILE_URL', 'label': 'Profile URL', 'placeholder': 'https://www.instagram.com/wearthehope', 'secret': False},
-            {'key': 'INSTAGRAM_BUSINESS_ID', 'label': 'IG Business Account ID', 'placeholder': '17841400000000000', 'secret': False},
-            {'key': 'INSTAGRAM_ACCESS_TOKEN', 'label': 'Meta Graph API access token', 'placeholder': 'EAAG...', 'secret': True},
+            {'key': 'INSTAGRAM_BUSINESS_ID', 'optional': True, 'label': 'IG Business Account ID', 'placeholder': '17841400000000000', 'secret': False},
+            {'key': 'INSTAGRAM_ACCESS_TOKEN', 'optional': True, 'label': 'Meta Graph API access token', 'placeholder': 'EAAG...', 'secret': True},
         ],
     },
     {
         'category': 'shipping',
         'label': 'Shipping — Shiprocket',
-        'description': 'Provide credentials to move shipment tracking + AWB assignment from the mocked path to real Shiprocket.',
+        'description': 'Your Shiprocket login is saved here, but the live Shiprocket connection (automatic shipments, AWB and tracking) is not built yet. Checkout prices come from your Shipping rules, and AWB numbers are entered manually on each order.',
+        'wired': False,
         'docs_url': 'https://apidocs.shiprocket.in/',
         'fields': [
             {'key': 'SHIPROCKET_EMAIL', 'label': 'Shiprocket email', 'placeholder': 'ops@wearthehope.com', 'secret': False},
             {'key': 'SHIPROCKET_PASSWORD', 'label': 'Shiprocket password', 'placeholder': '••••••••', 'secret': True},
-            {'key': 'SHIPROCKET_PICKUP_LOCATION', 'label': 'Default pickup location', 'placeholder': 'Mumbai Design Center', 'secret': False},
+            {'key': 'SHIPROCKET_PICKUP_LOCATION', 'optional': True, 'label': 'Default pickup location', 'placeholder': 'Mumbai Design Center', 'secret': False},
         ],
     },
     {
@@ -3449,7 +3443,7 @@ INTEGRATIONS_SCHEMA = [
         'fields': [
             {'key': 'RAZORPAY_KEY_ID', 'label': 'Key ID', 'placeholder': 'rzp_live_XXXX', 'secret': False},
             {'key': 'RAZORPAY_KEY_SECRET', 'label': 'Key secret', 'placeholder': '••••••••', 'secret': True},
-            {'key': 'RAZORPAY_WEBHOOK_SECRET', 'label': 'Webhook secret', 'placeholder': '••••••••', 'secret': True},
+            {'key': 'RAZORPAY_WEBHOOK_SECRET', 'optional': True, 'label': 'Webhook secret', 'placeholder': '••••••••', 'secret': True},
         ],
     },
     {
@@ -3460,7 +3454,7 @@ INTEGRATIONS_SCHEMA = [
         'fields': [
             {'key': 'STRIPE_PUBLISHABLE_KEY', 'label': 'Publishable key', 'placeholder': 'pk_live_XXXX', 'secret': False},
             {'key': 'STRIPE_SECRET_KEY', 'label': 'Secret key', 'placeholder': 'sk_live_XXXX', 'secret': True},
-            {'key': 'STRIPE_WEBHOOK_SECRET', 'label': 'Webhook signing secret', 'placeholder': 'whsec_XXXX', 'secret': True},
+            {'key': 'STRIPE_WEBHOOK_SECRET', 'optional': True, 'label': 'Webhook signing secret', 'placeholder': 'whsec_XXXX', 'secret': True},
         ],
     },
     {
@@ -3471,7 +3465,7 @@ INTEGRATIONS_SCHEMA = [
         'fields': [
             {'key': 'PAYPAL_CLIENT_ID', 'label': 'Client ID', 'placeholder': 'AXX...', 'secret': False},
             {'key': 'PAYPAL_CLIENT_SECRET', 'label': 'Client secret', 'placeholder': '••••••••', 'secret': True},
-            {'key': 'PAYPAL_MODE', 'label': 'Mode', 'placeholder': 'sandbox / live', 'secret': False},
+            {'key': 'PAYPAL_MODE', 'optional': True, 'label': 'Mode', 'placeholder': 'sandbox / live', 'secret': False},
         ],
     },
     {
@@ -3482,7 +3476,7 @@ INTEGRATIONS_SCHEMA = [
         'fields': [
             {'key': 'GMAIL_FROM_ADDRESS', 'label': 'From address', 'placeholder': 'orders@wearthehope.com', 'secret': False},
             {'key': 'GMAIL_APP_PASSWORD', 'label': 'App password (16 chars)', 'placeholder': '••••••••••••••••', 'secret': True},
-            {'key': 'ADMIN_NOTIFICATION_EMAILS', 'label': 'Admin notification emails (comma separated)', 'placeholder': 'orders@wearthehope.com, founder@wearthehope.com', 'secret': False},
+            {'key': 'ADMIN_NOTIFICATION_EMAILS', 'optional': True, 'label': 'Admin notification emails (comma separated)', 'placeholder': 'orders@wearthehope.com, founder@wearthehope.com', 'secret': False},
         ],
     },
     {
@@ -3519,9 +3513,9 @@ INTEGRATIONS_SCHEMA = [
         'docs_url': None,
         'fields': [
             {'key': 'MUSIC_URL', 'label': 'Audio file URL', 'placeholder': 'https://.../track.mp3', 'secret': False},
-            {'key': 'MUSIC_LABEL', 'label': 'Track label', 'placeholder': 'Wear The Hope — Ambient', 'secret': False},
+            {'key': 'MUSIC_LABEL', 'optional': True, 'label': 'Track label', 'placeholder': 'Wear The Hope — Ambient', 'secret': False},
             {'key': 'MUSIC_ENABLED', 'label': 'Enabled (true/false)', 'placeholder': 'true', 'secret': False},
-            {'key': 'MUSIC_VOLUME', 'label': 'Default volume (0.0 – 1.0)', 'placeholder': '0.35', 'secret': False},
+            {'key': 'MUSIC_VOLUME', 'optional': True, 'label': 'Default volume (0.0 – 1.0)', 'placeholder': '0.35', 'secret': False},
         ],
     },
     {
@@ -3535,8 +3529,8 @@ INTEGRATIONS_SCHEMA = [
             {'key': 'AWS_REGION', 'label': 'AWS region', 'placeholder': 'ap-south-1', 'secret': False},
             {'key': 'AWS_ACCESS_KEY_ID', 'label': 'AWS access key ID', 'placeholder': 'AKIA...', 'secret': True},
             {'key': 'AWS_SECRET_ACCESS_KEY', 'label': 'AWS secret access key', 'placeholder': '', 'secret': True},
-            {'key': 'CLOUDFRONT_DOMAIN', 'label': 'CloudFront domain', 'placeholder': 'https://cdn.wearthehope.com', 'secret': False},
-            {'key': 'S3_KEY_PREFIX', 'label': 'S3 key prefix', 'placeholder': 'images/', 'secret': False},
+            {'key': 'CLOUDFRONT_DOMAIN', 'optional': True, 'label': 'CloudFront domain', 'placeholder': 'https://cdn.wearthehope.com', 'secret': False},
+            {'key': 'S3_KEY_PREFIX', 'optional': True, 'label': 'S3 key prefix', 'placeholder': 'images/', 'secret': False},
         ],
     },
 ]
@@ -3587,9 +3581,13 @@ async def admin_list_integrations(user: dict = Depends(require_admin)):
                 'updated_at': updated_map.get(f['key']),
             })
         total = len(section['fields'])
-        status = 'configured' if filled == total else ('partial' if filled else 'unconfigured')
+        required = [r for r in rows if not r.get('optional')]
+        req_ok = all(r['has_value'] for r in required)
+        status = 'configured' if req_ok else ('partial' if filled else 'unconfigured')
+        if status == 'configured' and section.get('wired') is False:
+            status = 'saved_not_connected'
         sections.append({**section, 'fields': rows, 'status': status, 'filled': filled, 'total': total})
-    return {'sections': sections, 'mocked_when_empty': True}
+    return {'sections': sections}
 
 
 @api.get('/admin/integrations/{key}/reveal')
@@ -4045,6 +4043,10 @@ async def get_public_settings():
     if ig_provider not in ('curated', 'behold', 'elfsight'):
         ig_provider = 'curated'
     return {
+        'tracking': {
+            'ga4_id': ((await get_setting('GA4_MEASUREMENT_ID', '')) or '').strip(),
+            'fb_pixel_id': ((await get_setting('FB_PIXEL_ID', '')) or '').strip(),
+        },
         'music': {
             'enabled': bool(music_enabled and music_url),
             'url': music_url if music_enabled else '',

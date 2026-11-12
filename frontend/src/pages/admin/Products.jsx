@@ -20,6 +20,7 @@ const cartesian = (arrs) => arrs.reduce((acc, arr) => acc.flatMap(a => arr.map(v
 
 const AdminProducts = () => {
   const [items, setItems] = useState([]);
+  const [thumbSize, setThumbSize] = useState(() => +(localStorage.getItem('wth_admin_thumb_size') || 240));
   const [cats, setCats] = useState([]);
   const [subs, setSubs] = useState([]);  // subcategories for the currently-edited product's category
   const [sizeCharts, setSizeCharts] = useState([]);
@@ -214,6 +215,14 @@ const AdminProducts = () => {
         <div>
           <h1 className="font-serif-display text-4xl">Products</h1>
           <p className="text-sm text-neutral-600 mt-1">{items.length} total{dragEnabled ? ' · drag cards to reorder' : ' · clear search to reorder'}</p>
+          <label className="mt-3 flex items-center gap-3 text-[11px] uppercase tracking-widest text-neutral-500">
+            <ImageIcon className="w-3.5 h-3.5" /> Thumbnail size
+            <input
+              type="range" min="120" max="400" step="10" value={thumbSize}
+              onChange={e => { const v = +e.target.value; setThumbSize(v); localStorage.setItem('wth_admin_thumb_size', String(v)); }}
+              className="w-40 accent-[#B4593F]" data-testid="products-thumb-size-slider"
+            />
+          </label>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -231,7 +240,7 @@ const AdminProducts = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${thumbSize}px, 1fr))` }} data-testid="products-grid">
         {filtered.map(p => (
           <div
             key={p.id}

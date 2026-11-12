@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { adminListEmails, adminGetEmail } from '../../lib/api';
-import { Mail, X, Info, Search } from 'lucide-react';
+import { Mail, X, Search } from 'lucide-react';
+import { useIntegrationSection, IntegrationBanner } from './IntegrationStatus';
+
+const statusColors = {
+  sent: 'bg-emerald-50 text-emerald-700',
+  failed: 'bg-red-50 text-red-700',
+  mocked: 'bg-neutral-100 text-neutral-600',
+};
+const statusLabel = (s) => (s === 'mocked' ? 'not sent' : s);
 
 const TEMPLATES = [
   { id: '', label: 'All' },
@@ -24,6 +32,8 @@ const AdminEmails = () => {
   const [filter, setFilter] = useState('');
   const [q, setQ] = useState('');
   const [preview, setPreview] = useState(null);
+  const gmail = useIntegrationSection('Email — Gmail');
+  const sentCount = items.filter(e => e.status === 'sent').length;
 
   const load = () => adminListEmails(filter || undefined).then(setItems).catch(() => setItems([]));
   useEffect(() => { load(); }, [filter]);
@@ -40,7 +50,7 @@ const AdminEmails = () => {
       <div className="flex items-end justify-between mb-8 gap-4">
         <div>
           <h1 className="font-serif-display text-4xl">Email Outbox</h1>
-          <p className="text-sm text-neutral-600 mt-1">{items.length} emails · all MOCKED (written to DB, not delivered)</p>
+          <p className="text-sm text-neutral-600 mt-1" data-testid="emails-count">{items.length} emails · {sentCount} delivered</p>
         </div>
         <div className="relative">
           <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
@@ -54,10 +64,12 @@ const AdminEmails = () => {
         ))}
       </div>
 
-      <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-4 mb-4 text-sm flex items-start gap-3">
-        <Info className="w-4 h-4 mt-0.5 shrink-0" />
-        <div>All emails are <strong>MOCKED</strong> — stored in the database with rendered HTML so you can preview exactly what customers would see. Provide Gmail SMTP credentials (or OAuth) in backend .env and switch <code>provider='gmail'</code> to enable delivery.</div>
-      </div>
+      <IntegrationBanner
+        section={gmail}
+        testId="emails-gmail-status"
+        liveText={<>Gmail is <strong>connected</strong>. Emails are delivered to customers and admins. Every email is also saved here so you can preview it.</>}
+        offText={<>Gmail is <strong>not connected</strong>, so emails are only saved here and not delivered. Add your Gmail address and app password to start sending.</>}
+      />
 
       <div className="bg-white rounded-xl border border-[#EBD9CE] overflow-hidden">
         <table className="w-full text-sm">
@@ -70,7 +82,7 @@ const AdminEmails = () => {
                 <td className="px-6 py-3 flex items-center gap-2"><Mail className="w-3.5 h-3.5 text-[#B4593F]" /> {e.to}</td>
                 <td className="px-6 py-3">{e.subject}</td>
                 <td className="px-6 py-3"><span className={`text-[10px] uppercase px-2 py-1 rounded ${templateColors[e.template] || 'bg-neutral-100 text-neutral-600'}`}>{e.template.replace('_',' ')}</span></td>
-                <td className="px-6 py-3"><span className="text-[10px] uppercase tracking-widest bg-yellow-50 text-yellow-800 px-2 py-0.5 rounded">{e.status}</span></td>
+                <td className="px-6 py-3"><span title={e.error || ''} className={`text-[10px] uppercase tracking-widest px-2 py-0.5 rounded ${statusColors[e.status] || 'bg-neutral-100 text-neutral-600'}`}>{statusLabel(e.status)}</span></td>
                 <td className="px-6 py-3 text-xs text-neutral-500">{new Date(e.created_at).toLocaleString()}</td>
                 <td className="px-6 py-3 text-right"><button className="text-xs text-[#B4593F]">Preview</button></td>
               </tr>

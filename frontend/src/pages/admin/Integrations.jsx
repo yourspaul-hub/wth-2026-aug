@@ -47,8 +47,9 @@ const AdminIntegrations = () => {
   };
 
   const status = (s) => s === 'configured' ? { cls: 'bg-emerald-50 text-emerald-700', icon: ShieldCheck, label: 'Live' }
+    : s === 'saved_not_connected' ? { cls: 'bg-amber-50 text-amber-700', icon: AlertCircle, label: 'Saved · not yet connected' }
     : s === 'partial' ? { cls: 'bg-amber-50 text-amber-700', icon: AlertCircle, label: 'Partial' }
-    : { cls: 'bg-neutral-100 text-neutral-500', icon: MinusCircle, label: 'MOCKED' };
+    : { cls: 'bg-neutral-100 text-neutral-500', icon: MinusCircle, label: 'Not connected' };
 
   if (loading) return <div className="py-16 text-center text-neutral-500">Loading integrations…</div>;
 
@@ -56,7 +57,7 @@ const AdminIntegrations = () => {
     <div data-testid="integrations-hub">
       <div className="mb-8">
         <h1 className="font-serif-display text-4xl flex items-center gap-3"><Puzzle className="w-8 h-8 text-[#B4593F]" /> Integrations Hub</h1>
-        <p className="text-sm text-neutral-600 mt-2 max-w-2xl">One place for every third-party API key. Values stored here override `.env`. Anything left blank runs in <strong>MOCKED</strong> mode so your app still works — swap in real keys to go live per integration, at your own pace.</p>
+        <p className="text-sm text-neutral-600 mt-2 max-w-2xl">One place for every third-party API key. Values stored here override `.env`. Anything left blank stays switched off — fill in real keys to go live per integration, at your own pace.</p>
       </div>
 
       <div className="space-y-5">

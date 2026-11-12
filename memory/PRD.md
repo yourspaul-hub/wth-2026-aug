@@ -244,3 +244,9 @@ User pivoted from Vercel → **Emergent-hosted deployment** with custom domain.
 - Prod RCA: Pillow WebP encode ran on event loop -> health probe 1s timeout -> pod killed mid-upload. Now asyncio.to_thread, WebP method=4, cap 25MB, admin uploader shrinks >1MB images in browser (max 2000px, WebP), clear error toasts.
 - Product page: removed duplicate 'Details' tab; Shipping tab remains.
 - Deployer noted: tier_0 CPU 250m; 2nd replica flapping on startup probe.
+
+## 2026-06 Real integration status banners + GA4/Pixel injection + admin thumb slider
+- Removed hardcoded MOCKED banners (Analytics, Emails, Instagram, Integrations, refund/recovery toasts). Banners read /admin/integrations status (optional fields don't block 'Live'). Shiprocket shows 'Saved · not yet connected' (wired False) — real Shiprocket API still NOT built.
+- Analytics: removed fake baseline traffic/sources; real data only. GA4 + Meta Pixel now injected on storefront from settings (/settings/public tracking).
+- Removed Google Locations reviews tab.
+- Admin Products: thumbnail size slider (localStorage wth_admin_thumb_size).
