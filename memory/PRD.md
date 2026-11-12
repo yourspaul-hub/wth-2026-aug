@@ -239,3 +239,8 @@ User pivoted from Vercel → **Emergent-hosted deployment** with custom domain.
 - Off-canvas drawers no longer bleed shadow on the right edge; filter drawer above music pill.
 - Footer 2-column links with bigger tap areas; tighter section padding on mobile (About, Contact, Reviews, Instagram, Story).
 - Music pill compact on mobile with contrast ring; hover-only card buttons hidden on touch screens.
+
+## 2026-06 PNG upload fix + PDP Details tab removed
+- Prod RCA: Pillow WebP encode ran on event loop -> health probe 1s timeout -> pod killed mid-upload. Now asyncio.to_thread, WebP method=4, cap 25MB, admin uploader shrinks >1MB images in browser (max 2000px, WebP), clear error toasts.
+- Product page: removed duplicate 'Details' tab; Shipping tab remains.
+- Deployer noted: tier_0 CPU 250m; 2nd replica flapping on startup probe.

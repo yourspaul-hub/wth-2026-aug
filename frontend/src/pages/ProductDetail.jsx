@@ -30,7 +30,7 @@ const ProductDetail = () => {
   const { track } = useRecentlyViewed();
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
-  const [tab, setTab] = useState('details');
+  const [tab, setTab] = useState('shipping');
   const [customName, setCustomName] = useState('');
   const [selectedOptions, setSelectedOptions] = useState({});
   const [sizeChartOpen, setSizeChartOpen] = useState(false);
@@ -323,12 +323,11 @@ const ProductDetail = () => {
 
             <div className="mt-10 border-t border-[#EBD9CE] pt-6">
               <div className="flex gap-6 text-xs uppercase tracking-[0.2em]">
-                {['details', 'shipping'].map(t => (
+                {['shipping'].map(t => (
                   <button key={t} onClick={() => setTab(t)} className={`pb-3 border-b-2 transition-colors ${tab === t ? 'border-[#B4593F] text-[#B4593F]' : 'border-transparent text-neutral-500'}`}>{t}</button>
                 ))}
               </div>
               <div className="pt-5 text-sm text-neutral-700 leading-relaxed">
-                {tab === 'details' && <p>{product.description || 'Made with the finest materials and handcrafted attention to detail.'}</p>}
                 {tab === 'shipping' && <p>{product.product_type === 'digital' ? 'This is a digital product. You will receive a download link on your email within minutes of purchase.' : 'We ship pan-India within 3-5 business days. International shipping available (7-14 business days). Free shipping on all orders over ₹999.'}</p>}
               </div>
             </div>

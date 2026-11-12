@@ -3821,7 +3821,7 @@ def _process_image(raw: bytes, target_w: int = 1600, target_h: int = 1600, quali
     im = im.convert('RGB') if im.mode not in ('RGB', 'RGBA') else im
     im.thumbnail((target_w, target_h), Image.LANCZOS)
     out = BytesIO()
-    im.save(out, format='WEBP', quality=quality, method=6)
+    im.save(out, format='WEBP', quality=quality, method=4)
     out.seek(0)
     return out.getvalue(), 'webp', im.width, im.height
 
@@ -3830,7 +3830,7 @@ async def _store_image_from_url(source_url: str, uploaded_by: Optional[str] = No
     """Full pipeline: resolve source (Drive → direct), fetch, resize, WebP, save (S3 or GridFS), return metadata."""
     resolved = _resolve_image_source(source_url)
     raw = await _fetch_bytes(resolved)
-    body, ext, w, h = _process_image(raw)
+    body, ext, w, h = await asyncio.to_thread(_process_image, raw)
 
     # Prefer S3 + CloudFront when configured; fall back to GridFS on any failure.
     s3_meta = await _try_upload_to_s3(body, ext, source_url, w, h)
@@ -3925,10 +3925,10 @@ async def admin_upload_image_file(file: UploadFile = File(...), user: dict = Dep
     if not file.content_type or not file.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail='File must be an image')
     raw = await file.read()
-    if len(raw) > 15 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail='File too large — 15 MB max')
+    if len(raw) > 25 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail='File too large — 25 MB max')
     try:
-        body, ext, w, h = _process_image(raw)
+        body, ext, w, h = await asyncio.to_thread(_process_image, raw)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f'Could not process image: {e}')
 

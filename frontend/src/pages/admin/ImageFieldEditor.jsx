@@ -12,6 +12,24 @@ import { adminUploadImageFile, adminUploadImageFromUrl } from '../../lib/api';
 const BACKEND = process.env.REACT_APP_BACKEND_URL || '';
 const resolve = (u) => (u && u.startsWith('/api/') ? `${BACKEND}${u}` : u);
 
+const MAX_SIDE = 2000;
+// Shrink big images in the browser so uploads stay well under proxy body limits.
+const shrinkImage = (file) => new Promise((res) => {
+  if (file.size < 1024 * 1024 || file.type === 'image/gif' || file.type === 'image/svg+xml') return res(file);
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    const scale = Math.min(1, MAX_SIDE / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    c.toBlob(b => res(b && b.size < file.size ? new File([b], file.name.replace(/\.\w+$/, '') + '.webp', { type: 'image/webp' }) : file), 'image/webp', 0.9);
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); res(file); };
+  img.src = url;
+});
+
 const ImageFieldEditor = ({ value, onChange, testKey }) => {
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
@@ -30,11 +48,13 @@ const ImageFieldEditor = ({ value, onChange, testKey }) => {
     }
     setUploading(true);
     try {
-      const meta = await adminUploadImageFile(file);
+      const meta = await adminUploadImageFile(await shrinkImage(file));
       onChange(meta.url);
       toast.success(`Uploaded (${Math.round((meta.size || 0) / 1024)} KB, WebP)`);
     } catch (err) {
-      toast.error(err?.response?.data?.detail || 'Upload failed');
+      const d = err?.response?.data?.detail;
+      const status = err?.response?.status;
+      toast.error(typeof d === 'string' ? d : status === 413 ? 'Image is too large to upload. Please use a file under 25 MB.' : `Upload failed${status ? ` (${status})` : ''}. Please try again.`);
     } finally {
       setUploading(false);
     }
